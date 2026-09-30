@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- ASBC Labor Calculator v7.9.0 | Zones, Crew Size, Offline Cache | Build 2026-09-30 -->
+<!-- ASBC Labor Calculator v7.9.2 | Restored 60-Day Warning | Build 2026-09-30 -->
 <html lang="en">
 <head>
     <link rel="manifest" href="./manifest.json">
@@ -9,7 +9,7 @@
     <meta name="theme-color" content="#b08d57">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="application-version" content="7.9.0">
+    <meta name="application-version" content="7.9.2">
     <meta name="build-date" content="2026-09-30">
     <meta name="theme-color" content="#050505">
     <title>Labor Calculator | ASBC</title>
@@ -184,17 +184,26 @@
         <section id="catalogPanel" class="w-full md:w-2/3 flex flex-col border-r border-gray-800 pb-20 md:pb-0">
             <div class="p-3 sm:p-4 bg-bgPanel border-b border-gray-800 space-y-3 shrink-0">
                 <div class="flex gap-2">
-                    <div class="w-1/3 relative shrink-0">
-                        <input list="zoneOptions" id="activeZone" placeholder="Zone..." value="General" class="w-full h-12 bg-gray-900 border border-gray-700 rounded-xl px-3 text-sm text-brandGold font-medium outline-none focus:border-brandGold">
+                    <!-- The Spaces Combobox -->
+                    <div class="w-5/12 sm:w-1/3 relative shrink-0">
+                        <input list="zoneOptions" id="activeZone" placeholder="Spaces I.E. Family room, bedroom..." value="" class="w-full h-12 bg-gray-900 border border-gray-700 rounded-xl px-3 text-xs sm:text-sm text-brandGold font-medium outline-none focus:border-brandGold placeholder:text-[#888888] placeholder:font-normal truncate">
                         <datalist id="zoneOptions">
                             <option value="General"></option>
+                            <option value="Entry / Foyer"></option>
                             <option value="Living Room"></option>
-                            <option value="Master Bedroom"></option>
+                            <option value="Family Room"></option>
+                            <option value="Great Room"></option>
+                            <option value="Formal Living Room"></option>
+                            <option value="Den"></option>
+                            <option value="Sitting Room"></option>
+                            <option value="Lounge"></option>
+                            <option value="Library"></option>
+                            <option value="Media Room"></option>
                             <option value="Home Theater"></option>
-                            <option value="Outdoor"></option>
-                            <option value="Rack / Head End"></option>
+                            <option value="Game Room"></option>
                         </datalist>
                     </div>
+                    
                     <input id="searchInput" type="search" autocomplete="off" placeholder="Search products..." class="flex-1 min-w-0 bg-gray-900 border border-gray-700 rounded-xl px-4 h-12 text-base outline-none focus:border-brandGold focus:ring-1 focus:ring-brandGold">
                     <button type="button" onclick="toggleCustomModal(true)" class="h-12 bg-gray-800 border border-gray-700 rounded-xl px-3 sm:px-4 font-medium hover:bg-brandGold hover:text-bgDark shrink-0">+ Custom</button>
                 </div>
@@ -284,6 +293,10 @@
                     <button type="button" onclick="window.print()" class="bg-white text-black font-bold py-3 rounded-xl">Print</button>
                     <button type="button" onclick="shareQuote()" class="bg-brandGold text-bgDark font-bold py-3 rounded-xl">Share</button>
                 </div>
+                
+                <p class="text-[10px] sm:text-xs text-textMuted mt-3.5 text-center leading-relaxed print-hide px-2">
+                    <span class="text-brandGold font-medium">Note:</span> Cloud quotes are automatically purged after 60 days to optimize system performance. Please <strong>Print</strong> or <strong>Share</strong> estimates for long-term project records.
+                </p>
             </div>
         </section>
     </main>
@@ -347,7 +360,7 @@
               }
           });
 
-        const APP_VERSION = '7.9.0';
+        const APP_VERSION = '7.9.2';
         const BUILD_DATE = '2026-09-30';
         const HOURLY_RATE = 200;
         const RECYCLING_FEE = 75;
