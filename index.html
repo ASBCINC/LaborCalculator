@@ -1,18 +1,21 @@
 <!DOCTYPE html>
-<!-- ASBC Labor Calculator v7.3.0 | Cloud Sync, Live Sheets, Share Enabled | Build 2026-09-30 -->
+<!-- ASBC Labor Calculator v7.3.1 | PWA Icon Fixes & Share Button | Build 2026-09-30 -->
 <html lang="en">
 <head>
     <link rel="manifest" href="./manifest.json">
+    <!-- These two lines ensure the icon loads on PC browser tabs and Apple/iOS devices -->
+    <link rel="icon" type="image/png" href="./icon-192.png">
+    <link rel="apple-touch-icon" href="./icon-192.png">
+    
     <meta name="theme-color" content="#b08d57">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="application-version" content="7.3.0">
+    <meta name="application-version" content="7.3.1">
     <meta name="build-date" content="2026-09-30">
     <meta name="theme-color" content="#050505">
     <title>Labor Calculator | ASBC</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- PapaParse for reading the Google Sheets CSV -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     
     <script>
@@ -139,9 +142,9 @@
                     <div class="text-sm tracking-wide text-black">Labor Estimator</div>
                 </div>
             </div>
-            <!-- The Install App button is dynamically hidden/shown here -->
             <div class="flex items-center gap-2 ml-2 shrink-0">
-                <button id="installAppButton" type="button" class="print-hide h-9 px-3 rounded-md bg-black text-white text-xs sm:text-sm font-medium hover:bg-[#C7A66A] hover:text-black transition-colors">Install App</button>
+                <!-- IMPORTANT: 'hidden' class is back so the JS can properly unhide it when ready -->
+                <button id="installAppButton" type="button" class="hidden print-hide h-9 px-3 rounded-md bg-black text-white text-xs sm:text-sm font-medium hover:bg-[#C7A66A] hover:text-black transition-colors">Install App</button>
                 <div class="text-right leading-tight">
                     <div class="text-xs sm:text-sm text-[#666666] whitespace-nowrap">$200/hr</div>
                     <div id="versionNumber" class="text-[9px] sm:text-[10px] text-[#999999] whitespace-nowrap"></div>
@@ -193,7 +196,6 @@
             <div id="categoryBreakdown" class="px-4 pb-3"></div>
 
             <div class="sticky bottom-0 z-20 p-3 sm:p-4 bg-gray-900 border-t border-gray-800 shrink-0 safe-bottom shadow-[0_-10px_20px_rgba(0,0,0,0.45)]">
-
                 <div class="grid grid-cols-2 gap-2 mb-3 print-hide">
                     <label class="text-xs text-textMuted">
                         Recycling
@@ -226,7 +228,6 @@
                     <span id="priceTotal" class="text-2xl sm:text-3xl font-bold text-brandGold font-mono">$0.00</span>
                 </div>
 
-                <!-- NEW 3-BUTTON GRID WITH SHARE BUTTON -->
                 <div class="grid grid-cols-3 gap-2 print-hide">
                     <button type="button" onclick="clearQuote()" class="bg-[#171717] border border-[#2A2A2A] font-semibold py-3 rounded-xl">Clear</button>
                     <button type="button" onclick="window.print()" class="bg-white text-black font-bold py-3 rounded-xl">Print</button>
@@ -270,7 +271,6 @@
         </div>
     </div>
 
-    <!-- Use Firebase Compat libraries to allow local file:// execution -->
     <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
 
@@ -287,7 +287,7 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        const APP_VERSION = '7.3.0';
+        const APP_VERSION = '7.3.1';
         const BUILD_DATE = '2026-09-30';
         const HOURLY_RATE = 200;
         const RECYCLING_FEE = 75;
@@ -785,7 +785,6 @@
             }
         }
 
-        // --- NEW SHARE FUNCTION ---
         async function shareQuote() {
             if (quoteCart.length === 0) {
                 alert('Add some items to the quote first.');
@@ -831,7 +830,6 @@
                 alert('Could not copy to clipboard.');
             });
         }
-        // ------------------------
 
         productGrid.addEventListener('click', event => {
             const quantityButton = event.target.closest('.quantity-button');
@@ -860,13 +858,12 @@
             if (event.key === 'Escape') { toggleCustomModal(false); toggleEstimate(false); }
         });
 
-        // --- INSTALL APP LOGIC ---
         let deferredInstallPrompt = null;
         const installAppButton = document.getElementById('installAppButton');
         window.addEventListener('beforeinstallprompt', event => {
             event.preventDefault();
             deferredInstallPrompt = event;
-            installAppButton.classList.remove('hidden'); // UNHIDES THE BUTTON
+            installAppButton.classList.remove('hidden');
         });
 
         installAppButton.addEventListener('click', async () => {
@@ -881,12 +878,10 @@
             deferredInstallPrompt = null;
             installAppButton.classList.add('hidden');
         });
-        // -------------------------
 
         document.getElementById('versionNumber').textContent = `v${APP_VERSION} (${BUILD_DATE})`;
         document.title = `Labor Calculator | ASBC v${APP_VERSION}`;
 
-        // Bind all functions to window for the HTML buttons to find
         window.saveEstimate = saveEstimate;
         window.loadEstimate = loadEstimate;
         window.deleteEstimate = deleteEstimate;
