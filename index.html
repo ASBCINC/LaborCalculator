@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- ASBC Labor Calculator v7.6.2 | Save-As, Auto-Purge, 60-Day Warning | Build 2026-09-30 -->
+<!-- ASBC Labor Calculator v7.6.3 | Clear Button Form Reset Fix | Build 2026-09-30 -->
 <html lang="en">
 <head>
     <link rel="manifest" href="./manifest.json">
@@ -9,7 +9,7 @@
     <meta name="theme-color" content="#b08d57">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="application-version" content="7.6.2">
+    <meta name="application-version" content="7.6.3">
     <meta name="build-date" content="2026-09-30">
     <meta name="theme-color" content="#050505">
     <title>Labor Calculator | ASBC</title>
@@ -304,7 +304,7 @@
               }
           });
 
-        const APP_VERSION = '7.6.2';
+        const APP_VERSION = '7.6.3';
         const BUILD_DATE = '2026-09-30';
         const HOURLY_RATE = 200;
         const RECYCLING_FEE = 75;
@@ -830,6 +830,7 @@
                 quoteCart = [];
                 savedEstimates.value = '';
                 customerName.value = '';
+                salesManagerName.value = '';
                 renderCatalog();
                 renderQuote();
             }
