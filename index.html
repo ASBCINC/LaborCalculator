@@ -1,16 +1,15 @@
 <!DOCTYPE html>
-<!-- ASBC Labor Calculator v7.3.1 | PWA Icon Fixes & Share Button | Build 2026-09-30 -->
+<!-- ASBC Labor Calculator v7.4.0 | OS Install Icons & Share Enable | Build 2026-09-30 -->
 <html lang="en">
 <head>
     <link rel="manifest" href="./manifest.json">
-    <!-- These two lines ensure the icon loads on PC browser tabs and Apple/iOS devices -->
     <link rel="icon" type="image/png" href="./icon-192.png">
     <link rel="apple-touch-icon" href="./icon-192.png">
     
     <meta name="theme-color" content="#b08d57">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="application-version" content="7.3.1">
+    <meta name="application-version" content="7.4.0">
     <meta name="build-date" content="2026-09-30">
     <meta name="theme-color" content="#050505">
     <title>Labor Calculator | ASBC</title>
@@ -143,8 +142,11 @@
                 </div>
             </div>
             <div class="flex items-center gap-2 ml-2 shrink-0">
-                <!-- IMPORTANT: 'hidden' class is back so the JS can properly unhide it when ready -->
-                <button id="installAppButton" type="button" class="hidden print-hide h-9 px-3 rounded-md bg-black text-white text-xs sm:text-sm font-medium hover:bg-[#C7A66A] hover:text-black transition-colors">Install App</button>
+                <!-- OS-specific Install Button -->
+                <button id="installAppButton" type="button" class="hidden print-hide h-9 px-3 rounded-md bg-black text-white text-xs sm:text-sm font-medium hover:bg-[#C7A66A] hover:text-black transition-colors flex items-center gap-1.5">
+                    <span id="installAppIcon" class="flex items-center"></span>
+                    <span id="installAppText">Install App</span>
+                </button>
                 <div class="text-right leading-tight">
                     <div class="text-xs sm:text-sm text-[#666666] whitespace-nowrap">$200/hr</div>
                     <div id="versionNumber" class="text-[9px] sm:text-[10px] text-[#999999] whitespace-nowrap"></div>
@@ -287,7 +289,7 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        const APP_VERSION = '7.3.1';
+        const APP_VERSION = '7.4.0';
         const BUILD_DATE = '2026-09-30';
         const HOURLY_RATE = 200;
         const RECYCLING_FEE = 75;
@@ -858,11 +860,32 @@
             if (event.key === 'Escape') { toggleCustomModal(false); toggleEstimate(false); }
         });
 
+        // --- INSTALL APP LOGIC ---
         let deferredInstallPrompt = null;
         const installAppButton = document.getElementById('installAppButton');
+        const installAppIcon = document.getElementById('installAppIcon');
+        const installAppText = document.getElementById('installAppText');
+
+        function setInstallIcon() {
+            const ua = navigator.userAgent.toLowerCase();
+            let svg = '';
+            
+            if (ua.includes('android')) {
+                svg = `<svg class="w-4 h-4 fill-current" viewBox="0 0 576 512"><path d="M420.22 165.29a244 244 0 0 0 -264.44 0l-28.75-49.76a14.77 14.77 0 0 0 -20.19-5.41 14.65 14.65 0 0 0 -5.39 20l30.06 52.05A250.77 250.77 0 0 0 0 357.51h576a250.73 250.73 0 0 0 -131.51-175.34l30.05-52.05a14.63 14.63 0 0 0 -5.4-20 14.76 14.76 0 0 0 -20.18 5.41zm-247.96 109.13a29.15 29.15 0 1 1 29.14-29.15 29.16 29.16 0 0 1 -29.14 29.15zm231.48 0a29.15 29.15 0 1 1 29.15-29.15 29.16 29.16 0 0 1 -29.15 29.15z"/></svg>`;
+            } else if (ua.includes('mac') || ua.includes('iphone') || ua.includes('ipad')) {
+                svg = `<svg class="w-4 h-4 fill-current pb-[1px]" viewBox="0 0 384 512"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.3 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.3zM34.3 120.5c5.3-26.1 27.5-63.6 57.6-82.5 2.1-1.3 4.4-2.5 6.7-3.6 22.3-10.4 46.3-15.1 69.8-15.1 1.4 0 2.8 0 4.1.1 1.6 30.4-11.4 67.8-37.1 91.8-19.1 17.9-46 29.8-70.1 31.3-1.8.1-3.6.1-5.3.1-1.5 0-3-.1-4.5-.2-1.2-22.1 4.7-48.4 18.8-71.9z"/></svg>`;
+            } else if (ua.includes('win')) {
+                svg = `<svg class="w-4 h-4 fill-current" viewBox="0 0 448 512"><path d="M0 93.7l183.6-25.3v177.4H0V93.7zm0 324.6l183.6 25.3V268.4H0v149.9zm203.8 28L448 480V268.4H203.8v177.9zm0-380.6v180.1H448V32L203.8 65.7z"/></svg>`;
+            }
+
+            if (svg) installAppIcon.innerHTML = svg;
+            installAppText.textContent = `Install`;
+        }
+
         window.addEventListener('beforeinstallprompt', event => {
             event.preventDefault();
             deferredInstallPrompt = event;
+            setInstallIcon();
             installAppButton.classList.remove('hidden');
         });
 
@@ -878,6 +901,7 @@
             deferredInstallPrompt = null;
             installAppButton.classList.add('hidden');
         });
+        // -------------------------
 
         document.getElementById('versionNumber').textContent = `v${APP_VERSION} (${BUILD_DATE})`;
         document.title = `Labor Calculator | ASBC v${APP_VERSION}`;
