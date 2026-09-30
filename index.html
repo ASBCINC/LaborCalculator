@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- ASBC Labor Calculator v7.4.0 | OS Install Icons & Share Enable | Build 2026-09-30 -->
+<!-- ASBC Labor Calculator v7.5.0 | Offline Persistence & Sales Manager Tracking | Build 2026-09-30 -->
 <html lang="en">
 <head>
     <link rel="manifest" href="./manifest.json">
@@ -9,7 +9,7 @@
     <meta name="theme-color" content="#b08d57">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="application-version" content="7.4.0">
+    <meta name="application-version" content="7.5.0">
     <meta name="build-date" content="2026-09-30">
     <meta name="theme-color" content="#050505">
     <title>Labor Calculator | ASBC</title>
@@ -142,7 +142,6 @@
                 </div>
             </div>
             <div class="flex items-center gap-2 ml-2 shrink-0">
-                <!-- OS-specific Install Button -->
                 <button id="installAppButton" type="button" class="hidden print-hide h-9 px-3 rounded-md bg-black text-white text-xs sm:text-sm font-medium hover:bg-[#C7A66A] hover:text-black transition-colors flex items-center gap-1.5">
                     <span id="installAppIcon" class="flex items-center"></span>
                     <span id="installAppText">Install App</span>
@@ -155,8 +154,10 @@
         </div>
 
         <div id="projectTools" class="h-12 px-3 sm:px-5 flex items-center gap-2 border-t border-[#EBEBEB] bg-[#F7F7F5] print-hide overflow-x-auto">
-            <input id="customerName" type="text" placeholder="Customer / quote name" class="h-9 w-44 sm:w-56 shrink-0 bg-white border border-[#D8D8D8] rounded-md px-3 text-sm text-black placeholder:text-[#888888]">
-            <select id="savedEstimates" class="h-9 w-44 sm:w-56 shrink-0 bg-white border border-[#D8D8D8] rounded-md px-3 text-sm text-black">
+            <input id="customerName" type="text" placeholder="Customer / quote name" class="h-9 w-40 sm:w-48 shrink-0 bg-white border border-[#D8D8D8] rounded-md px-3 text-sm text-black placeholder:text-[#888888]">
+            <input id="salesManagerName" type="text" placeholder="Sales Manager" class="h-9 w-32 sm:w-40 shrink-0 bg-white border border-[#D8D8D8] rounded-md px-3 text-sm text-black placeholder:text-[#888888]">
+            
+            <select id="savedEstimates" class="h-9 w-40 sm:w-48 shrink-0 bg-white border border-[#D8D8D8] rounded-md px-3 text-sm text-black">
                 <option value="">Saved quotes...</option>
             </select>
             <button type="button" onclick="saveEstimate()" class="h-9 shrink-0 bg-black text-white font-medium rounded-md px-4 text-sm">Save</button>
@@ -289,7 +290,17 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        const APP_VERSION = '7.4.0';
+        // ENABLE FIRESTORE OFFLINE PERSISTENCE
+        db.enablePersistence()
+          .catch(function(err) {
+              if (err.code == 'failed-precondition') {
+                  console.warn('Multiple tabs open, offline persistence can only be enabled in one tab at a time.');
+              } else if (err.code == 'unimplemented') {
+                  console.warn('Current browser does not support full offline persistence.');
+              }
+          });
+
+        const APP_VERSION = '7.5.0';
         const BUILD_DATE = '2026-09-30';
         const HOURLY_RATE = 200;
         const RECYCLING_FEE = 75;
@@ -406,11 +417,13 @@
         const recyclingToggle = document.getElementById('recyclingToggle');
         const materialsMarkup = document.getElementById('materialsMarkup');
         const customerName = document.getElementById('customerName');
+        const salesManagerName = document.getElementById('salesManagerName');
         const savedEstimates = document.getElementById('savedEstimates');
 
         async function refreshSavedEstimateList(selectedId = '') {
             savedEstimates.innerHTML = '<option value="">Syncing with cloud...</option>';
             try {
+                // By default, get() tries to fetch from server, falls back to cache if offline
                 const querySnapshot = await db.collection("quotes").get();
                 savedEstimates.innerHTML = '<option value="">Saved quotes...</option>';
                 const quotes = [];
@@ -433,11 +446,15 @@
         }
 
         function currentProjectData() {
-            return { customerName: customerName.value.trim() };
+            return { 
+                customerName: customerName.value.trim(),
+                salesManagerName: salesManagerName.value.trim()
+            };
         }
 
         function applyProjectData(data = {}) {
             customerName.value = data.customerName || '';
+            salesManagerName.value = data.salesManagerName || '';
         }
 
         function serializeQuoteCart() {
@@ -501,8 +518,9 @@
             };
 
             try {
+                // If offline, Firestore queues this and resolves immediately
                 await db.collection("quotes").doc(id).set(quoteDocument);
-                alert(`Saved ${label} to the cloud!`);
+                alert(`Saved ${label} to the cloud! (Will sync when online if currently offline)`);
                 await refreshSavedEstimateList(id);
             } catch (error) {
                 console.error("Cloud save failed: ", error);
@@ -733,6 +751,7 @@
             document.getElementById('projectInfoPrint').innerHTML = `
                 <div class="mb-4 border-b border-gray-300 pb-3 space-y-1">
                     ${data.customerName ? `<div><strong>Customer / Quote:</strong> ${escapeHtml(data.customerName)}</div>` : ''}
+                    ${data.salesManagerName ? `<div><strong>Sales Manager:</strong> ${escapeHtml(data.salesManagerName)}</div>` : ''}
                     <div><strong>Calculator Version:</strong> v${escapeHtml(APP_VERSION)}</div>
                     <div><strong>Build Date:</strong> ${escapeHtml(BUILD_DATE)}</div>
                 </div>
@@ -800,6 +819,9 @@
 
             let shareText = `ASBC Labor Estimate\n`;
             shareText += `Project: ${projectName}\n`;
+            if (data.salesManagerName) {
+                shareText += `Sales Manager: ${data.salesManagerName}\n`;
+            }
             shareText += `Total Labor: ${totalHours} hrs\n`;
             shareText += `Total Price: ${totalPrice}\n\n`;
             shareText += `Breakdown:\n`;
@@ -860,7 +882,6 @@
             if (event.key === 'Escape') { toggleCustomModal(false); toggleEstimate(false); }
         });
 
-        // --- INSTALL APP LOGIC ---
         let deferredInstallPrompt = null;
         const installAppButton = document.getElementById('installAppButton');
         const installAppIcon = document.getElementById('installAppIcon');
@@ -901,7 +922,6 @@
             deferredInstallPrompt = null;
             installAppButton.classList.add('hidden');
         });
-        // -------------------------
 
         document.getElementById('versionNumber').textContent = `v${APP_VERSION} (${BUILD_DATE})`;
         document.title = `Labor Calculator | ASBC v${APP_VERSION}`;
@@ -918,7 +938,10 @@
 
         applyProjectData();
         refreshSavedEstimateList();
+        
         customerName.addEventListener('input', renderQuote);
+        salesManagerName.addEventListener('input', renderQuote);
+        
         renderQuote();
         loadCatalog();
     </script>
