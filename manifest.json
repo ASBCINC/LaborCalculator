@@ -1,18 +1,19 @@
 {
-  "name": "ASBC Labor Calculator",
-  "short_name": "LaborCalc",
-  "start_url": "./",
+  "name": "ASBC Labor Estimator",
+  "short_name": "ASBC Labor",
+  "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#b08d57",
+  "background_color": "#050505",
+  "theme_color": "#050505",
+  "orientation": "portrait",
   "icons": [
     {
-      "src": "./web-app-manifest-192x192",
+      "src": "./asbc-logo.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "./web-app-manifest-512x512.png",
+      "src": "./asbc-logo.png",
       "sizes": "512x512",
       "type": "image/png"
     }
