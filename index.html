@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- ASBC Labor Calculator v7.5.0 | Offline Persistence & Sales Manager Tracking | Build 2026-09-30 -->
+<!-- ASBC Labor Calculator v7.6.1 | Save-As, Auto-Purge, Site Notes Removed | Build 2026-09-30 -->
 <html lang="en">
 <head>
     <link rel="manifest" href="./manifest.json">
@@ -9,7 +9,7 @@
     <meta name="theme-color" content="#b08d57">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="application-version" content="7.5.0">
+    <meta name="application-version" content="7.6.1">
     <meta name="build-date" content="2026-09-30">
     <meta name="theme-color" content="#050505">
     <title>Labor Calculator | ASBC</title>
@@ -59,12 +59,13 @@
         .border-gray-800 { border-color: #1A1A1A !important; }
         .border-gray-700 { border-color: #242424 !important; }
         .hover\:border-brandGold:hover { border-color: #C7A66A !important; }
-        #catalogPanel input, #catalogPanel textarea, #catalogPanel select,
-        #estimatePanel input, #estimatePanel textarea, #estimatePanel select,
-        #customItemModal input, #customItemModal textarea, #customItemModal select { color-scheme: dark; }
-        input:focus, textarea:focus, select:focus {
+        #catalogPanel input, #catalogPanel select,
+        #estimatePanel input, #estimatePanel select,
+        #customItemModal input, #customItemModal select { color-scheme: dark; }
+        input:focus, select:focus {
             border-color: #C7A66A !important;
             box-shadow: 0 0 0 1px rgba(199, 166, 106, 0.28);
+            outline: none;
         }
 
         .estimate-open { transform: translateY(0) !important; }
@@ -290,7 +291,6 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        // ENABLE FIRESTORE OFFLINE PERSISTENCE
         db.enablePersistence()
           .catch(function(err) {
               if (err.code == 'failed-precondition') {
@@ -300,7 +300,7 @@
               }
           });
 
-        const APP_VERSION = '7.5.0';
+        const APP_VERSION = '7.6.1';
         const BUILD_DATE = '2026-09-30';
         const HOURLY_RATE = 200;
         const RECYCLING_FEE = 75;
@@ -416,6 +416,7 @@
         const favoritesFilterButton = document.getElementById('favoritesFilterButton');
         const recyclingToggle = document.getElementById('recyclingToggle');
         const materialsMarkup = document.getElementById('materialsMarkup');
+        
         const customerName = document.getElementById('customerName');
         const salesManagerName = document.getElementById('salesManagerName');
         const savedEstimates = document.getElementById('savedEstimates');
@@ -423,12 +424,24 @@
         async function refreshSavedEstimateList(selectedId = '') {
             savedEstimates.innerHTML = '<option value="">Syncing with cloud...</option>';
             try {
-                // By default, get() tries to fetch from server, falls back to cache if offline
+                // AUTO-PURGE LOGIC: 60 Days Cutoff
+                const cutoff = Date.now() - (60 * 24 * 60 * 60 * 1000); 
                 const querySnapshot = await db.collection("quotes").get();
                 savedEstimates.innerHTML = '<option value="">Saved quotes...</option>';
                 const quotes = [];
+
                 querySnapshot.forEach((doc) => {
-                    quotes.push(doc.data());
+                    const data = doc.data();
+                    const quoteDate = data.updatedAt?.toMillis ? data.updatedAt.toMillis() : (data.updatedAt || 0);
+
+                    // Auto-delete quotes older than 60 days
+                    if (quoteDate > 0 && quoteDate < cutoff) {
+                        db.collection("quotes").doc(doc.id).delete().catch(err => {
+                            console.error("Auto-cleanup error:", err);
+                        });
+                    } else {
+                        quotes.push(data);
+                    }
                 });
 
                 quotes.sort((a, b) => a.label.localeCompare(b.label))
@@ -501,9 +514,19 @@
                 return;
             }
             
-            const existingId = savedEstimates.value;
-            const id = existingId || `estimate-${Date.now()}`;
+            let id = savedEstimates.value;
             const label = data.customerName;
+
+            // OVERWRITE PROTECTION LOGIC
+            if (id) {
+                const overwrite = window.confirm(`Overwrite the existing quote for ${label}?\n\n• Click OK to UPDATE the original.\n• Click Cancel to SAVE AS A NEW COPY.`);
+                if (!overwrite) {
+                    id = `estimate-${Date.now()}`; // Fork to a new quote
+                    savedEstimates.value = ''; 
+                }
+            } else {
+                id = `estimate-${Date.now()}`;
+            }
 
             const quoteDocument = {
                 id,
@@ -514,11 +537,10 @@
                     recycling: recyclingToggle.value,
                     markup: materialsMarkup.value
                 },
-                updatedAt: Date.now()
+                updatedAt: new Date() // Required format for auto-delete
             };
 
             try {
-                // If offline, Firestore queues this and resolves immediately
                 await db.collection("quotes").doc(id).set(quoteDocument);
                 alert(`Saved ${label} to the cloud! (Will sync when online if currently offline)`);
                 await refreshSavedEstimateList(id);
@@ -570,6 +592,7 @@
             try {
                 await db.collection("quotes").doc(id).delete();
                 await refreshSavedEstimateList();
+                clearQuote();
             } catch (error) {
                 console.error("Cloud delete failed: ", error);
                 alert("Failed to delete estimate from cloud.");
@@ -801,6 +824,8 @@
         function clearQuote() {
             if (quoteCart.length === 0 || window.confirm('Clear the entire estimate?')) {
                 quoteCart = [];
+                savedEstimates.value = '';
+                customerName.value = '';
                 renderCatalog();
                 renderQuote();
             }
@@ -869,6 +894,8 @@
         });
 
         searchInput.addEventListener('input', renderCatalog);
+        customerName.addEventListener('input', renderQuote);
+        salesManagerName.addEventListener('input', renderQuote);
 
         favoritesFilterButton.addEventListener('click', () => {
             favoritesOnly = !favoritesOnly;
@@ -938,9 +965,6 @@
 
         applyProjectData();
         refreshSavedEstimateList();
-        
-        customerName.addEventListener('input', renderQuote);
-        salesManagerName.addEventListener('input', renderQuote);
         
         renderQuote();
         loadCatalog();
