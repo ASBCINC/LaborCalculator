@@ -89,6 +89,8 @@
                 border-bottom: 2px solid black;
             }
 
+            #projectTools, #savedEstimateControls { display: none !important; }
+            #projectInfoPrint, #notesPrint, #scopePrint, #categoryBreakdown { display: block !important; }
             #quoteList { overflow: visible !important; }
             #quoteList > div {
                 background: white !important;
@@ -167,7 +169,34 @@
                 </button>
             </div>
 
+            <div id="projectTools" class="p-4 border-b border-gray-800 space-y-3 shrink-0 print-hide">
+                <div class="grid grid-cols-2 gap-2">
+                    <input id="customerName" type="text" placeholder="Customer name" class="bg-gray-900 border border-gray-700 rounded-lg p-2.5 text-sm">
+                    <input id="projectName" type="text" placeholder="Project name" class="bg-gray-900 border border-gray-700 rounded-lg p-2.5 text-sm">
+                    <input id="projectLocation" type="text" placeholder="Location" class="bg-gray-900 border border-gray-700 rounded-lg p-2.5 text-sm">
+                    <input id="salespersonName" type="text" placeholder="Salesperson" class="bg-gray-900 border border-gray-700 rounded-lg p-2.5 text-sm">
+                    <input id="proposalNumber" type="text" placeholder="Proposal number" class="bg-gray-900 border border-gray-700 rounded-lg p-2.5 text-sm">
+                    <input id="projectDate" type="date" class="bg-gray-900 border border-gray-700 rounded-lg p-2.5 text-sm">
+                </div>
+                <textarea id="projectNotes" rows="2" placeholder="Project notes" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2.5 text-sm"></textarea>
+                <div class="grid grid-cols-2 gap-2">
+                    <button type="button" onclick="saveEstimate()" class="bg-brandGold text-bgDark font-bold rounded-lg py-2.5">Save Estimate</button>
+                    <button type="button" onclick="generateScope()" class="border border-brandGold text-brandGold font-bold rounded-lg py-2.5">Generate Scope</button>
+                </div>
+                <div id="savedEstimateControls" class="flex gap-2">
+                    <select id="savedEstimates" class="flex-1 min-w-0 bg-gray-900 border border-gray-700 rounded-lg p-2.5 text-sm">
+                        <option value="">Saved estimates...</option>
+                    </select>
+                    <button type="button" onclick="loadEstimate()" class="bg-gray-800 border border-gray-700 rounded-lg px-3">Load</button>
+                    <button type="button" onclick="deleteEstimate()" class="bg-gray-800 border border-red-800 text-red-300 rounded-lg px-3">Delete</button>
+                </div>
+            </div>
+
+            <div id="projectInfoPrint" class="hidden px-4 pt-4 text-sm"></div>
             <div id="quoteList" class="flex-1 overflow-y-auto p-4 space-y-3"></div>
+            <div id="categoryBreakdown" class="px-4 pb-3"></div>
+            <div id="notesPrint" class="hidden px-4 pb-3 text-sm"></div>
+            <div id="scopePrint" class="hidden px-4 pb-4 text-sm"></div>
 
             <div class="p-4 sm:p-6 bg-gray-900 border-t border-gray-800 shrink-0 safe-bottom">
                 <div class="grid grid-cols-2 gap-3 mb-3 print-hide">
@@ -962,6 +991,135 @@
         const materialsMarkup = document.getElementById('materialsMarkup');
         const crewSize = document.getElementById('crewSize');
         const workdayHours = document.getElementById('workdayHours');
+        const customerName = document.getElementById('customerName');
+        const projectName = document.getElementById('projectName');
+        const projectLocation = document.getElementById('projectLocation');
+        const salespersonName = document.getElementById('salespersonName');
+        const proposalNumber = document.getElementById('proposalNumber');
+        const projectDate = document.getElementById('projectDate');
+        const projectNotes = document.getElementById('projectNotes');
+        const savedEstimates = document.getElementById('savedEstimates');
+        let generatedScope = '';
+
+        function getSavedEstimateMap() {
+            try { return JSON.parse(localStorage.getItem('asbcSavedEstimates') || '{}'); }
+            catch (error) { return {}; }
+        }
+
+        function refreshSavedEstimateList(selectedId = '') {
+            const saved = getSavedEstimateMap();
+            savedEstimates.innerHTML = '<option value="">Saved estimates...</option>';
+            Object.values(saved)
+                .sort((a, b) => a.label.localeCompare(b.label))
+                .forEach(record => {
+                    const option = document.createElement('option');
+                    option.value = record.id;
+                    option.textContent = record.label;
+                    savedEstimates.appendChild(option);
+                });
+            savedEstimates.value = selectedId;
+        }
+
+        function currentProjectData() {
+            return {
+                customerName: customerName.value.trim(),
+                projectName: projectName.value.trim(),
+                projectLocation: projectLocation.value.trim(),
+                salespersonName: salespersonName.value.trim(),
+                proposalNumber: proposalNumber.value.trim(),
+                projectDate: projectDate.value,
+                projectNotes: projectNotes.value.trim()
+            };
+        }
+
+        function applyProjectData(data = {}) {
+            customerName.value = data.customerName || '';
+            projectName.value = data.projectName || '';
+            projectLocation.value = data.projectLocation || '';
+            salespersonName.value = data.salespersonName || '';
+            proposalNumber.value = data.proposalNumber || '';
+            projectDate.value = data.projectDate || new Date().toISOString().slice(0, 10);
+            projectNotes.value = data.projectNotes || '';
+        }
+
+        function createProposalNumber() {
+            const year = new Date().getFullYear();
+            const key = `asbcProposalSequence-${year}`;
+            const next = (Number(localStorage.getItem(key)) || 0) + 1;
+            localStorage.setItem(key, String(next));
+            return `ASBC-${year}-${String(next).padStart(3, '0')}`;
+        }
+
+        function saveEstimate() {
+            const data = currentProjectData();
+            if (!data.customerName && !data.projectName) {
+                alert('Enter a customer or project name before saving.');
+                return;
+            }
+            if (!data.proposalNumber) {
+                data.proposalNumber = createProposalNumber();
+                proposalNumber.value = data.proposalNumber;
+            }
+            const saved = getSavedEstimateMap();
+            const existingId = savedEstimates.value;
+            const id = existingId || `estimate-${Date.now()}`;
+            const label = [data.customerName, data.projectName].filter(Boolean).join(' - ');
+            saved[id] = {
+                id,
+                label,
+                project: data,
+                quoteCart,
+                generatedScope,
+                options: {
+                    recycling: recyclingToggle.value,
+                    markup: materialsMarkup.value,
+                    crew: crewSize.value,
+                    workday: workdayHours.value
+                }
+            };
+            localStorage.setItem('asbcSavedEstimates', JSON.stringify(saved));
+            refreshSavedEstimateList(id);
+            alert(`Saved: ${label}`);
+        }
+
+        function loadEstimate() {
+            const id = savedEstimates.value;
+            if (!id) return alert('Choose a saved estimate first.');
+            const record = getSavedEstimateMap()[id];
+            if (!record) return alert('Saved estimate not found.');
+            quoteCart = Array.isArray(record.quoteCart) ? record.quoteCart : [];
+            applyProjectData(record.project);
+            generatedScope = record.generatedScope || '';
+            recyclingToggle.value = record.options?.recycling || 'no';
+            materialsMarkup.value = record.options?.markup || '0';
+            crewSize.value = record.options?.crew || '2';
+            workdayHours.value = record.options?.workday || '8';
+            renderCatalog();
+            renderQuote();
+        }
+
+        function deleteEstimate() {
+            const id = savedEstimates.value;
+            if (!id) return alert('Choose a saved estimate first.');
+            const saved = getSavedEstimateMap();
+            const label = saved[id]?.label || 'this estimate';
+            if (!window.confirm(`Delete ${label}?`)) return;
+            delete saved[id];
+            localStorage.setItem('asbcSavedEstimates', JSON.stringify(saved));
+            refreshSavedEstimateList();
+        }
+
+        function generateScope() {
+            if (!quoteCart.length) return alert('Add products before generating a scope.');
+            const lines = quoteCart.map(item => {
+                const qtyText = item.qty === 1 ? 'one' : item.qty;
+                return `Install and configure ${qtyText} ${item.name}`;
+            });
+            generatedScope = `${lines.join('; ')}. Complete system setup, testing, software updates where applicable, and customer orientation.`;
+            renderQuote();
+            toggleEstimate(true);
+        }
+
 
         function escapeHtml(value) {
             return String(value).replace(/[&<>'"]/g, character => ({
@@ -1154,6 +1312,36 @@
             document.getElementById('materialsRow').classList.toggle('hidden', materialsFee === 0);
             document.getElementById('materialsLabel').textContent = `Materials fee (${markupPercent}%)`;
             document.getElementById('materialsAmount').textContent = currencyFormatter.format(materialsFee);
+
+            const categoryTotals = {};
+            quoteCart.forEach(item => {
+                categoryTotals[item.category] = (categoryTotals[item.category] || 0) + (item.totalHours * item.qty);
+            });
+            const breakdown = document.getElementById('categoryBreakdown');
+            breakdown.innerHTML = quoteCart.length
+                ? '<div class="text-xs uppercase tracking-wider text-textMuted mb-2">Labor by category</div>' +
+                  Object.entries(categoryTotals)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([category, hours]) => `<div class="flex justify-between text-sm"><span>${escapeHtml(category)}</span><span class="font-mono">${hours.toFixed(2)} hrs</span></div>`)
+                    .join('')
+                : '';
+
+            const data = currentProjectData();
+            document.getElementById('projectInfoPrint').innerHTML = `
+                <div class="grid grid-cols-2 gap-x-6 gap-y-1 mb-4 border-b border-gray-300 pb-3">
+                    <div><strong>Customer:</strong> ${escapeHtml(data.customerName || '—')}</div>
+                    <div><strong>Project:</strong> ${escapeHtml(data.projectName || '—')}</div>
+                    <div><strong>Location:</strong> ${escapeHtml(data.projectLocation || '—')}</div>
+                    <div><strong>Salesperson:</strong> ${escapeHtml(data.salespersonName || '—')}</div>
+                    <div><strong>Proposal:</strong> ${escapeHtml(data.proposalNumber || '—')}</div>
+                    <div><strong>Date:</strong> ${escapeHtml(data.projectDate || '—')}</div>
+                </div>`;
+            document.getElementById('notesPrint').innerHTML = data.projectNotes
+                ? `<h3 class="font-bold mb-1">Project Notes</h3><p class="whitespace-pre-wrap">${escapeHtml(data.projectNotes)}</p>`
+                : '';
+            document.getElementById('scopePrint').innerHTML = generatedScope
+                ? `<h3 class="font-bold mb-1">Scope of Work</h3><p>${escapeHtml(generatedScope)}</p>`
+                : '';
         }
 
         function toggleFavorite(itemId) {
@@ -1261,8 +1449,14 @@
         });
 
         buildCategoryButtons();
+        applyProjectData({ projectDate: new Date().toISOString().slice(0, 10) });
+        refreshSavedEstimateList();
+        [customerName, projectName, projectLocation, salespersonName, proposalNumber, projectDate, projectNotes].forEach(control => {
+            control.addEventListener('input', renderQuote);
+        });
         renderCatalog();
         renderQuote();
     </script>
 </body>
 </html>
+
