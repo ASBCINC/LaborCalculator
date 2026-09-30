@@ -1,893 +1,1268 @@
 <!DOCTYPE html>
 <html lang="en">
- <head>
-  <meta charset="utf-8"/>
-  <meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
-  <meta content="#0a0a0a" name="theme-color"/>
-  <title>
-   ASBC Labor Calculator
-  </title>
-  <script src="https://cdn.tailwindcss.com">
-  </script>
-  <script>
-   tailwind.config = {
-  theme: {
-    extend: {
-      colors: {
-        gold: '#d4af37',
-        ink: '#0a0a0a',
-        panel: '#171717',
-        muted: '#a3a3a3'
-      }
-    }
-  }
-}
-  </script>
-  <style>
-   html{-webkit-text-size-adjust:100%}button,input,select{touch-action:manipulation}.active{background:#d4af37!important;color:#0a0a0a!important;border-color:#d4af37!important}.open{transform:translateY(0)!important}.safe{padding-bottom:env(safe-area-inset-bottom)}@media print{header,#catalog,#mobileBar,#backdrop,.no-print{display:none!important}main{display:block!important;height:auto!important}#estimate{position:static!important;transform:none!important;width:100%!important;height:auto!important;background:white!important;color:black!important}#cart{overflow:visible!important}#cart>div{background:white!important;color:black!important;border:1px solid #ddd!important}}
-  </style>
- </head>
- <body class="bg-ink text-white h-screen overflow-hidden font-sans">
-  <header class="h-16 bg-panel border-b border-gray-800 px-4 flex items-center justify-between">
-   <h1 class="text-xl sm:text-2xl">
-    <b class="text-gold">
-     ASBC
-    </b>
-    Labor Calculator
-   </h1>
-   <span class="text-sm text-muted">
-    $200/hr
-   </span>
-  </header>
-  <main class="h-[calc(100vh-4rem)] flex overflow-hidden relative">
-   <section class="w-full md:w-2/3 flex flex-col pb-20 md:pb-0" id="catalog">
-    <div class="p-3 bg-panel border-b border-gray-800 space-y-3">
-     <div class="flex gap-2">
-      <input class="flex-1 min-w-0 bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-base outline-none focus:border-gold" id="search" placeholder="Search 102 products..." type="search"/>
-      <button class="bg-gray-800 border border-gray-700 rounded-xl px-4" onclick="showCustom(true)">
-       + Custom
-      </button>
-     </div>
-     <div class="flex gap-2 overflow-x-auto pb-1" id="chips">
-     </div>
-     <div class="flex justify-between text-xs text-muted">
-      <span id="count">
-      </span>
-      <button class="border border-gray-700 rounded-full px-3 py-1.5" id="favFilter">
-       ☆ Favorites
-      </button>
-     </div>
-    </div>
-    <div class="flex-1 overflow-y-auto p-3 grid grid-cols-1 lg:grid-cols-2 gap-3 content-start" id="grid">
-    </div>
-   </section>
-   <section class="fixed md:static inset-x-0 bottom-0 z-40 w-full md:w-1/3 h-[88vh] md:h-auto bg-panel flex flex-col border-l border-gray-800 rounded-t-2xl md:rounded-none translate-y-full md:translate-y-0 transition-transform" id="estimate">
-    <div class="p-4 border-b border-gray-800 flex justify-between items-center">
-     <div>
-      <h2 class="text-xl font-semibold text-gold">
-       Current Estimate
-      </h2>
-      <p class="text-xs text-muted" id="itemCount">
-       0 items
-      </p>
-     </div>
-     <button class="md:hidden w-11 h-11 bg-gray-800 rounded-full" onclick="showEstimate(false)">
-      ✕
-     </button>
-    </div>
-    <div class="flex-1 overflow-y-auto p-4 space-y-3" id="cart">
-    </div>
-    <div class="p-4 bg-gray-900 border-t border-gray-800 safe">
-     <div class="grid grid-cols-2 gap-2 mb-3 no-print">
-      <label class="text-xs text-muted">
-       Crew size
-       <select class="mt-1 w-full bg-ink border border-gray-700 rounded-lg p-2 text-base" id="crew" onchange="renderCart()">
-        <option>
-         1
-        </option>
-        <option selected="">
-         2
-        </option>
-        <option>
-         3
-        </option>
-        <option>
-         4
-        </option>
-       </select>
-      </label>
-      <label class="text-xs text-muted">
-       Workday
-       <select class="mt-1 w-full bg-ink border border-gray-700 rounded-lg p-2 text-base" id="day" onchange="renderCart()">
-        <option value="8">
-         8 hours
-        </option>
-        <option value="10">
-         10 hours
-        </option>
-       </select>
-      </label>
-      <label class="text-xs text-muted">
-       Recycling
-       <select class="mt-1 w-full bg-ink border border-gray-700 rounded-lg p-2 text-base" id="recycle" onchange="renderCart()">
-        <option value="0">
-         No
-        </option>
-        <option value="75">
-         Yes (+$75)
-        </option>
-       </select>
-      </label>
-      <label class="text-xs text-muted">
-       Materials
-       <select class="mt-1 w-full bg-ink border border-gray-700 rounded-lg p-2 text-base" id="markup" onchange="renderCart()">
-        <option>
-         0
-        </option>
-        <option>
-         5
-        </option>
-        <option>
-         10
-        </option>
-       </select>
-      </label>
-     </div>
-     <div class="space-y-1 text-sm">
-      <div class="flex justify-between text-muted">
-       <span>
-        Install hours
-       </span>
-       <b class="text-white" id="install">
-       </b>
-      </div>
-      <div class="flex justify-between text-muted">
-       <span>
-        Programming hours
-       </span>
-       <b class="text-white" id="program">
-       </b>
-      </div>
-      <div class="flex justify-between text-muted">
-       <span>
-        Total hours
-       </span>
-       <b class="text-white" id="hours">
-       </b>
-      </div>
-      <div class="flex justify-between text-muted">
-       <span>
-        Estimated crew days
-       </span>
-       <b class="text-white" id="days">
-       </b>
-      </div>
-     </div>
-     <div class="flex justify-between items-end border-t border-gray-700 mt-3 pt-3">
-      <span>
-       TOTAL
-      </span>
-      <b class="text-gold text-3xl" id="total">
-      </b>
-     </div>
-     <div class="grid grid-cols-2 gap-2 mt-3 no-print">
-      <button class="border border-gray-700 rounded-xl py-3" onclick="clearCart()">
-       Clear
-      </button>
-      <button class="bg-gold text-ink font-bold rounded-xl py-3" onclick="print()">
-       Print / PDF
-      </button>
-     </div>
-    </div>
-   </section>
-  </main>
-  <button class="md:hidden fixed left-3 right-3 bottom-3 z-30 bg-gold text-ink rounded-2xl px-4 py-3 font-bold flex justify-between safe" id="mobileBar" onclick="showEstimate(true)">
-   <span>
-    <span id="barQty">
-     0
-    </span>
-    items ·
-    <span id="barHours">
-     0.00
-    </span>
-    hrs
-   </span>
-   <span id="barTotal">
-   </span>
-  </button>
-  <div class="hidden md:hidden fixed inset-0 z-30 bg-black/70" id="backdrop" onclick="showEstimate(false)">
-  </div>
-  <div class="hidden fixed inset-0 z-50 bg-black/80 p-4 items-center justify-center" id="modal">
-   <div class="bg-panel border border-gray-700 rounded-2xl p-5 w-full max-w-md">
-    <div class="flex justify-between mb-4">
-     <h3 class="text-gold font-bold text-lg">
-      Add Custom Labor
-     </h3>
-     <button onclick="showCustom(false)">
-      ✕
-     </button>
-    </div>
-    <input class="w-full bg-gray-900 border border-gray-700 rounded-xl p-3 mb-3 text-base" id="customName" placeholder="Description"/>
-    <div class="grid grid-cols-2 gap-3">
-     <input class="bg-gray-900 border border-gray-700 rounded-xl p-3 min-w-0" id="customInstall" inputmode="decimal" placeholder="Install hrs" step=".25" type="number"/>
-     <input class="bg-gray-900 border border-gray-700 rounded-xl p-3 min-w-0" id="customProgram" inputmode="decimal" placeholder="Program hrs" step=".25" type="number"/>
-    </div>
-    <button class="w-full mt-4 bg-gold text-ink font-bold rounded-xl py-3" onclick="addCustom()">
-     Add to Estimate
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0A0A0A">
+    <title>Labor Calculator | ASBC</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brandGold: '#D4AF37',
+                        bgDark: '#0A0A0A',
+                        bgPanel: '#171717',
+                        textMuted: '#A3A3A3'
+                    }
+                }
+            }
+        };
+    </script>
+
+    <style>
+        html { -webkit-text-size-adjust: 100%; }
+        body { overscroll-behavior: none; }
+        button, input, select { touch-action: manipulation; }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0A0A0A; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #D4AF37; }
+
+        .category-active,
+        .favorites-active {
+            background: #D4AF37 !important;
+            border-color: #D4AF37 !important;
+            color: #0A0A0A !important;
+        }
+
+        .estimate-open { transform: translateY(0) !important; }
+        .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+
+        @media print {
+            body {
+                background: white !important;
+                color: black !important;
+                height: auto !important;
+                overflow: visible !important;
+            }
+
+            header,
+            #catalogPanel,
+            #mobileQuoteBar,
+            #estimateBackdrop,
+            #closeEstimateButton,
+            #customItemModal,
+            .print-hide {
+                display: none !important;
+            }
+
+            main {
+                display: block !important;
+                height: auto !important;
+                overflow: visible !important;
+            }
+
+            #estimatePanel {
+                position: static !important;
+                display: flex !important;
+                transform: none !important;
+                width: 100% !important;
+                height: auto !important;
+                max-height: none !important;
+                background: white !important;
+                box-shadow: none !important;
+                border: 0 !important;
+            }
+
+            #estimatePanel::before {
+                content: "ASBC Project Labor Estimate";
+                display: block;
+                font-size: 24px;
+                font-weight: bold;
+                text-align: center;
+                margin-bottom: 20px;
+                padding-bottom: 10px;
+                border-bottom: 2px solid black;
+            }
+
+            #quoteList { overflow: visible !important; }
+            #quoteList > div {
+                background: white !important;
+                border: 1px solid #ddd !important;
+            }
+            * { color: black !important; }
+        }
+    </style>
+</head>
+
+<body class="bg-bgDark text-white h-screen overflow-hidden font-sans">
+    <header class="h-16 bg-bgPanel border-b border-gray-800 px-3 sm:px-4 flex items-center justify-between shadow-md">
+        <h1 class="text-lg sm:text-2xl font-light tracking-wide truncate">
+            <span class="text-brandGold font-bold">ASBC</span> Labor Calculator
+        </h1>
+        <div class="text-xs sm:text-sm text-textMuted whitespace-nowrap ml-2">$200/hr</div>
+    </header>
+
+    <main class="h-[calc(100vh-4rem)] flex overflow-hidden relative">
+        <section id="catalogPanel" class="w-full md:w-2/3 flex flex-col border-r border-gray-800 pb-20 md:pb-0">
+            <div class="p-3 sm:p-4 bg-bgPanel border-b border-gray-800 space-y-3 shrink-0">
+                <div class="flex gap-2">
+                    <input
+                        id="searchInput"
+                        type="search"
+                        autocomplete="off"
+                        placeholder="Search 102 products..."
+                        class="flex-1 min-w-0 bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-base outline-none focus:border-brandGold focus:ring-1 focus:ring-brandGold"
+                    >
+                    <button
+                        type="button"
+                        onclick="toggleCustomModal(true)"
+                        class="min-h-12 bg-gray-800 border border-gray-700 rounded-xl px-3 sm:px-4 font-medium hover:bg-brandGold hover:text-bgDark"
+                    >
+                        + Custom
+                    </button>
+                </div>
+
+                <div id="categoryButtons" class="flex gap-2 overflow-x-auto pb-1"></div>
+
+                <div class="flex justify-between items-center text-xs text-textMuted">
+                    <span id="resultCount">0 products</span>
+                    <button
+                        id="favoritesFilterButton"
+                        type="button"
+                        class="border border-gray-700 rounded-full px-3 py-1.5"
+                    >
+                        ☆ Favorites
+                    </button>
+                </div>
+            </div>
+
+            <div
+                id="productGrid"
+                class="flex-1 overflow-y-auto p-3 sm:p-4 grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 content-start"
+            ></div>
+        </section>
+
+        <section
+            id="estimatePanel"
+            class="fixed md:static inset-x-0 bottom-0 z-40 md:z-auto w-full md:w-1/3 h-[88vh] md:h-auto bg-bgPanel flex flex-col shadow-2xl md:shadow-none rounded-t-2xl md:rounded-none border-t md:border-t-0 border-gray-700 translate-y-full md:translate-y-0 transition-transform duration-300"
+        >
+            <div class="p-4 border-b border-gray-800 flex justify-between items-center shrink-0">
+                <div>
+                    <h2 class="text-xl font-semibold text-brandGold">Current Estimate</h2>
+                    <p id="quoteItemCount" class="text-xs text-textMuted">0 items</p>
+                </div>
+                <button
+                    id="closeEstimateButton"
+                    type="button"
+                    onclick="toggleEstimate(false)"
+                    class="md:hidden w-11 h-11 bg-gray-800 rounded-full text-xl"
+                    aria-label="Close estimate"
+                >
+                    ×
+                </button>
+            </div>
+
+            <div id="quoteList" class="flex-1 overflow-y-auto p-4 space-y-3"></div>
+
+            <div class="p-4 sm:p-6 bg-gray-900 border-t border-gray-800 shrink-0 safe-bottom">
+                <div class="grid grid-cols-2 gap-3 mb-3 print-hide">
+                    <label class="text-xs text-textMuted">
+                        Crew size
+                        <select id="crewSize" class="mt-1 w-full bg-bgDark border border-gray-700 rounded-lg p-2.5 text-base">
+                            <option value="1">1 tech</option>
+                            <option value="2" selected>2 techs</option>
+                            <option value="3">3 techs</option>
+                            <option value="4">4 techs</option>
+                        </select>
+                    </label>
+
+                    <label class="text-xs text-textMuted">
+                        Workday
+                        <select id="workdayHours" class="mt-1 w-full bg-bgDark border border-gray-700 rounded-lg p-2.5 text-base">
+                            <option value="8" selected>8 hours</option>
+                            <option value="10">10 hours</option>
+                        </select>
+                    </label>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 mb-4 print-hide">
+                    <label class="text-xs text-textMuted">
+                        Recycling
+                        <select id="recyclingToggle" class="mt-1 w-full bg-bgDark border border-gray-700 rounded-lg p-2.5 text-base">
+                            <option value="no">No</option>
+                            <option value="yes">Yes (+$75)</option>
+                        </select>
+                    </label>
+
+                    <label class="text-xs text-textMuted">
+                        Materials fee
+                        <select id="materialsMarkup" class="mt-1 w-full bg-bgDark border border-gray-700 rounded-lg p-2.5 text-base">
+                            <option value="0">0%</option>
+                            <option value="5">5%</option>
+                            <option value="10">10%</option>
+                        </select>
+                    </label>
+                </div>
+
+                <div class="space-y-1.5 text-sm mb-3">
+                    <div class="flex justify-between text-textMuted">
+                        <span>Install hours</span>
+                        <span id="installTotal" class="text-white font-mono">0.00</span>
+                    </div>
+                    <div class="flex justify-between text-textMuted">
+                        <span>Programming hours</span>
+                        <span id="programmingTotal" class="text-white font-mono">0.00</span>
+                    </div>
+                    <div class="flex justify-between text-textMuted">
+                        <span>Total labor hours</span>
+                        <span id="hoursTotal" class="text-white font-mono">0.00</span>
+                    </div>
+                    <div class="flex justify-between text-textMuted">
+                        <span>Estimated crew days</span>
+                        <span id="crewDaysTotal" class="text-white font-mono">0.00</span>
+                    </div>
+                    <div id="recyclingRow" class="hidden flex justify-between text-brandGold">
+                        <span>Recycling fee</span>
+                        <span>$75.00</span>
+                    </div>
+                    <div id="materialsRow" class="hidden flex justify-between text-brandGold">
+                        <span id="materialsLabel">Materials fee</span>
+                        <span id="materialsAmount">$0.00</span>
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-end border-t border-gray-700 pt-3 mb-3">
+                    <span class="uppercase tracking-wider text-textMuted">Total</span>
+                    <span id="priceTotal" class="text-2xl sm:text-3xl font-bold text-brandGold font-mono">$0.00</span>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2 print-hide">
+                    <button
+                        type="button"
+                        onclick="clearQuote()"
+                        class="border border-gray-700 font-semibold py-3 rounded-xl hover:border-red-500"
+                    >
+                        Clear
+                    </button>
+                    <button
+                        type="button"
+                        onclick="window.print()"
+                        class="bg-brandGold text-bgDark font-bold py-3 rounded-xl hover:bg-yellow-500"
+                    >
+                        Print / PDF
+                    </button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <button
+        id="mobileQuoteBar"
+        type="button"
+        onclick="toggleEstimate(true)"
+        class="md:hidden fixed z-30 left-3 right-3 bottom-3 bg-brandGold text-bgDark rounded-2xl shadow-2xl px-4 py-3 flex items-center justify-between font-bold safe-bottom"
+    >
+        <span><span id="mobileItemCount">0</span> items · <span id="mobileHours">0.00</span> hrs</span>
+        <span id="mobilePrice" class="font-mono text-lg">$0.00</span>
     </button>
-   </div>
-  </div>
-  <script>
-   const RATE = 200,
-  CATALOG = [{
-    "category": "Access Control",
-    "name": "Complete UniFi Single-Door Access System",
-    "installHours": 10.0,
-    "programmingHours": 2.0
-  }, {
-    "category": "Access Control",
-    "name": "UniFi Access Door Hub",
-    "installHours": 4.0,
-    "programmingHours": 1.0
-  }, {
-    "category": "Access Control",
-    "name": "UniFi Access Door Hub Mini",
-    "installHours": 3.0,
-    "programmingHours": 0.5
-  }, {
-    "category": "Access Control",
-    "name": "UniFi Access Elevator Hub",
-    "installHours": 8.0,
-    "programmingHours": 2.0
-  }, {
-    "category": "Access Control",
-    "name": "UniFi Access G3 Intercom / Door Station",
-    "installHours": 3.0,
-    "programmingHours": 1.0
-  }, {
-    "category": "Access Control",
-    "name": "UniFi Access G3 Reader",
-    "installHours": 1.5,
-    "programmingHours": 0.5
-  }, {
-    "category": "Access Control",
-    "name": "UniFi Access G3 Reader Pro",
-    "installHours": 2.0,
-    "programmingHours": 1.0
-  }, {
-    "category": "Access Control",
-    "name": "UniFi Access Gate Hub",
-    "installHours": 6.0,
-    "programmingHours": 1.5
-  }, {
-    "category": "Access Control",
-    "name": "UniFi Access Intercom Viewer",
-    "installHours": 1.0,
-    "programmingHours": 0.5
-  }, {
-    "category": "Access Control",
-    "name": "UniFi Access Ultra",
-    "installHours": 3.0,
-    "programmingHours": 0.5
-  }, {
-    "category": "Access Control",
-    "name": "UniFi Electric Strike Lock",
-    "installHours": 3.0,
-    "programmingHours": 0.0
-  }, {
-    "category": "Access Control",
-    "name": "UniFi Enterprise Access Hub",
-    "installHours": 8.0,
-    "programmingHours": 2.0
-  }, {
-    "category": "Access Control",
-    "name": "UniFi Entry Sensor",
-    "installHours": 0.75,
-    "programmingHours": 0.25
-  }, {
-    "category": "Access Control",
-    "name": "UniFi Magnetic Lock",
-    "installHours": 3.0,
-    "programmingHours": 0.0
-  }, {
-    "category": "Access Control",
-    "name": "UniFi Push-to-Exit Button",
-    "installHours": 1.0,
-    "programmingHours": 0.0
-  }, {
-    "category": "Bang & Olufsen Audio",
-    "name": "Adopt Speaker into Bang & Olufsen App",
-    "installHours": 0.0,
-    "programmingHours": 0.25
-  }, {
-    "category": "Bang & Olufsen Audio",
-    "name": "Bang & Olufsen Speaker Floor Stand",
-    "installHours": 1.0,
-    "programmingHours": 0.25
-  }, {
-    "category": "Bang & Olufsen Audio",
-    "name": "Bang & Olufsen Speaker Wall/Cieling Bracket",
-    "installHours": 1.5,
-    "programmingHours": 0.25
-  }, {
-    "category": "Bang & Olufsen Audio",
-    "name": "Beoconnect Core",
-    "installHours": 1.5,
-    "programmingHours": 0.5
-  }, {
-    "category": "Bang & Olufsen Audio",
-    "name": "Beogram Turntable",
-    "installHours": 1.0,
-    "programmingHours": 0.5
-  }, {
-    "category": "Bang & Olufsen Audio",
-    "name": "Beolab 18 (Pair)",
-    "installHours": 3.0,
-    "programmingHours": 0.5
-  }, {
-    "category": "Bang & Olufsen Audio",
-    "name": "Beolab 19",
-    "installHours": 1.5,
-    "programmingHours": 0.5
-  }, {
-    "category": "Bang & Olufsen Audio",
-    "name": "Beolab 28 (Pair)",
-    "installHours": 4.0,
-    "programmingHours": 1.0
-  }, {
-    "category": "Bang & Olufsen Audio",
-    "name": "Beolab 50 (Pair)",
-    "installHours": 8.0,
-    "programmingHours": 1.5
-  }, {
-    "category": "Bang & Olufsen Audio",
-    "name": "Beolab 8 (Pair)",
-    "installHours": 2.0,
-    "programmingHours": 0.5
-  }, {
-    "category": "Bang & Olufsen Audio",
-    "name": "Beolab 90 (Pair)",
-    "installHours": 12.0,
-    "programmingHours": 1.5
-  }, {
-    "category": "Bang & Olufsen Audio",
-    "name": "Beoremote/Halo Setup",
-    "installHours": 0.5,
-    "programmingHours": 0.5
-  }, {
-    "category": "Bang & Olufsen Audio",
-    "name": "Beosound 9000 + Legacy Sources",
-    "installHours": 3.0,
-    "programmingHours": 1.5
-  }, {
-    "category": "Bang & Olufsen Audio",
-    "name": "Beosound A5",
-    "installHours": 0.5,
-    "programmingHours": 0.0
-  }, {
-    "category": "Bang & Olufsen Audio",
-    "name": "Beosound Balance",
-    "installHours": 0.75,
-    "programmingHours": 0.0
-  }, {
-    "category": "Bang & Olufsen Audio",
-    "name": "Beosound Level",
-    "installHours": 0.5,
-    "programmingHours": 0.0
-  }, {
-    "category": "Bang & Olufsen Audio",
-    "name": "Beosound Premiere",
-    "installHours": 2.0,
-    "programmingHours": 1.0
-  }, {
-    "category": "Bang & Olufsen Audio",
-    "name": "Beosound Shape — Large (21–40 Tiles)",
-    "installHours": 16.0,
-    "programmingHours": 2.5
-  }, {
-    "category": "Bang & Olufsen Audio",
-    "name": "Beosound Shape — Medium (11–20 Tiles)",
-    "installHours": 10.0,
-    "programmingHours": 1.5
-  }, {
-    "category": "Bang & Olufsen Audio",
-    "name": "Beosound Shape — Small (Up to 10 Tiles)",
-    "installHours": 6.0,
-    "programmingHours": 1.0
-  }, {
-    "category": "Bang & Olufsen Audio",
-    "name": "Beosound Stage",
-    "installHours": 1.5,
-    "programmingHours": 0.5
-  }, {
-    "category": "Bang & Olufsen Audio",
-    "name": "Beosound Theatre",
-    "installHours": 3.0,
-    "programmingHours": 1.0
-  }, {
-    "category": "Bang & Olufsen Audio",
-    "name": "Beosound Theatre Table Stand w/ SMI VESA",
-    "installHours": 3.0,
-    "programmingHours": 1.0
-  }, {
-    "category": "Bang & Olufsen Audio",
-    "name": "Beosound Theatre Wall Mount w/ SMI VESA",
-    "installHours": 5.0,
-    "programmingHours": 1.0
-  }, {
-    "category": "Bang & Olufsen Audio",
-    "name": "TV + Beosound Theatre Soundbar on Motorized Mount",
-    "installHours": 9.0,
-    "programmingHours": 1.0
-  }, {
-    "category": "Bang & Olufsen Audio",
-    "name": "Beovision Harmony 65/77/83",
-    "installHours": 4.0,
-    "programmingHours": 1.5
-  }, {
-    "category": "Bang & Olufsen Audio",
-    "name": "Beovision Harmony 97",
-    "installHours": 5.0,
-    "programmingHours": 2.0
-  }, {
-    "category": "Bang & Olufsen Audio",
-    "name": "Beovision Harmony Wall Mount w/ TV (Add-On)",
-    "installHours": 5.0,
-    "programmingHours": 1.0
-  }, {
-    "category": "Bang & Olufsen Audio",
-    "name": "CD Player Integration",
-    "installHours": 1.0,
-    "programmingHours": 0.5
-  }, {
-    "category": "Bang & Olufsen Audio",
-    "name": "Legacy/Existing Bang & Olufsen Integration",
-    "installHours": 3.0,
-    "programmingHours": 1.0
-  }, {
-    "category": "Bang & Olufsen Audio",
-    "name": "Origin Acoustics Celestial In-Ceiling Speaker",
-    "installHours": 0.5,
-    "programmingHours": 0.0
-  }, {
-    "category": "Bang & Olufsen Audio",
-    "name": "Speaker Calibration / ARC Tuning",
-    "installHours": 1.0,
-    "programmingHours": 1.0
-  }, {
-    "category": "Bang & Olufsen Audio",
-    "name": "Speaker Wire Concealment (Add-On)",
-    "installHours": 2.0,
-    "programmingHours": 0.0
-  }, {
-    "category": "Kaleidescape",
-    "name": "Strato C Movie Player",
-    "installHours": 1.0,
-    "programmingHours": 1.0
-  }, {
-    "category": "Kaleidescape",
-    "name": "Strato E Movie Player",
-    "installHours": 0.75,
-    "programmingHours": 0.75
-  }, {
-    "category": "Kaleidescape",
-    "name": "Strato K Movie Player",
-    "installHours": 1.0,
-    "programmingHours": 1.0
-  }, {
-    "category": "Kaleidescape",
-    "name": "Strato M Movie Player",
-    "installHours": 0.75,
-    "programmingHours": 0.75
-  }, {
-    "category": "Kaleidescape",
-    "name": "Strato V Movie Player",
-    "installHours": 1.0,
-    "programmingHours": 1.0
-  }, {
-    "category": "Kaleidescape",
-    "name": "Terra Prime 22TB Movie Server",
-    "installHours": 1.5,
-    "programmingHours": 1.0
-  }, {
-    "category": "Kaleidescape",
-    "name": "Terra Prime 48TB Movie Server",
-    "installHours": 2.0,
-    "programmingHours": 1.5
-  }, {
-    "category": "Kaleidescape",
-    "name": "Terra Prime 72TB Movie Server",
-    "installHours": 2.0,
-    "programmingHours": 1.5
-  }, {
-    "category": "Kaleidescape",
-    "name": "Terra Prime 8TB Movie Server",
-    "installHours": 1.5,
-    "programmingHours": 1.0
-  }, {
-    "category": "Kaleidescape",
-    "name": "Terra Prime 96TB Movie Server",
-    "installHours": 2.0,
-    "programmingHours": 1.5
-  }, {
-    "category": "Networking",
-    "name": "2-4 Pack Wireless Mesh",
-    "installHours": 1.0,
-    "programmingHours": 0.5
-  }, {
-    "category": "Networking",
-    "name": "Access Point Installation (Each)",
-    "installHours": 1.5,
-    "programmingHours": 0.75
-  }, {
-    "category": "Networking",
-    "name": "Access Point with Cable Run (Each)",
-    "installHours": 3.0,
-    "programmingHours": 0.75
-  }, {
-    "category": "Networking",
-    "name": "Add Network Device  (IE. Apple tv, Roku, WIFI  Device)",
-    "installHours": 0.5,
-    "programmingHours": 0.3
-  }, {
-    "category": "Networking",
-    "name": "Basic Switch Installation",
-    "installHours": 0.5,
-    "programmingHours": 0.0
-  }, {
-    "category": "Networking",
-    "name": "Large Network Rack Build",
-    "installHours": 16.0,
-    "programmingHours": 0.0
-  }, {
-    "category": "Networking",
-    "name": "Managed Switch Setup",
-    "installHours": 1.5,
-    "programmingHours": 1.0
-  }, {
-    "category": "Networking",
-    "name": "Medium Network Rack Build",
-    "installHours": 8.0,
-    "programmingHours": 0.0
-  }, {
-    "category": "Networking",
-    "name": "Router Replacement",
-    "installHours": 1.0,
-    "programmingHours": 0.0
-  }, {
-    "category": "Networking",
-    "name": "Small Network Rack Build",
-    "installHours": 4.0,
-    "programmingHours": 0.0
-  }, {
-    "category": "Networking",
-    "name": "WattBox Installation",
-    "installHours": 1.0,
-    "programmingHours": 0.5
-  }, {
-    "category": "Networking",
-    "name": "WattBox Programming",
-    "installHours": 0.0,
-    "programmingHours": 0.5
-  }, {
-    "category": "Project Management",
-    "name": "Projects $10K-$25K",
-    "installHours": 2.0,
-    "programmingHours": 0.0
-  }, {
-    "category": "Project Management",
-    "name": "Projects $25K-$75K",
-    "installHours": 4.0,
-    "programmingHours": 0.0
-  }, {
-    "category": "Project Management",
-    "name": "Projects $75K-$150K",
-    "installHours": 8.0,
-    "programmingHours": 0.0
-  }, {
-    "category": "Project Management",
-    "name": "Projects Over $150K",
-    "installHours": 16.0,
-    "programmingHours": 0.0
-  }, {
-    "category": "Project Management",
-    "name": "Projects Under $10K",
-    "installHours": 1.0,
-    "programmingHours": 0.0
-  }, {
-    "category": "Rack & Cabinet Work",
-    "name": "Cable Management (Per Device)",
-    "installHours": 0.2,
-    "programmingHours": 0.0
-  }, {
-    "category": "Rack & Cabinet Work",
-    "name": "Labeling & Documentation (Per Device)",
-    "installHours": 0.1,
-    "programmingHours": 0.0
-  }, {
-    "category": "Rack & Cabinet Work",
-    "name": "Power Conditioner Installation",
-    "installHours": 0.5,
-    "programmingHours": 0.0
-  }, {
-    "category": "Rack & Cabinet Work",
-    "name": "Rack Cleanup",
-    "installHours": 2.0,
-    "programmingHours": 0.0
-  }, {
-    "category": "Rack & Cabinet Work",
-    "name": "Rack Rebuild",
-    "installHours": 8.0,
-    "programmingHours": 0.0
-  }, {
-    "category": "Rack & Cabinet Work",
-    "name": "UPS Installation (Power Back-up)",
-    "installHours": 0.5,
-    "programmingHours": 0.0
-  }, {
-    "category": "Security Cameras",
-    "name": "Camera Programming (Each)",
-    "installHours": 0.25,
-    "programmingHours": 0.25
-  }, {
-    "category": "Security Cameras",
-    "name": "Difficult Access Camera",
-    "installHours": 3.0,
-    "programmingHours": 0.25
-  }, {
-    "category": "Security Cameras",
-    "name": "Exterior Camera",
-    "installHours": 2.0,
-    "programmingHours": 0.25
-  }, {
-    "category": "Security Cameras",
-    "name": "Interior Camera",
-    "installHours": 1.5,
-    "programmingHours": 0.25
-  }, {
-    "category": "Security Cameras",
-    "name": "NVR Setup",
-    "installHours": 2.0,
-    "programmingHours": 1.5
-  }, {
-    "category": "Security Cameras",
-    "name": "UniFi Protect Camera with Cable Run",
-    "installHours": 3.0,
-    "programmingHours": 0.5
-  }, {
-    "category": "TV & Home Theater",
-    "name": "Motorized TV Mount",
-    "installHours": 5.0,
-    "programmingHours": 0.0
-  }, {
-    "category": "TV & Home Theater",
-    "name": "Remove TV from Wall Mount",
-    "installHours": 0.25,
-    "programmingHours": 0.0
-  }, {
-    "category": "TV & Home Theater",
-    "name": "Soundbar Installation",
-    "installHours": 1.0,
-    "programmingHours": 0.0
-  }, {
-    "category": "TV & Home Theater",
-    "name": "Streaming Device Setup",
-    "installHours": 0.5,
-    "programmingHours": 0.0
-  }, {
-    "category": "TV & Home Theater",
-    "name": "TV + Soundbar Package",
-    "installHours": 3.5,
-    "programmingHours": 0.0
-  }, {
-    "category": "TV & Home Theater",
-    "name": "TV Unbox & Furniture Setup",
-    "installHours": 1.0,
-    "programmingHours": 0.0
-  }, {
-    "category": "TV & Home Theater",
-    "name": "TV Backing Behind Drywall (Excludes Patch & Paint)",
-    "installHours": 1.5,
-    "programmingHours": 0.0
-  }, {
-    "category": "TV & Home Theater",
-    "name": "TV Wall Mount 77\"-85\" (TV ONLY)",
-    "installHours": 3.0,
-    "programmingHours": 0.0
-  }, {
-    "category": "TV & Home Theater",
-    "name": "TV Wall Mount 98\"(TV ONLY)",
-    "installHours": 4.5,
-    "programmingHours": 0.0
-  }, {
-    "category": "Wire Runs",
-    "name": "Conduit Pull Existing Pathway",
-    "installHours": 2.0,
-    "programmingHours": 0.0
-  }, {
-    "category": "Wire Runs",
-    "name": "HDMI Run 50'-100'",
-    "installHours": 2.0,
-    "programmingHours": 0.0
-  }, {
-    "category": "Wire Runs",
-    "name": "HDMI Run up to 50'",
-    "installHours": 1.0,
-    "programmingHours": 0.0
-  }, {
-    "category": "Wire Runs",
-    "name": "Outdoor Wire Run",
-    "installHours": 3.0,
-    "programmingHours": 0.0
-  }, {
-    "category": "Wire Runs",
-    "name": "TV Power Relocation Kit",
-    "installHours": 2.0,
-    "programmingHours": 0.0
-  }, {
-    "category": "Wire Runs",
-    "name": "Wire Run",
-    "installHours": 1.0,
-    "programmingHours": 0.0
-  }];
-CATALOG.forEach((x, i) => {
-  x.id = i;
-  x.total = x.installHours + x.programmingHours
-});
-let cart = [],
-  category = 'All',
-  favOnly = false,
-  favs = new Set(JSON.parse(localStorage.getItem('asbc-favs') || '[]'));
-const money = new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD'
-  }),
-  esc = s => String(s).replace(/[&<>"']/g, c => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;'
-  } [c]));
 
-function setup() {
-  ['All', ...new Set(CATALOG.map(x => x.category))].forEach(c => {
-    const b = document.createElement('button');
-    b.textContent = c;
-    b.className =
-      'chip shrink-0 border border-gray-700 bg-gray-900 rounded-full px-4 min-h-10 text-sm';
-    b.onclick = () => {
-      category = c;
-      document.querySelectorAll('.chip').forEach(x => x.classList.toggle('active', x
-        .textContent === c));
-      renderCatalog()
-    };
-    chips.appendChild(b)
-  });
-  chips.firstChild.classList.add('active')
-}
+    <div
+        id="estimateBackdrop"
+        onclick="toggleEstimate(false)"
+        class="hidden md:hidden fixed inset-0 z-30 bg-black/70"
+    ></div>
 
-function renderCatalog() {
-  const q = search.value.trim().toLowerCase(),
-    items = CATALOG.filter(x => (category === 'All' || x.category === category) && (!q || (x.name +
-      ' ' + x.category).toLowerCase().includes(q)) && (!favOnly || favs.has(x.id)));
-  count.textContent = items.length + ' products';
-  grid.innerHTML = items.length ? '' :
-    '<p class="text-muted p-8 text-center">No matching products.</p>';
-  items.forEach(x => {
-    const found = cart.find(y => y.id === x.id && !y.custom),
-      qty = found ? found.qty : 0,
-      d = document.createElement('article');
-    d.className = 'bg-gray-900 border border-gray-700 rounded-2xl p-4';
-    d.innerHTML =
-      `<div class="flex justify-between"><small class="text-gold uppercase">${esc(x.category)}</small><button onclick="favorite(${x.id})" class="w-11 h-11 -mt-2 -mr-2 text-xl ${favs.has(x.id)?'text-gold':'text-muted'}">${favs.has(x.id)?'★':'☆'}</button></div><h3 class="mb-3">${esc(x.name)}</h3><div class="border-t border-gray-800 pt-3 flex justify-between items-center"><small class="text-muted">${x.installHours.toFixed(2)} install + ${x.programmingHours.toFixed(2)} prog</small><div class="bg-gray-800 rounded-xl flex items-center"><button onclick="qty(${x.id},-1)" class="w-11 h-11 text-xl">−</button><b class="w-7 text-center">${qty}</b><button onclick="qty(${x.id},1)" class="w-11 h-11 text-xl">+</button></div></div>`;
-    grid.appendChild(d)
-  })
-}
+    <div id="customItemModal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 p-4">
+        <div class="bg-bgPanel border border-gray-700 p-5 rounded-2xl shadow-2xl w-full max-w-md">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-brandGold">Add Custom Labor</h3>
+                <button type="button" onclick="toggleCustomModal(false)" class="w-10 h-10 rounded-full bg-gray-800">×</button>
+            </div>
 
-function qty(id, n) {
-  const x = CATALOG[id],
-    y = cart.find(z => z.id === id && !z.custom);
-  if (y) {
-    y.qty += n;
-    if (y.qty <= 0) cart.splice(cart.indexOf(y), 1)
-  } else if (n > 0) cart.push({
-    ...x,
-    qty: 1
-  });
-  renderCatalog();
-  renderCart()
-}
+            <label class="block text-xs text-textMuted uppercase tracking-wider">
+                Description
+                <input
+                    id="customName"
+                    type="text"
+                    placeholder="e.g. Core drill concrete wall"
+                    class="mt-1 w-full bg-gray-900 border border-gray-700 rounded-xl p-3 text-base"
+                >
+            </label>
 
-function cartQty(i, n) {
-  cart[i].qty += n;
-  if (cart[i].qty <= 0) cart.splice(i, 1);
-  renderCatalog();
-  renderCart()
-}
+            <div class="grid grid-cols-2 gap-3 mt-4">
+                <label class="text-xs text-textMuted uppercase tracking-wider">
+                    Install hrs
+                    <input id="customInstall" type="number" inputmode="decimal" min="0" step="0.25" placeholder="0" class="mt-1 w-full min-w-0 bg-gray-900 border border-gray-700 rounded-xl p-3 text-base">
+                </label>
+                <label class="text-xs text-textMuted uppercase tracking-wider">
+                    Programming hrs
+                    <input id="customProgramming" type="number" inputmode="decimal" min="0" step="0.25" placeholder="0" class="mt-1 w-full min-w-0 bg-gray-900 border border-gray-700 rounded-xl p-3 text-base">
+                </label>
+            </div>
 
-function renderCart() {
-  let ins = 0,
-    prog = 0,
-    num = 0;
-  cart.innerHTML = '';
-  if (!window.cart.length) cart.innerHTML =
-    '<p class="text-muted text-center mt-10">No items added yet.</p>';
-  window.cart.forEach((x, i) => {
-    ins += x.installHours * x.qty;
-    prog += x.programmingHours * x.qty;
-    num += x.qty;
-    const d = document.createElement('div');
-    d.className =
-      'bg-gray-900 border border-gray-800 rounded-xl p-3 flex justify-between items-center';
-    d.innerHTML =
-      `<div><b class="text-gold text-sm">${esc(x.name)}</b><p class="text-muted text-xs">${(x.total*x.qty).toFixed(2)} hrs</p></div><div class="flex bg-gray-800 rounded-lg"><button onclick="cartQty(${i},-1)" class="w-10 h-10">−</button><span class="w-7 text-center pt-2">${x.qty}</span><button onclick="cartQty(${i},1)" class="w-10 h-10">+</button></div>`;
-    cart.appendChild(d)
-  });
-  const hrs = ins + prog,
-    base = hrs * RATE,
-    fee = +recycle.value,
-    mat = base * (+markup.value / 100),
-    sum = base + fee + mat;
-  install.textContent = ins.toFixed(2);
-  program.textContent = prog.toFixed(2);
-  hours.textContent = barHours.textContent = hrs.toFixed(2);
-  days.textContent = (hrs / (+crew.value * +day.value)).toFixed(2);
-  total.textContent = barTotal.textContent = money.format(sum);
-  itemCount.textContent = barQty.textContent = num + (num === 1 ? ' item' : ' items')
-}
+            <button
+                type="button"
+                onclick="addCustomItem()"
+                class="mt-5 w-full bg-brandGold text-bgDark font-bold py-3.5 rounded-xl"
+            >
+                Add to Estimate
+            </button>
+        </div>
+    </div>
 
-function favorite(id) {
-  favs.has(id) ? favs.delete(id) : favs.add(id);
-  localStorage.setItem('asbc-favs', JSON.stringify([...favs]));
-  renderCatalog()
-}
+    <script>
+        const HOURLY_RATE = 200;
+        const RECYCLING_FEE = 75;
 
-function showEstimate(v) {
-  estimate.classList.toggle('open', v);
-  backdrop.classList.toggle('hidden', !v)
-}
+        const catalog = [
+    {
+        "category": "Access Control",
+        "name": "Complete UniFi Single-Door Access System",
+        "installHours": 10.0,
+        "programmingHours": 2.0
+    },
+    {
+        "category": "Access Control",
+        "name": "UniFi Access Door Hub",
+        "installHours": 4.0,
+        "programmingHours": 1.0
+    },
+    {
+        "category": "Access Control",
+        "name": "UniFi Access Door Hub Mini",
+        "installHours": 3.0,
+        "programmingHours": 0.5
+    },
+    {
+        "category": "Access Control",
+        "name": "UniFi Access Elevator Hub",
+        "installHours": 8.0,
+        "programmingHours": 2.0
+    },
+    {
+        "category": "Access Control",
+        "name": "UniFi Access G3 Intercom / Door Station",
+        "installHours": 3.0,
+        "programmingHours": 1.0
+    },
+    {
+        "category": "Access Control",
+        "name": "UniFi Access G3 Reader",
+        "installHours": 1.5,
+        "programmingHours": 0.5
+    },
+    {
+        "category": "Access Control",
+        "name": "UniFi Access G3 Reader Pro",
+        "installHours": 2.0,
+        "programmingHours": 1.0
+    },
+    {
+        "category": "Access Control",
+        "name": "UniFi Access Gate Hub",
+        "installHours": 6.0,
+        "programmingHours": 1.5
+    },
+    {
+        "category": "Access Control",
+        "name": "UniFi Access Intercom Viewer",
+        "installHours": 1.0,
+        "programmingHours": 0.5
+    },
+    {
+        "category": "Access Control",
+        "name": "UniFi Access Ultra",
+        "installHours": 3.0,
+        "programmingHours": 0.5
+    },
+    {
+        "category": "Access Control",
+        "name": "UniFi Electric Strike Lock",
+        "installHours": 3.0,
+        "programmingHours": 0.0
+    },
+    {
+        "category": "Access Control",
+        "name": "UniFi Enterprise Access Hub",
+        "installHours": 8.0,
+        "programmingHours": 2.0
+    },
+    {
+        "category": "Access Control",
+        "name": "UniFi Entry Sensor",
+        "installHours": 0.75,
+        "programmingHours": 0.25
+    },
+    {
+        "category": "Access Control",
+        "name": "UniFi Magnetic Lock",
+        "installHours": 3.0,
+        "programmingHours": 0.0
+    },
+    {
+        "category": "Access Control",
+        "name": "UniFi Push-to-Exit Button",
+        "installHours": 1.0,
+        "programmingHours": 0.0
+    },
+    {
+        "category": "Bang & Olufsen Audio",
+        "name": "Adopt Speaker into Bang & Olufsen App",
+        "installHours": 0.0,
+        "programmingHours": 0.25
+    },
+    {
+        "category": "Bang & Olufsen Audio",
+        "name": "Bang & Olufsen Speaker Floor Stand",
+        "installHours": 1.0,
+        "programmingHours": 0.25
+    },
+    {
+        "category": "Bang & Olufsen Audio",
+        "name": "Bang & Olufsen Speaker Wall/Cieling Bracket",
+        "installHours": 1.5,
+        "programmingHours": 0.25
+    },
+    {
+        "category": "Bang & Olufsen Audio",
+        "name": "Beoconnect Core",
+        "installHours": 1.5,
+        "programmingHours": 0.5
+    },
+    {
+        "category": "Bang & Olufsen Audio",
+        "name": "Beogram Turntable",
+        "installHours": 1.0,
+        "programmingHours": 0.5
+    },
+    {
+        "category": "Bang & Olufsen Audio",
+        "name": "Beolab 18 (Pair)",
+        "installHours": 3.0,
+        "programmingHours": 0.5
+    },
+    {
+        "category": "Bang & Olufsen Audio",
+        "name": "Beolab 19",
+        "installHours": 1.5,
+        "programmingHours": 0.5
+    },
+    {
+        "category": "Bang & Olufsen Audio",
+        "name": "Beolab 28 (Pair)",
+        "installHours": 4.0,
+        "programmingHours": 1.0
+    },
+    {
+        "category": "Bang & Olufsen Audio",
+        "name": "Beolab 50 (Pair)",
+        "installHours": 8.0,
+        "programmingHours": 1.5
+    },
+    {
+        "category": "Bang & Olufsen Audio",
+        "name": "Beolab 8 (Pair)",
+        "installHours": 2.0,
+        "programmingHours": 0.5
+    },
+    {
+        "category": "Bang & Olufsen Audio",
+        "name": "Beolab 90 (Pair)",
+        "installHours": 12.0,
+        "programmingHours": 1.5
+    },
+    {
+        "category": "Bang & Olufsen Audio",
+        "name": "Beoremote/Halo Setup",
+        "installHours": 0.5,
+        "programmingHours": 0.5
+    },
+    {
+        "category": "Bang & Olufsen Audio",
+        "name": "Beosound 9000 + Legacy Sources",
+        "installHours": 3.0,
+        "programmingHours": 1.5
+    },
+    {
+        "category": "Bang & Olufsen Audio",
+        "name": "Beosound A5",
+        "installHours": 0.5,
+        "programmingHours": 0.0
+    },
+    {
+        "category": "Bang & Olufsen Audio",
+        "name": "Beosound Balance",
+        "installHours": 0.75,
+        "programmingHours": 0.0
+    },
+    {
+        "category": "Bang & Olufsen Audio",
+        "name": "Beosound Level",
+        "installHours": 0.5,
+        "programmingHours": 0.0
+    },
+    {
+        "category": "Bang & Olufsen Audio",
+        "name": "Beosound Premiere",
+        "installHours": 2.0,
+        "programmingHours": 1.0
+    },
+    {
+        "category": "Bang & Olufsen Audio",
+        "name": "Beosound Shape — Large (21–40 Tiles)",
+        "installHours": 16.0,
+        "programmingHours": 2.5
+    },
+    {
+        "category": "Bang & Olufsen Audio",
+        "name": "Beosound Shape — Medium (11–20 Tiles)",
+        "installHours": 10.0,
+        "programmingHours": 1.5
+    },
+    {
+        "category": "Bang & Olufsen Audio",
+        "name": "Beosound Shape — Small (Up to 10 Tiles)",
+        "installHours": 6.0,
+        "programmingHours": 1.0
+    },
+    {
+        "category": "Bang & Olufsen Audio",
+        "name": "Beosound Stage",
+        "installHours": 1.5,
+        "programmingHours": 0.5
+    },
+    {
+        "category": "Bang & Olufsen Audio",
+        "name": "Beosound Theatre",
+        "installHours": 3.0,
+        "programmingHours": 1.0
+    },
+    {
+        "category": "Bang & Olufsen Audio",
+        "name": "Beosound Theatre Table Stand w/ SMI VESA",
+        "installHours": 3.0,
+        "programmingHours": 1.0
+    },
+    {
+        "category": "Bang & Olufsen Audio",
+        "name": "Beosound Theatre Wall Mount w/ SMI VESA",
+        "installHours": 5.0,
+        "programmingHours": 1.0
+    },
+    {
+        "category": "Bang & Olufsen Audio",
+        "name": "TV + Beosound Theatre Soundbar on Motorized Mount",
+        "installHours": 9.0,
+        "programmingHours": 1.0
+    },
+    {
+        "category": "Bang & Olufsen Audio",
+        "name": "Beovision Harmony 65/77/83",
+        "installHours": 4.0,
+        "programmingHours": 1.5
+    },
+    {
+        "category": "Bang & Olufsen Audio",
+        "name": "Beovision Harmony 97",
+        "installHours": 5.0,
+        "programmingHours": 2.0
+    },
+    {
+        "category": "Bang & Olufsen Audio",
+        "name": "Beovision Harmony Wall Mount w/ TV (Add-On)",
+        "installHours": 5.0,
+        "programmingHours": 1.0
+    },
+    {
+        "category": "Bang & Olufsen Audio",
+        "name": "CD Player Integration",
+        "installHours": 1.0,
+        "programmingHours": 0.5
+    },
+    {
+        "category": "Bang & Olufsen Audio",
+        "name": "Legacy/Existing Bang & Olufsen Integration",
+        "installHours": 3.0,
+        "programmingHours": 1.0
+    },
+    {
+        "category": "Bang & Olufsen Audio",
+        "name": "Origin Acoustics Celestial In-Ceiling Speaker",
+        "installHours": 0.5,
+        "programmingHours": 0.0
+    },
+    {
+        "category": "Bang & Olufsen Audio",
+        "name": "Speaker Calibration / ARC Tuning",
+        "installHours": 1.0,
+        "programmingHours": 1.0
+    },
+    {
+        "category": "Bang & Olufsen Audio",
+        "name": "Speaker Wire Concealment (Add-On)",
+        "installHours": 2.0,
+        "programmingHours": 0.0
+    },
+    {
+        "category": "Kaleidescape",
+        "name": "Strato C Movie Player",
+        "installHours": 1.0,
+        "programmingHours": 1.0
+    },
+    {
+        "category": "Kaleidescape",
+        "name": "Strato E Movie Player",
+        "installHours": 0.75,
+        "programmingHours": 0.75
+    },
+    {
+        "category": "Kaleidescape",
+        "name": "Strato K Movie Player",
+        "installHours": 1.0,
+        "programmingHours": 1.0
+    },
+    {
+        "category": "Kaleidescape",
+        "name": "Strato M Movie Player",
+        "installHours": 0.75,
+        "programmingHours": 0.75
+    },
+    {
+        "category": "Kaleidescape",
+        "name": "Strato V Movie Player",
+        "installHours": 1.0,
+        "programmingHours": 1.0
+    },
+    {
+        "category": "Kaleidescape",
+        "name": "Terra Prime 22TB Movie Server",
+        "installHours": 1.5,
+        "programmingHours": 1.0
+    },
+    {
+        "category": "Kaleidescape",
+        "name": "Terra Prime 48TB Movie Server",
+        "installHours": 2.0,
+        "programmingHours": 1.5
+    },
+    {
+        "category": "Kaleidescape",
+        "name": "Terra Prime 72TB Movie Server",
+        "installHours": 2.0,
+        "programmingHours": 1.5
+    },
+    {
+        "category": "Kaleidescape",
+        "name": "Terra Prime 8TB Movie Server",
+        "installHours": 1.5,
+        "programmingHours": 1.0
+    },
+    {
+        "category": "Kaleidescape",
+        "name": "Terra Prime 96TB Movie Server",
+        "installHours": 2.0,
+        "programmingHours": 1.5
+    },
+    {
+        "category": "Networking",
+        "name": "2-4 Pack Wireless Mesh",
+        "installHours": 1.0,
+        "programmingHours": 0.5
+    },
+    {
+        "category": "Networking",
+        "name": "Access Point Installation (Each)",
+        "installHours": 1.5,
+        "programmingHours": 0.75
+    },
+    {
+        "category": "Networking",
+        "name": "Access Point with Cable Run (Each)",
+        "installHours": 3.0,
+        "programmingHours": 0.75
+    },
+    {
+        "category": "Networking",
+        "name": "Add Network Device  (IE. Apple tv, Roku, WIFI  Device)",
+        "installHours": 0.5,
+        "programmingHours": 0.3
+    },
+    {
+        "category": "Networking",
+        "name": "Basic Switch Installation",
+        "installHours": 0.5,
+        "programmingHours": 0.0
+    },
+    {
+        "category": "Networking",
+        "name": "Large Network Rack Build",
+        "installHours": 16.0,
+        "programmingHours": 0.0
+    },
+    {
+        "category": "Networking",
+        "name": "Managed Switch Setup",
+        "installHours": 1.5,
+        "programmingHours": 1.0
+    },
+    {
+        "category": "Networking",
+        "name": "Medium Network Rack Build",
+        "installHours": 8.0,
+        "programmingHours": 0.0
+    },
+    {
+        "category": "Networking",
+        "name": "Router Replacement",
+        "installHours": 1.0,
+        "programmingHours": 0.0
+    },
+    {
+        "category": "Networking",
+        "name": "Small Network Rack Build",
+        "installHours": 4.0,
+        "programmingHours": 0.0
+    },
+    {
+        "category": "Networking",
+        "name": "WattBox Installation",
+        "installHours": 1.0,
+        "programmingHours": 0.5
+    },
+    {
+        "category": "Networking",
+        "name": "WattBox Programming",
+        "installHours": 0.0,
+        "programmingHours": 0.5
+    },
+    {
+        "category": "Project Management",
+        "name": "Projects $10K-$25K",
+        "installHours": 2.0,
+        "programmingHours": 0.0
+    },
+    {
+        "category": "Project Management",
+        "name": "Projects $25K-$75K",
+        "installHours": 4.0,
+        "programmingHours": 0.0
+    },
+    {
+        "category": "Project Management",
+        "name": "Projects $75K-$150K",
+        "installHours": 8.0,
+        "programmingHours": 0.0
+    },
+    {
+        "category": "Project Management",
+        "name": "Projects Over $150K",
+        "installHours": 16.0,
+        "programmingHours": 0.0
+    },
+    {
+        "category": "Project Management",
+        "name": "Projects Under $10K",
+        "installHours": 1.0,
+        "programmingHours": 0.0
+    },
+    {
+        "category": "Rack & Cabinet Work",
+        "name": "Cable Management (Per Device)",
+        "installHours": 0.2,
+        "programmingHours": 0.0
+    },
+    {
+        "category": "Rack & Cabinet Work",
+        "name": "Labeling & Documentation (Per Device)",
+        "installHours": 0.1,
+        "programmingHours": 0.0
+    },
+    {
+        "category": "Rack & Cabinet Work",
+        "name": "Power Conditioner Installation",
+        "installHours": 0.5,
+        "programmingHours": 0.0
+    },
+    {
+        "category": "Rack & Cabinet Work",
+        "name": "Rack Cleanup",
+        "installHours": 2.0,
+        "programmingHours": 0.0
+    },
+    {
+        "category": "Rack & Cabinet Work",
+        "name": "Rack Rebuild",
+        "installHours": 8.0,
+        "programmingHours": 0.0
+    },
+    {
+        "category": "Rack & Cabinet Work",
+        "name": "UPS Installation (Power Back-up)",
+        "installHours": 0.5,
+        "programmingHours": 0.0
+    },
+    {
+        "category": "Security Cameras",
+        "name": "Camera Programming (Each)",
+        "installHours": 0.25,
+        "programmingHours": 0.25
+    },
+    {
+        "category": "Security Cameras",
+        "name": "Difficult Access Camera",
+        "installHours": 3.0,
+        "programmingHours": 0.25
+    },
+    {
+        "category": "Security Cameras",
+        "name": "Exterior Camera",
+        "installHours": 2.0,
+        "programmingHours": 0.25
+    },
+    {
+        "category": "Security Cameras",
+        "name": "Interior Camera",
+        "installHours": 1.5,
+        "programmingHours": 0.25
+    },
+    {
+        "category": "Security Cameras",
+        "name": "NVR Setup",
+        "installHours": 2.0,
+        "programmingHours": 1.5
+    },
+    {
+        "category": "Security Cameras",
+        "name": "UniFi Protect Camera with Cable Run",
+        "installHours": 3.0,
+        "programmingHours": 0.5
+    },
+    {
+        "category": "TV & Home Theater",
+        "name": "Motorized TV Mount",
+        "installHours": 5.0,
+        "programmingHours": 0.0
+    },
+    {
+        "category": "TV & Home Theater",
+        "name": "Remove TV from Wall Mount",
+        "installHours": 0.25,
+        "programmingHours": 0.0
+    },
+    {
+        "category": "TV & Home Theater",
+        "name": "Soundbar Installation",
+        "installHours": 1.0,
+        "programmingHours": 0.0
+    },
+    {
+        "category": "TV & Home Theater",
+        "name": "Streaming Device Setup",
+        "installHours": 0.5,
+        "programmingHours": 0.0
+    },
+    {
+        "category": "TV & Home Theater",
+        "name": "TV + Soundbar Package",
+        "installHours": 3.5,
+        "programmingHours": 0.0
+    },
+    {
+        "category": "TV & Home Theater",
+        "name": "TV Unbox & Furniture Setup",
+        "installHours": 1.0,
+        "programmingHours": 0.0
+    },
+    {
+        "category": "TV & Home Theater",
+        "name": "TV Backing Behind Drywall (Excludes Patch & Paint)",
+        "installHours": 1.5,
+        "programmingHours": 0.0
+    },
+    {
+        "category": "TV & Home Theater",
+        "name": "TV Wall Mount 77\"-85\" (TV ONLY)",
+        "installHours": 3.0,
+        "programmingHours": 0.0
+    },
+    {
+        "category": "TV & Home Theater",
+        "name": "TV Wall Mount 98\"(TV ONLY)",
+        "installHours": 4.5,
+        "programmingHours": 0.0
+    },
+    {
+        "category": "Wire Runs",
+        "name": "Conduit Pull Existing Pathway",
+        "installHours": 2.0,
+        "programmingHours": 0.0
+    },
+    {
+        "category": "Wire Runs",
+        "name": "HDMI Run 50'-100'",
+        "installHours": 2.0,
+        "programmingHours": 0.0
+    },
+    {
+        "category": "Wire Runs",
+        "name": "HDMI Run up to 50'",
+        "installHours": 1.0,
+        "programmingHours": 0.0
+    },
+    {
+        "category": "Wire Runs",
+        "name": "Outdoor Wire Run",
+        "installHours": 3.0,
+        "programmingHours": 0.0
+    },
+    {
+        "category": "Wire Runs",
+        "name": "TV Power Relocation Kit",
+        "installHours": 2.0,
+        "programmingHours": 0.0
+    },
+    {
+        "category": "Wire Runs",
+        "name": "Wire Run",
+        "installHours": 1.0,
+        "programmingHours": 0.0
+    }
+];
 
-function showCustom(v) {
-  modal.classList.toggle('hidden', !v);
-  modal.classList.toggle('flex', v)
-}
+        catalog.forEach((item, index) => {
+            item.id = index;
+            item.totalHours = item.installHours + item.programmingHours;
+        });
 
-function addCustom() {
-  const i = +customInstall.value || 0,
-    p = +customProgram.value || 0;
-  if (!i && !p) return alert('Enter labor hours.');
-  window.cart.push({
-    id: 'c' + Date.now(),
-    name: customName.value || 'Custom Labor',
-    installHours: i,
-    programmingHours: p,
-    total: i + p,
-    qty: 1,
-    custom: true
-  });
-  showCustom(false);
-  renderCart();
-  showEstimate(true)
-}
+        // Version 2 uses the original working quote pattern:
+        // find an existing item, increase qty, otherwise push a copied catalog item.
+        let quoteCart = [];
+        let selectedCategory = 'All';
+        let favoritesOnly = false;
+        let favoriteIds = new Set(JSON.parse(localStorage.getItem('asbcFavoriteIds') || '[]'));
 
-function clearCart() {
-  if (!window.cart.length || confirm('Clear the estimate?')) {
-    window.cart = [];
-    renderCatalog();
-    renderCart()
-  }
-}
-search.oninput = renderCatalog;
-favFilter.onclick = () => {
-  favOnly = !favOnly;
-  favFilter.classList.toggle('active', favOnly);
-  favFilter.textContent = favOnly ? '★ Favorites' : '☆ Favorites';
-  renderCatalog()
-};
-setup();
-renderCatalog();
-renderCart();
-  </script>
- </body>
+        const currencyFormatter = new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD',
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+
+        const searchInput = document.getElementById('searchInput');
+        const productGrid = document.getElementById('productGrid');
+        const quoteList = document.getElementById('quoteList');
+        const categoryButtons = document.getElementById('categoryButtons');
+        const favoritesFilterButton = document.getElementById('favoritesFilterButton');
+        const recyclingToggle = document.getElementById('recyclingToggle');
+        const materialsMarkup = document.getElementById('materialsMarkup');
+        const crewSize = document.getElementById('crewSize');
+        const workdayHours = document.getElementById('workdayHours');
+
+        function escapeHtml(value) {
+            return String(value).replace(/[&<>'"]/g, character => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                "'": '&#39;',
+                '"': '&quot;'
+            }[character]));
+        }
+
+        function buildCategoryButtons() {
+            const categories = ['All', ...new Set(catalog.map(item => item.category))];
+            categoryButtons.innerHTML = '';
+
+            categories.forEach(category => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.textContent = category;
+                button.className = 'category-button shrink-0 min-h-10 px-4 rounded-full border border-gray-700 bg-gray-900 text-sm';
+                button.dataset.category = category;
+                button.addEventListener('click', () => {
+                    selectedCategory = category;
+                    updateCategoryButtonStyles();
+                    renderCatalog();
+                });
+                categoryButtons.appendChild(button);
+            });
+
+            updateCategoryButtonStyles();
+        }
+
+        function updateCategoryButtonStyles() {
+            document.querySelectorAll('.category-button').forEach(button => {
+                button.classList.toggle('category-active', button.dataset.category === selectedCategory);
+            });
+        }
+
+        function getVisibleCatalogItems() {
+            const searchText = searchInput.value.trim().toLowerCase();
+
+            return catalog.filter(item => {
+                const matchesCategory = selectedCategory === 'All' || item.category === selectedCategory;
+                const matchesSearch = !searchText || `${item.name} ${item.category}`.toLowerCase().includes(searchText);
+                const matchesFavorite = !favoritesOnly || favoriteIds.has(item.id);
+                return matchesCategory && matchesSearch && matchesFavorite;
+            });
+        }
+
+        function renderCatalog() {
+            const visibleItems = getVisibleCatalogItems();
+            productGrid.innerHTML = '';
+            document.getElementById('resultCount').textContent = `${visibleItems.length} product${visibleItems.length === 1 ? '' : 's'}`;
+
+            if (visibleItems.length === 0) {
+                productGrid.innerHTML = '<div class="col-span-full text-center text-textMuted py-12">No matching products.</div>';
+                return;
+            }
+
+            visibleItems.forEach(item => {
+                const quoteItem = quoteCart.find(cartItem => cartItem.id === item.id && !cartItem.isCustom);
+                const quantity = quoteItem ? quoteItem.qty : 0;
+                const card = document.createElement('article');
+                card.className = 'bg-gray-900 border border-gray-700 rounded-2xl p-4 flex flex-col justify-between hover:border-brandGold transition-colors';
+
+                card.innerHTML = `
+                    <div>
+                        <div class="flex justify-between gap-3">
+                            <div class="text-xs text-brandGold mb-1 uppercase tracking-wider">${escapeHtml(item.category)}</div>
+                            <button
+                                type="button"
+                                data-favorite-id="${item.id}"
+                                class="favorite-button -mt-2 -mr-2 w-11 h-11 text-xl ${favoriteIds.has(item.id) ? 'text-brandGold' : 'text-textMuted'}"
+                                aria-label="Favorite ${escapeHtml(item.name)}"
+                            >${favoriteIds.has(item.id) ? '★' : '☆'}</button>
+                        </div>
+                        <h3 class="font-medium text-base leading-snug mb-3">${escapeHtml(item.name)}</h3>
+                    </div>
+                    <div class="flex justify-between items-center gap-2 border-t border-gray-800 pt-3">
+                        <div class="text-xs text-textMuted font-mono">
+                            ${item.installHours.toFixed(2)} install + ${item.programmingHours.toFixed(2)} prog
+                        </div>
+                        <div class="flex items-center bg-gray-800 rounded-xl overflow-hidden shrink-0">
+                            <button type="button" data-product-id="${item.id}" data-change="-1" class="quantity-button w-11 h-11 text-xl" aria-label="Decrease quantity">−</button>
+                            <span class="w-8 text-center font-mono font-bold">${quantity}</span>
+                            <button type="button" data-product-id="${item.id}" data-change="1" class="quantity-button w-11 h-11 text-xl hover:bg-brandGold hover:text-bgDark" aria-label="Increase quantity">+</button>
+                        </div>
+                    </div>
+                `;
+
+                productGrid.appendChild(card);
+            });
+        }
+
+        // Original working quote logic, preserved and made explicit.
+        function addToQuote(catalogIndex) {
+            const item = catalog[catalogIndex];
+            const existingItem = quoteCart.find(cartItem => cartItem.id === item.id && !cartItem.isCustom);
+
+            if (existingItem) {
+                existingItem.qty += 1;
+            } else {
+                quoteCart.push({ ...item, qty: 1, isCustom: false });
+            }
+
+            renderCatalog();
+            renderQuote();
+        }
+
+        function updateProductQuantity(catalogIndex, change) {
+            if (change > 0) {
+                addToQuote(catalogIndex);
+                return;
+            }
+
+            const existingIndex = quoteCart.findIndex(cartItem => cartItem.id === catalogIndex && !cartItem.isCustom);
+            if (existingIndex === -1) return;
+
+            quoteCart[existingIndex].qty -= 1;
+            if (quoteCart[existingIndex].qty <= 0) {
+                quoteCart.splice(existingIndex, 1);
+            }
+
+            renderCatalog();
+            renderQuote();
+        }
+
+        function updateQuoteQuantity(quoteIndex, change) {
+            quoteCart[quoteIndex].qty += change;
+            if (quoteCart[quoteIndex].qty <= 0) {
+                quoteCart.splice(quoteIndex, 1);
+            }
+
+            renderCatalog();
+            renderQuote();
+        }
+
+        function renderQuote() {
+            let totalInstall = 0;
+            let totalProgramming = 0;
+            let totalQuantity = 0;
+            quoteList.innerHTML = '';
+
+            if (quoteCart.length === 0) {
+                quoteList.innerHTML = '<div class="text-textMuted text-center mt-10 italic">No items added yet.</div>';
+            } else {
+                quoteCart.forEach((item, quoteIndex) => {
+                    totalInstall += item.installHours * item.qty;
+                    totalProgramming += item.programmingHours * item.qty;
+                    totalQuantity += item.qty;
+
+                    const row = document.createElement('div');
+                    row.className = 'bg-gray-900 p-3 rounded-xl border border-gray-800 flex justify-between items-center';
+                    row.innerHTML = `
+                        <div class="flex-1 pr-3">
+                            <div class="text-sm font-medium leading-tight mb-1 text-brandGold">${escapeHtml(item.name)}</div>
+                            <div class="text-xs text-textMuted font-mono">${(item.totalHours * item.qty).toFixed(2)} hrs</div>
+                        </div>
+                        <div class="flex items-center bg-gray-800 rounded-lg print-hide">
+                            <button type="button" data-quote-index="${quoteIndex}" data-change="-1" class="quote-quantity-button w-10 h-10 text-lg">−</button>
+                            <span class="w-7 text-center font-mono">${item.qty}</span>
+                            <button type="button" data-quote-index="${quoteIndex}" data-change="1" class="quote-quantity-button w-10 h-10 text-lg">+</button>
+                        </div>
+                    `;
+                    quoteList.appendChild(row);
+                });
+            }
+
+            const totalHours = totalInstall + totalProgramming;
+            const baseLaborPrice = totalHours * HOURLY_RATE;
+            const recyclingFee = recyclingToggle.value === 'yes' ? RECYCLING_FEE : 0;
+            const markupPercent = Number(materialsMarkup.value) || 0;
+            const materialsFee = baseLaborPrice * (markupPercent / 100);
+            const finalPrice = baseLaborPrice + recyclingFee + materialsFee;
+            const selectedCrewSize = Number(crewSize.value) || 1;
+            const selectedWorkdayHours = Number(workdayHours.value) || 8;
+            const estimatedCrewDays = totalHours / (selectedCrewSize * selectedWorkdayHours);
+
+            document.getElementById('installTotal').textContent = totalInstall.toFixed(2);
+            document.getElementById('programmingTotal').textContent = totalProgramming.toFixed(2);
+            document.getElementById('hoursTotal').textContent = totalHours.toFixed(2);
+            document.getElementById('crewDaysTotal').textContent = estimatedCrewDays.toFixed(2);
+            document.getElementById('priceTotal').textContent = currencyFormatter.format(finalPrice);
+            document.getElementById('quoteItemCount').textContent = `${totalQuantity} item${totalQuantity === 1 ? '' : 's'}`;
+            document.getElementById('mobileItemCount').textContent = totalQuantity;
+            document.getElementById('mobileHours').textContent = totalHours.toFixed(2);
+            document.getElementById('mobilePrice').textContent = currencyFormatter.format(finalPrice);
+
+            document.getElementById('recyclingRow').classList.toggle('hidden', recyclingFee === 0);
+            document.getElementById('materialsRow').classList.toggle('hidden', materialsFee === 0);
+            document.getElementById('materialsLabel').textContent = `Materials fee (${markupPercent}%)`;
+            document.getElementById('materialsAmount').textContent = currencyFormatter.format(materialsFee);
+        }
+
+        function toggleFavorite(itemId) {
+            if (favoriteIds.has(itemId)) {
+                favoriteIds.delete(itemId);
+            } else {
+                favoriteIds.add(itemId);
+            }
+
+            localStorage.setItem('asbcFavoriteIds', JSON.stringify([...favoriteIds]));
+            renderCatalog();
+        }
+
+        function toggleEstimate(show) {
+            document.getElementById('estimatePanel').classList.toggle('estimate-open', show);
+            document.getElementById('estimateBackdrop').classList.toggle('hidden', !show);
+        }
+
+        function toggleCustomModal(show) {
+            const modal = document.getElementById('customItemModal');
+            modal.classList.toggle('hidden', !show);
+            modal.classList.toggle('flex', show);
+
+            if (show) {
+                document.getElementById('customName').value = '';
+                document.getElementById('customInstall').value = '';
+                document.getElementById('customProgramming').value = '';
+                setTimeout(() => document.getElementById('customName').focus(), 50);
+            }
+        }
+
+        function addCustomItem() {
+            const name = document.getElementById('customName').value.trim() || 'Custom Labor';
+            const installHours = Number(document.getElementById('customInstall').value) || 0;
+            const programmingHours = Number(document.getElementById('customProgramming').value) || 0;
+
+            if (installHours === 0 && programmingHours === 0) {
+                alert('Please enter at least some labor hours.');
+                return;
+            }
+
+            quoteCart.push({
+                id: `custom-${Date.now()}`,
+                category: 'Custom',
+                name,
+                installHours,
+                programmingHours,
+                totalHours: installHours + programmingHours,
+                qty: 1,
+                isCustom: true
+            });
+
+            toggleCustomModal(false);
+            renderQuote();
+            toggleEstimate(true);
+        }
+
+        function clearQuote() {
+            if (quoteCart.length === 0 || window.confirm('Clear the entire estimate?')) {
+                quoteCart = [];
+                renderCatalog();
+                renderQuote();
+            }
+        }
+
+        productGrid.addEventListener('click', event => {
+            const quantityButton = event.target.closest('.quantity-button');
+            if (quantityButton) {
+                const productId = Number(quantityButton.dataset.productId);
+                const change = Number(quantityButton.dataset.change);
+                updateProductQuantity(productId, change);
+                return;
+            }
+
+            const favoriteButton = event.target.closest('.favorite-button');
+            if (favoriteButton) {
+                toggleFavorite(Number(favoriteButton.dataset.favoriteId));
+            }
+        });
+
+        quoteList.addEventListener('click', event => {
+            const button = event.target.closest('.quote-quantity-button');
+            if (!button) return;
+            updateQuoteQuantity(Number(button.dataset.quoteIndex), Number(button.dataset.change));
+        });
+
+        searchInput.addEventListener('input', renderCatalog);
+
+        favoritesFilterButton.addEventListener('click', () => {
+            favoritesOnly = !favoritesOnly;
+            favoritesFilterButton.classList.toggle('favorites-active', favoritesOnly);
+            favoritesFilterButton.textContent = favoritesOnly ? '★ Favorites' : '☆ Favorites';
+            renderCatalog();
+        });
+
+        [recyclingToggle, materialsMarkup, crewSize, workdayHours].forEach(control => {
+            control.addEventListener('change', renderQuote);
+        });
+
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape') {
+                toggleCustomModal(false);
+                toggleEstimate(false);
+            }
+        });
+
+        buildCategoryButtons();
+        renderCatalog();
+        renderQuote();
+    </script>
+</body>
 </html>
