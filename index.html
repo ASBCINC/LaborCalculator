@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- ASBC Labor Calculator v7.7.0 | Compact List View Toggle | Build 2026-09-30 -->
+<!-- ASBC Labor Calculator v7.8.0 | Template Engine & Auto-Forking | Build 2026-09-30 -->
 <html lang="en">
 <head>
     <link rel="manifest" href="./manifest.json">
@@ -9,7 +9,7 @@
     <meta name="theme-color" content="#b08d57">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="application-version" content="7.7.0">
+    <meta name="application-version" content="7.8.0">
     <meta name="build-date" content="2026-09-30">
     <meta name="theme-color" content="#050505">
     <title>Labor Calculator | ASBC</title>
@@ -161,6 +161,12 @@
             <select id="savedEstimates" class="h-9 w-40 sm:w-48 shrink-0 bg-white border border-[#D8D8D8] rounded-md px-3 text-sm text-black">
                 <option value="">Saved quotes...</option>
             </select>
+            
+            <label class="flex items-center gap-1.5 shrink-0 bg-[#EAEAEA] border border-[#D0D0D0] rounded-md px-2.5 h-9 cursor-pointer hover:bg-[#E0E0E0] transition-colors">
+                <input type="checkbox" id="isTemplateCheckbox" class="w-3.5 h-3.5 rounded-sm border-gray-400 text-black focus:ring-black">
+                <span class="text-[11px] font-bold text-black uppercase tracking-wide mt-0.5">Template</span>
+            </label>
+
             <button type="button" onclick="saveEstimate()" class="h-9 shrink-0 bg-black text-white font-medium rounded-md px-4 text-sm">Save</button>
             <button type="button" onclick="loadEstimate()" class="h-9 shrink-0 bg-white border border-[#CFCFCF] text-black font-medium rounded-md px-4 text-sm">Load</button>
             <button type="button" onclick="deleteEstimate()" class="h-9 shrink-0 bg-white border border-[#DCCFCF] text-[#8C3333] font-medium rounded-md px-4 text-sm">Delete</button>
@@ -242,10 +248,6 @@
                     <button type="button" onclick="window.print()" class="bg-white text-black font-bold py-3 rounded-xl">Print</button>
                     <button type="button" onclick="shareQuote()" class="bg-brandGold text-bgDark font-bold py-3 rounded-xl">Share</button>
                 </div>
-                
-                <p class="text-[10px] sm:text-xs text-textMuted mt-3.5 text-center leading-relaxed print-hide px-2">
-                    <span class="text-brandGold font-medium">Note:</span> Cloud quotes are automatically purged after 60 days to optimize system performance. Please <strong>Print</strong> or <strong>Share</strong> estimates for long-term project records.
-                </p>
             </div>
         </section>
     </main>
@@ -309,7 +311,7 @@
               }
           });
 
-        const APP_VERSION = '7.7.0';
+        const APP_VERSION = '7.8.0';
         const BUILD_DATE = '2026-09-30';
         const HOURLY_RATE = 200;
         const RECYCLING_FEE = 75;
@@ -317,6 +319,7 @@
         let catalog = [];
         let catalogLoadError = null;
         let isListView = localStorage.getItem('asbcListView') === 'true';
+        let currentLoadedIsTemplate = false;
 
         function slugify(value) {
             return String(value).trim().toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
@@ -428,6 +431,7 @@
         const viewToggleButton = document.getElementById('viewToggleButton');
         const recyclingToggle = document.getElementById('recyclingToggle');
         const materialsMarkup = document.getElementById('materialsMarkup');
+        const isTemplateCheckbox = document.getElementById('isTemplateCheckbox');
         
         const customerName = document.getElementById('customerName');
         const salesManagerName = document.getElementById('salesManagerName');
@@ -439,28 +443,50 @@
                 const cutoff = Date.now() - (60 * 24 * 60 * 60 * 1000); 
                 const querySnapshot = await db.collection("quotes").get();
                 savedEstimates.innerHTML = '<option value="">Saved quotes...</option>';
-                const quotes = [];
+                
+                const templates = [];
+                const recents = [];
 
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
                     const quoteDate = data.updatedAt?.toMillis ? data.updatedAt.toMillis() : (data.updatedAt || 0);
 
-                    if (quoteDate > 0 && quoteDate < cutoff) {
+                    // Shield Templates from Auto-Purge
+                    if (data.isTemplate) {
+                        templates.push(data);
+                    } else if (quoteDate > 0 && quoteDate < cutoff) {
                         db.collection("quotes").doc(doc.id).delete().catch(err => {
                             console.error("Auto-cleanup error:", err);
                         });
                     } else {
-                        quotes.push(data);
+                        recents.push(data);
                     }
                 });
 
-                quotes.sort((a, b) => a.label.localeCompare(b.label))
-                    .forEach(record => {
+                if (templates.length > 0) {
+                    const optGroup = document.createElement('optgroup');
+                    optGroup.label = "── TEMPLATES ──";
+                    templates.sort((a, b) => a.label.localeCompare(b.label)).forEach(record => {
+                        const option = document.createElement('option');
+                        option.value = record.id;
+                        option.textContent = `★ ${record.label}`;
+                        optGroup.appendChild(option);
+                    });
+                    savedEstimates.appendChild(optGroup);
+                }
+
+                if (recents.length > 0) {
+                    const optGroup = document.createElement('optgroup');
+                    optGroup.label = "── RECENT QUOTES ──";
+                    recents.sort((a, b) => a.label.localeCompare(b.label)).forEach(record => {
                         const option = document.createElement('option');
                         option.value = record.id;
                         option.textContent = record.label;
-                        savedEstimates.appendChild(option);
+                        optGroup.appendChild(option);
                     });
+                    savedEstimates.appendChild(optGroup);
+                }
+
                 savedEstimates.value = selectedId;
             } catch (error) {
                 console.error("Failed to fetch estimates from cloud:", error);
@@ -524,14 +550,21 @@
                 return;
             }
             
+            const wantsToSaveAsTemplate = isTemplateCheckbox.checked;
             let id = savedEstimates.value;
             const label = data.customerName;
 
             if (id) {
-                const overwrite = window.confirm(`Overwrite the existing quote for ${label}?\n\n• Click OK to UPDATE the original.\n• Click Cancel to SAVE AS A NEW COPY.`);
-                if (!overwrite) {
-                    id = `estimate-${Date.now()}`; 
-                    savedEstimates.value = ''; 
+                // If it WAS a template but they UNCHECKED the box, silently fork it to protect the blueprint
+                if (currentLoadedIsTemplate && !wantsToSaveAsTemplate) {
+                    id = `estimate-${Date.now()}`;
+                    savedEstimates.value = '';
+                } else {
+                    const overwrite = window.confirm(`Overwrite the existing ${currentLoadedIsTemplate ? 'TEMPLATE' : 'quote'} for ${label}?\n\n• Click OK to UPDATE the original.\n• Click Cancel to SAVE AS A NEW COPY.`);
+                    if (!overwrite) {
+                        id = `estimate-${Date.now()}`; 
+                        savedEstimates.value = ''; 
+                    }
                 }
             } else {
                 id = `estimate-${Date.now()}`;
@@ -546,12 +579,14 @@
                     recycling: recyclingToggle.value,
                     markup: materialsMarkup.value
                 },
-                updatedAt: new Date()
+                updatedAt: new Date(),
+                isTemplate: wantsToSaveAsTemplate
             };
 
             try {
                 await db.collection("quotes").doc(id).set(quoteDocument);
                 alert(`Saved ${label} to the cloud! (Will sync when online if currently offline)`);
+                currentLoadedIsTemplate = wantsToSaveAsTemplate;
                 await refreshSavedEstimateList(id);
             } catch (error) {
                 console.error("Cloud save failed: ", error);
@@ -575,6 +610,9 @@
                     applyProjectData(record.project);
                     recyclingToggle.value = record.options?.recycling || 'no';
                     materialsMarkup.value = record.options?.markup || '0';
+                    
+                    currentLoadedIsTemplate = !!record.isTemplate;
+                    isTemplateCheckbox.checked = currentLoadedIsTemplate;
                     
                     renderCatalog();
                     renderQuote();
@@ -877,6 +915,8 @@
                 savedEstimates.value = '';
                 customerName.value = '';
                 salesManagerName.value = '';
+                currentLoadedIsTemplate = false;
+                isTemplateCheckbox.checked = false;
                 renderCatalog();
                 renderQuote();
             }
