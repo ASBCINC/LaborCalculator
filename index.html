@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<!-- ASBC Labor Calculator v7.0.0 | Build 2026-09-30 -->
+<!-- ASBC Labor Calculator v7.1.0 | Cloud Sync Enabled | Build 2026-09-30 -->
 <html lang="en">
 <head>
     <link rel="manifest" href="./manifest.json">
-<meta name="theme-color" content="#b08d57">
+    <meta name="theme-color" content="#b08d57">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="application-version" content="7.0.0">
+    <meta name="application-version" content="7.1.0">
     <meta name="build-date" content="2026-09-30">
     <meta name="theme-color" content="#050505">
     <title>Labor Calculator | ASBC</title>
@@ -49,7 +49,6 @@
             color: #C7A66A !important;
         }
 
-        /* Version 3.2 brand styling: colors and borders only */
         .bg-gray-900 { background-color: #101010 !important; }
         .bg-gray-800 { background-color: #171717 !important; }
         .border-gray-800 { border-color: #1A1A1A !important; }
@@ -129,30 +128,16 @@
     <header class="h-28 bg-white text-black shadow-sm">
         <div class="h-16 px-3 sm:px-5 flex items-center justify-between">
             <div class="flex items-center gap-3 sm:gap-5 min-w-0">
-                <img
-                    src="./bo-california-logo.png"
-                    alt="Bang &amp; Olufsen California"
-                    class="h-9 sm:h-11 w-auto max-w-[62vw] sm:max-w-none object-contain"
-                >
+                <img src="./bo-california-logo.png" alt="Bang &amp; Olufsen California" class="h-9 sm:h-11 w-auto max-w-[62vw] sm:max-w-none object-contain">
                 <div class="w-px h-9 bg-[#D8D8D8] shrink-0"></div>
-                <img
-                    src="./asbc-logo.png"
-                    alt="ASBC"
-                    class="h-7 sm:h-8 w-auto object-contain shrink-0"
-                >
+                <img src="./asbc-logo.png" alt="ASBC" class="h-7 sm:h-8 w-auto object-contain shrink-0">
                 <div class="hidden lg:block min-w-0 border-l border-[#E2E2E2] pl-5">
                     <div class="text-[10px] uppercase tracking-[0.24em] text-[#777777]">Internal Project Tool</div>
                     <div class="text-sm tracking-wide text-black">Labor Estimator</div>
                 </div>
             </div>
             <div class="flex items-center gap-2 ml-2 shrink-0">
-                <button
-                    id="installAppButton"
-                    type="button"
-                    class="hidden print-hide h-9 px-3 rounded-md bg-black text-white text-xs sm:text-sm font-medium hover:bg-[#C7A66A] hover:text-black transition-colors"
-                >
-                    Install App
-                </button>
+                <button id="installAppButton" type="button" class="hidden print-hide h-9 px-3 rounded-md bg-black text-white text-xs sm:text-sm font-medium hover:bg-[#C7A66A] hover:text-black transition-colors">Install App</button>
                 <div class="text-right leading-tight">
                     <div class="text-xs sm:text-sm text-[#666666] whitespace-nowrap">$200/hr</div>
                     <div id="versionNumber" class="text-[9px] sm:text-[10px] text-[#999999] whitespace-nowrap"></div>
@@ -161,12 +146,7 @@
         </div>
 
         <div id="projectTools" class="h-12 px-3 sm:px-5 flex items-center gap-2 border-t border-[#EBEBEB] bg-[#F7F7F5] print-hide overflow-x-auto">
-            <input
-                id="customerName"
-                type="text"
-                placeholder="Customer / quote name"
-                class="h-9 w-44 sm:w-56 shrink-0 bg-white border border-[#D8D8D8] rounded-md px-3 text-sm text-black placeholder:text-[#888888]"
-            >
+            <input id="customerName" type="text" placeholder="Customer / quote name" class="h-9 w-44 sm:w-56 shrink-0 bg-white border border-[#D8D8D8] rounded-md px-3 text-sm text-black placeholder:text-[#888888]">
             <select id="savedEstimates" class="h-9 w-44 sm:w-56 shrink-0 bg-white border border-[#D8D8D8] rounded-md px-3 text-sm text-black">
                 <option value="">Saved quotes...</option>
             </select>
@@ -180,60 +160,28 @@
         <section id="catalogPanel" class="w-full md:w-2/3 flex flex-col border-r border-gray-800 pb-20 md:pb-0">
             <div class="p-3 sm:p-4 bg-bgPanel border-b border-gray-800 space-y-3 shrink-0">
                 <div class="flex gap-2">
-                    <input
-                        id="searchInput"
-                        type="search"
-                        autocomplete="off"
-                        placeholder="Search products..."
-                        class="flex-1 min-w-0 bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-base outline-none focus:border-brandGold focus:ring-1 focus:ring-brandGold"
-                    >
-                    <button
-                        type="button"
-                        onclick="toggleCustomModal(true)"
-                        class="min-h-12 bg-gray-800 border border-gray-700 rounded-xl px-3 sm:px-4 font-medium hover:bg-brandGold hover:text-bgDark"
-                    >
-                        + Custom
-                    </button>
+                    <input id="searchInput" type="search" autocomplete="off" placeholder="Search products..." class="flex-1 min-w-0 bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-base outline-none focus:border-brandGold focus:ring-1 focus:ring-brandGold">
+                    <button type="button" onclick="toggleCustomModal(true)" class="min-h-12 bg-gray-800 border border-gray-700 rounded-xl px-3 sm:px-4 font-medium hover:bg-brandGold hover:text-bgDark">+ Custom</button>
                 </div>
 
                 <div id="categoryButtons" class="flex gap-2 overflow-x-auto pb-1"></div>
 
                 <div class="flex justify-between items-center text-xs text-textMuted">
                     <span id="resultCount">0 products</span>
-                    <button
-                        id="favoritesFilterButton"
-                        type="button"
-                        class="border border-gray-700 rounded-full px-3 py-1.5"
-                    >
-                        ☆ Favorites
-                    </button>
+                    <button id="favoritesFilterButton" type="button" class="border border-gray-700 rounded-full px-3 py-1.5">☆ Favorites</button>
                 </div>
             </div>
 
-            <div
-                id="productGrid"
-                class="flex-1 overflow-y-auto p-2.5 sm:p-3 grid grid-cols-1 lg:grid-cols-2 gap-2.5 sm:gap-3 content-start"
-            ></div>
+            <div id="productGrid" class="flex-1 overflow-y-auto p-2.5 sm:p-3 grid grid-cols-1 lg:grid-cols-2 gap-2.5 sm:gap-3 content-start"></div>
         </section>
 
-        <section
-            id="estimatePanel"
-            class="fixed md:static inset-x-0 bottom-0 z-40 md:z-auto w-full md:w-1/3 h-[88vh] md:h-full bg-bgPanel flex flex-col overflow-y-auto shadow-2xl md:shadow-none rounded-t-2xl md:rounded-none border-t md:border-t-0 border-gray-700 translate-y-full md:translate-y-0 transition-transform duration-300"
-        >
+        <section id="estimatePanel" class="fixed md:static inset-x-0 bottom-0 z-40 md:z-auto w-full md:w-1/3 h-[88vh] md:h-full bg-bgPanel flex flex-col overflow-y-auto shadow-2xl md:shadow-none rounded-t-2xl md:rounded-none border-t md:border-t-0 border-gray-700 translate-y-full md:translate-y-0 transition-transform duration-300">
             <div class="sticky top-0 z-20 p-4 border-b border-gray-800 flex justify-between items-center shrink-0 bg-bgPanel">
                 <div>
                     <h2 class="text-xl font-medium tracking-wide text-white">Project Estimate</h2>
                     <p id="quoteItemCount" class="text-xs text-textMuted">0 items</p>
                 </div>
-                <button
-                    id="closeEstimateButton"
-                    type="button"
-                    onclick="toggleEstimate(false)"
-                    class="md:hidden w-11 h-11 bg-gray-800 rounded-full text-xl"
-                    aria-label="Close estimate"
-                >
-                    ×
-                </button>
+                <button id="closeEstimateButton" type="button" onclick="toggleEstimate(false)" class="md:hidden w-11 h-11 bg-gray-800 rounded-full text-xl" aria-label="Close estimate">×</button>
             </div>
 
             <div id="projectInfoPrint" class="hidden px-4 pt-4 text-sm"></div>
@@ -262,26 +210,11 @@
                 </div>
 
                 <div class="space-y-1.5 text-sm mb-3">
-                    <div class="flex justify-between text-textMuted">
-                        <span>Install hours</span>
-                        <span id="installTotal" class="text-white font-mono">0.00</span>
-                    </div>
-                    <div class="flex justify-between text-textMuted">
-                        <span>Programming hours</span>
-                        <span id="programmingTotal" class="text-white font-mono">0.00</span>
-                    </div>
-                    <div class="flex justify-between text-textMuted">
-                        <span>Total labor hours</span>
-                        <span id="hoursTotal" class="text-white font-mono">0.00</span>
-                    </div>
-                    <div id="recyclingRow" class="hidden flex justify-between text-brandGold">
-                        <span>Recycling fee</span>
-                        <span>$75.00</span>
-                    </div>
-                    <div id="materialsRow" class="hidden flex justify-between text-brandGold">
-                        <span id="materialsLabel">Materials fee</span>
-                        <span id="materialsAmount">$0.00</span>
-                    </div>
+                    <div class="flex justify-between text-textMuted"><span>Install hours</span><span id="installTotal" class="text-white font-mono">0.00</span></div>
+                    <div class="flex justify-between text-textMuted"><span>Programming hours</span><span id="programmingTotal" class="text-white font-mono">0.00</span></div>
+                    <div class="flex justify-between text-textMuted"><span>Total labor hours</span><span id="hoursTotal" class="text-white font-mono">0.00</span></div>
+                    <div id="recyclingRow" class="hidden flex justify-between text-brandGold"><span>Recycling fee</span><span>$75.00</span></div>
+                    <div id="materialsRow" class="hidden flex justify-between text-brandGold"><span id="materialsLabel">Materials fee</span><span id="materialsAmount">$0.00</span></div>
                 </div>
 
                 <div class="flex justify-between items-end border-t border-gray-700 pt-3 mb-3">
@@ -297,21 +230,12 @@
         </section>
     </main>
 
-    <button
-        id="mobileQuoteBar"
-        type="button"
-        onclick="toggleEstimate(true)"
-        class="md:hidden fixed z-30 left-3 right-3 bottom-3 bg-brandGold text-bgDark rounded-2xl shadow-2xl px-4 py-3 flex items-center justify-between font-bold safe-bottom"
-    >
+    <button id="mobileQuoteBar" type="button" onclick="toggleEstimate(true)" class="md:hidden fixed z-30 left-3 right-3 bottom-3 bg-brandGold text-bgDark rounded-2xl shadow-2xl px-4 py-3 flex items-center justify-between font-bold safe-bottom">
         <span><span id="mobileItemCount">0</span> items · <span id="mobileHours">0.00</span> hrs</span>
         <span id="mobilePrice" class="font-mono text-lg">$0.00</span>
     </button>
 
-    <div
-        id="estimateBackdrop"
-        onclick="toggleEstimate(false)"
-        class="hidden md:hidden fixed inset-0 z-30 bg-black/70"
-    ></div>
+    <div id="estimateBackdrop" onclick="toggleEstimate(false)" class="hidden md:hidden fixed inset-0 z-30 bg-black/70"></div>
 
     <div id="customItemModal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 p-4">
         <div class="bg-bgPanel border border-gray-700 p-5 rounded-2xl shadow-2xl w-full max-w-md">
@@ -322,12 +246,7 @@
 
             <label class="block text-xs text-textMuted uppercase tracking-wider">
                 Description
-                <input
-                    id="customName"
-                    type="text"
-                    placeholder="e.g. Core drill concrete wall"
-                    class="mt-1 w-full bg-gray-900 border border-gray-700 rounded-xl p-3 text-base"
-                >
+                <input id="customName" type="text" placeholder="e.g. Core drill concrete wall" class="mt-1 w-full bg-gray-900 border border-gray-700 rounded-xl p-3 text-base">
             </label>
 
             <div class="grid grid-cols-2 gap-3 mt-4">
@@ -341,18 +260,27 @@
                 </label>
             </div>
 
-            <button
-                type="button"
-                onclick="addCustomItem()"
-                class="mt-5 w-full bg-brandGold text-bgDark font-bold py-3.5 rounded-xl"
-            >
-                Add to Estimate
-            </button>
+            <button type="button" onclick="addCustomItem()" class="mt-5 w-full bg-brandGold text-bgDark font-bold py-3.5 rounded-xl">Add to Estimate</button>
         </div>
     </div>
 
-    <script>
-        const APP_VERSION = '7.0.0';
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js";
+        import { getFirestore, doc, setDoc, getDoc, getDocs, deleteDoc, collection } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCSf560VkBf2esIH5rC-_Vcx349o7iIC-0",
+            authDomain: "asbc-calculator.firebaseapp.com",
+            projectId: "asbc-calculator",
+            storageBucket: "asbc-calculator.firebasestorage.app",
+            messagingSenderId: "1060301879727",
+            appId: "1:1060301879727:web:3eb390503974dc60ea175a"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const APP_VERSION = '7.1.0';
         const BUILD_DATE = '2026-09-30';
         const HOURLY_RATE = 200;
         const RECYCLING_FEE = 75;
@@ -361,14 +289,7 @@
         let catalogLoadError = null;
 
         function slugify(value) {
-            return String(value)
-                .trim()
-                .toLowerCase()
-                .normalize('NFKD')
-                .replace(/[\u0300-\u036f]/g, '')
-                .replace(/&/g, ' and ')
-                .replace(/[^a-z0-9]+/g, '-')
-                .replace(/^-+|-+$/g, '');
+            return String(value).trim().toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
         }
 
         function getStableCatalogId(item, category, name) {
@@ -399,14 +320,9 @@
 
             try {
                 const response = await fetch('./labor-catalog.json', { cache: 'no-store' });
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status} ${response.statusText}`);
-                }
-
+                if (!response.ok) throw new Error(`HTTP ${response.status} ${response.statusText}`);
                 const data = await response.json();
-                if (!Array.isArray(data)) {
-                    throw new Error('labor-catalog.json must contain a JSON array.');
-                }
+                if (!Array.isArray(data)) throw new Error('labor-catalog.json must contain a JSON array.');
 
                 catalog = data.map((item, index) => {
                     const category = String(item.category || '').trim();
@@ -415,44 +331,23 @@
                     const programmingHours = Number(item.programmingHours ?? 0);
                     const id = getStableCatalogId(item, category, name);
 
-                    if (!category || !name) {
-                        throw new Error(`Catalog item ${index + 1} is missing a category or name.`);
-                    }
-                    if (!Number.isFinite(installHours) || !Number.isFinite(programmingHours)) {
-                        throw new Error(`Catalog item ${index + 1} contains invalid labor hours.`);
-                    }
+                    if (!category || !name) throw new Error(`Catalog item ${index + 1} is missing a category or name.`);
+                    if (!Number.isFinite(installHours) || !Number.isFinite(programmingHours)) throw new Error(`Catalog item ${index + 1} contains invalid labor hours.`);
 
-                    return {
-                        ...item,
-                        id,
-                        category,
-                        name,
-                        installHours,
-                        programmingHours,
-                        totalHours: installHours + programmingHours
-                    };
+                    return { ...item, id, category, name, installHours, programmingHours, totalHours: installHours + programmingHours };
                 });
 
-                const duplicateIds = catalog
-                    .map(item => item.id)
-                    .filter((id, index, ids) => ids.indexOf(id) !== index);
-                if (duplicateIds.length) {
-                    throw new Error(`Duplicate catalog ID: ${duplicateIds[0]}. Add unique "id" values in labor-catalog.json.`);
-                }
-
                 migrateLegacyFavoriteIds();
-
                 catalogLoadError = null;
                 searchInput.placeholder = `Search ${catalog.length} products...`;
                 buildCategoryButtons();
                 renderCatalog();
                 renderQuote();
-                console.log(`Loaded ${catalog.length} labor items from labor-catalog.json`);
             } catch (error) {
                 catalog = [];
                 catalogLoadError = error;
                 console.error('Failed to load labor-catalog.json:', error);
-                categoryButtons.innerHTML = '';
+                document.getElementById('categoryButtons').innerHTML = '';
                 resultCount.textContent = 'Catalog unavailable';
                 productGrid.innerHTML = `
                     <div class="col-span-full mx-auto max-w-lg text-center py-12 px-5">
@@ -464,18 +359,13 @@
             }
         }
 
-        // Version 2 uses the original working quote pattern:
-        // find an existing item, increase qty, otherwise push a copied catalog item.
         let quoteCart = [];
         let selectedCategory = 'All';
         let favoritesOnly = false;
         let favoriteIds = new Set(JSON.parse(localStorage.getItem('asbcFavoriteIds') || '[]'));
 
         const currencyFormatter = new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: 'USD',
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
+            style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2
         });
 
         const searchInput = document.getElementById('searchInput');
@@ -488,53 +378,44 @@
         const customerName = document.getElementById('customerName');
         const savedEstimates = document.getElementById('savedEstimates');
 
-        function getSavedEstimateMap() {
-            try { return JSON.parse(localStorage.getItem('asbcSavedEstimates') || '{}'); }
-            catch (error) { return {}; }
-        }
-
-        function refreshSavedEstimateList(selectedId = '') {
-            const saved = getSavedEstimateMap();
-            savedEstimates.innerHTML = '<option value="">Saved quotes...</option>';
-            Object.values(saved)
-                .sort((a, b) => a.label.localeCompare(b.label))
-                .forEach(record => {
-                    const option = document.createElement('option');
-                    option.value = record.id;
-                    option.textContent = record.label;
-                    savedEstimates.appendChild(option);
+        async function refreshSavedEstimateList(selectedId = '') {
+            savedEstimates.innerHTML = '<option value="">Syncing with cloud...</option>';
+            try {
+                const querySnapshot = await getDocs(collection(db, "quotes"));
+                savedEstimates.innerHTML = '<option value="">Saved quotes...</option>';
+                const quotes = [];
+                querySnapshot.forEach((doc) => {
+                    quotes.push(doc.data());
                 });
-            savedEstimates.value = selectedId;
+
+                quotes.sort((a, b) => a.label.localeCompare(b.label))
+                    .forEach(record => {
+                        const option = document.createElement('option');
+                        option.value = record.id;
+                        option.textContent = record.label;
+                        savedEstimates.appendChild(option);
+                    });
+                savedEstimates.value = selectedId;
+            } catch (error) {
+                console.error("Failed to fetch estimates from cloud:", error);
+                savedEstimates.innerHTML = '<option value="">Error loading quotes</option>';
+            }
         }
 
         function currentProjectData() {
-            return {
-                customerName: customerName.value.trim()
-            };
+            return { customerName: customerName.value.trim() };
         }
 
         function applyProjectData(data = {}) {
             customerName.value = data.customerName || '';
         }
 
-
         function serializeQuoteCart() {
-            return quoteCart.map(item => item.isCustom
-                ? {
-                    id: item.id,
-                    category: 'Custom',
-                    name: item.name,
-                    installHours: item.installHours,
-                    programmingHours: item.programmingHours,
-                    qty: item.qty,
-                    isCustom: true
-                }
-                : {
-                    id: item.id,
-                    qty: item.qty,
-                    isCustom: false
-                }
-            );
+            return quoteCart.map(item => item.isCustom ? {
+                id: item.id, category: 'Custom', name: item.name, installHours: item.installHours, programmingHours: item.programmingHours, qty: item.qty, isCustom: true
+            } : {
+                id: item.id, qty: item.qty, isCustom: false
+            });
         }
 
         function rebuildQuoteCart(savedItems = []) {
@@ -543,57 +424,41 @@
 
             savedItems.forEach(savedItem => {
                 const qty = Math.max(1, Number(savedItem.qty) || 1);
-
                 if (savedItem.isCustom) {
                     const installHours = Number(savedItem.installHours) || 0;
                     const programmingHours = Number(savedItem.programmingHours) || 0;
                     rebuilt.push({
                         id: savedItem.id || `custom-${Date.now()}-${rebuilt.length}`,
-                        category: 'Custom',
-                        name: savedItem.name || 'Custom Labor',
-                        installHours,
-                        programmingHours,
-                        totalHours: installHours + programmingHours,
-                        qty,
-                        isCustom: true
+                        category: 'Custom', name: savedItem.name || 'Custom Labor', installHours, programmingHours, totalHours: installHours + programmingHours, qty, isCustom: true
                     });
                     return;
                 }
 
                 let catalogItem = catalog.find(item => item.id === savedItem.id);
-
-                // One-time compatibility for quotes saved by the previous index-based version.
-                if (!catalogItem && typeof savedItem.id === 'number') {
-                    catalogItem = catalog[savedItem.id];
-                }
+                if (!catalogItem && typeof savedItem.id === 'number') { catalogItem = catalog[savedItem.id]; }
                 if (!catalogItem && savedItem.name) {
-                    catalogItem = catalog.find(item =>
-                        item.name === savedItem.name &&
-                        (!savedItem.category || item.category === savedItem.category)
-                    );
+                    catalogItem = catalog.find(item => item.name === savedItem.name && (!savedItem.category || item.category === savedItem.category));
                 }
 
-                if (catalogItem) {
-                    rebuilt.push({ ...catalogItem, qty, isCustom: false });
-                } else {
-                    missing.push(savedItem.name || savedItem.id || 'Unknown item');
-                }
+                if (catalogItem) { rebuilt.push({ ...catalogItem, qty, isCustom: false }); } 
+                else { missing.push(savedItem.name || savedItem.id || 'Unknown item'); }
             });
 
             return { rebuilt, missing };
         }
 
-        function saveEstimate() {
+        async function saveEstimate() {
             const data = currentProjectData();
             if (!data.customerName) {
                 alert('Enter a customer name before saving.');
                 return;
             }
-            const saved = getSavedEstimateMap();
+            
             const existingId = savedEstimates.value;
             const id = existingId || `estimate-${Date.now()}`;
             const label = data.customerName;
-            saved[id] = {
+
+            const quoteDocument = {
                 id,
                 label,
                 project: data,
@@ -601,65 +466,77 @@
                 options: {
                     recycling: recyclingToggle.value,
                     markup: materialsMarkup.value
-                }
+                },
+                updatedAt: Date.now()
             };
-            localStorage.setItem('asbcSavedEstimates', JSON.stringify(saved));
-            refreshSavedEstimateList(id);
-            alert(`Saved: ${label}`);
+
+            try {
+                await setDoc(doc(db, "quotes", id), quoteDocument);
+                alert(`Saved ${label} to the cloud!`);
+                await refreshSavedEstimateList(id);
+            } catch (error) {
+                console.error("Cloud save failed: ", error);
+                alert("Failed to save to cloud. Check your connection.");
+            }
         }
 
-        function loadEstimate() {
+        async function loadEstimate() {
             const id = savedEstimates.value;
             if (!id) return alert('Choose a saved quote first.');
             if (!catalog.length) return alert('The labor catalog is still loading. Please try again.');
 
-            const record = getSavedEstimateMap()[id];
-            if (!record) return alert('Saved quote not found.');
+            try {
+                const docSnap = await getDoc(doc(db, "quotes", id));
+                if (docSnap.exists()) {
+                    const record = docSnap.data();
+                    const savedItems = Array.isArray(record.items) ? record.items : (Array.isArray(record.quoteCart) ? record.quoteCart : []);
+                    const { rebuilt, missing } = rebuildQuoteCart(savedItems);
 
-            const savedItems = Array.isArray(record.items)
-                ? record.items
-                : (Array.isArray(record.quoteCart) ? record.quoteCart : []);
-            const { rebuilt, missing } = rebuildQuoteCart(savedItems);
+                    quoteCart = rebuilt;
+                    applyProjectData(record.project);
+                    recyclingToggle.value = record.options?.recycling || 'no';
+                    materialsMarkup.value = record.options?.markup || '0';
+                    
+                    renderCatalog();
+                    renderQuote();
 
-            quoteCart = rebuilt;
-            applyProjectData(record.project);
-            recyclingToggle.value = record.options?.recycling || 'no';
-            materialsMarkup.value = record.options?.markup || '0';
-            renderCatalog();
-            renderQuote();
-
-            if (missing.length) {
-                alert(`Loaded with ${missing.length} missing catalog item${missing.length === 1 ? '' : 's'}: ${missing.join(', ')}`);
+                    if (missing.length) {
+                        alert(`Loaded with ${missing.length} missing catalog item(s): ${missing.join(', ')}`);
+                    }
+                } else {
+                    alert("Quote not found in the cloud database.");
+                }
+            } catch (error) {
+                console.error("Cloud load failed: ", error);
+                alert("Failed to load estimate from cloud.");
             }
         }
 
-        function deleteEstimate() {
+        async function deleteEstimate() {
             const id = savedEstimates.value;
             if (!id) return alert('Choose a saved quote first.');
-            const saved = getSavedEstimateMap();
-            const label = saved[id]?.label || 'this estimate';
-            if (!window.confirm(`Delete ${label}?`)) return;
-            delete saved[id];
-            localStorage.setItem('asbcSavedEstimates', JSON.stringify(saved));
-            refreshSavedEstimateList();
+            
+            const label = savedEstimates.options[savedEstimates.selectedIndex].text;
+            if (!window.confirm(`Delete ${label} from the cloud?`)) return;
+
+            try {
+                await deleteDoc(doc(db, "quotes", id));
+                await refreshSavedEstimateList();
+            } catch (error) {
+                console.error("Cloud delete failed: ", error);
+                alert("Failed to delete estimate from cloud.");
+            }
         }
-
-
 
         function escapeHtml(value) {
             return String(value).replace(/[&<>'"]/g, character => ({
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;',
-                "'": '&#39;',
-                '"': '&quot;'
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
             }[character]));
         }
 
         function buildCategoryButtons() {
             const categories = ['All', ...new Set(catalog.map(item => item.category))];
             categoryButtons.innerHTML = '';
-
             categories.forEach(category => {
                 const button = document.createElement('button');
                 button.type = 'button';
@@ -673,7 +550,6 @@
                 });
                 categoryButtons.appendChild(button);
             });
-
             updateCategoryButtonStyles();
         }
 
@@ -685,7 +561,6 @@
 
         function getVisibleCatalogItems() {
             const searchText = searchInput.value.trim().toLowerCase();
-
             return catalog.filter(item => {
                 const matchesCategory = selectedCategory === 'All' || item.category === selectedCategory;
                 const matchesSearch = !searchText || `${item.name} ${item.category}`.toLowerCase().includes(searchText);
@@ -714,65 +589,39 @@
                     <div>
                         <div class="flex justify-between gap-3">
                             <div class="text-xs text-brandGold mb-1 uppercase tracking-wider">${escapeHtml(item.category)}</div>
-                            <button
-                                type="button"
-                                data-favorite-id="${item.id}"
-                                class="favorite-button -mt-1.5 -mr-1.5 w-9 h-9 text-lg ${favoriteIds.has(item.id) ? 'text-brandGold' : 'text-textMuted'}"
-                                aria-label="Favorite ${escapeHtml(item.name)}"
-                            >${favoriteIds.has(item.id) ? '★' : '☆'}</button>
+                            <button type="button" data-favorite-id="${item.id}" class="favorite-button -mt-1.5 -mr-1.5 w-9 h-9 text-lg ${favoriteIds.has(item.id) ? 'text-brandGold' : 'text-textMuted'}">${favoriteIds.has(item.id) ? '★' : '☆'}</button>
                         </div>
                         <h3 class="font-medium text-sm leading-snug mb-2">${escapeHtml(item.name)}</h3>
                     </div>
                     <div class="flex justify-between items-center gap-2 border-t border-gray-800 pt-2.5">
-                        <div class="text-xs text-textMuted font-mono">
-                            ${item.installHours.toFixed(2)} install + ${item.programmingHours.toFixed(2)} prog
-                        </div>
+                        <div class="text-xs text-textMuted font-mono">${item.installHours.toFixed(2)} install + ${item.programmingHours.toFixed(2)} prog</div>
                         <div class="flex items-center bg-gray-800 rounded-xl overflow-hidden shrink-0">
-                            <button type="button" data-product-id="${item.id}" data-change="-1" class="quantity-button w-9 h-9 text-lg" aria-label="Decrease quantity">−</button>
+                            <button type="button" data-product-id="${item.id}" data-change="-1" class="quantity-button w-9 h-9 text-lg">−</button>
                             <span class="w-7 text-center text-sm font-mono font-bold">${quantity}</span>
-                            <button type="button" data-product-id="${item.id}" data-change="1" class="quantity-button w-9 h-9 text-lg hover:bg-brandGold hover:text-bgDark" aria-label="Increase quantity">+</button>
+                            <button type="button" data-product-id="${item.id}" data-change="1" class="quantity-button w-9 h-9 text-lg hover:bg-brandGold hover:text-bgDark">+</button>
                         </div>
                     </div>
                 `;
-
                 productGrid.appendChild(card);
             });
         }
 
-        // Original working quote logic, preserved and made explicit.
         function addToQuote(productId) {
             const item = catalog.find(catalogItem => catalogItem.id === productId);
-            if (!item) {
-                console.error('Catalog item not found:', productId);
-                return;
-            }
-
+            if (!item) return;
             const existingItem = quoteCart.find(cartItem => cartItem.id === productId && !cartItem.isCustom);
-
-            if (existingItem) {
-                existingItem.qty = (Number(existingItem.qty) || 0) + 1;
-            } else {
-                quoteCart.push({ ...item, qty: 1, isCustom: false });
-            }
-
+            if (existingItem) { existingItem.qty = (Number(existingItem.qty) || 0) + 1; } 
+            else { quoteCart.push({ ...item, qty: 1, isCustom: false }); }
             renderCatalog();
             renderQuote();
         }
 
         function updateProductQuantity(productId, change) {
-            if (change > 0) {
-                addToQuote(productId);
-                return;
-            }
-
+            if (change > 0) return addToQuote(productId);
             const existingIndex = quoteCart.findIndex(cartItem => cartItem.id === productId && !cartItem.isCustom);
             if (existingIndex === -1) return;
-
             quoteCart[existingIndex].qty = (Number(quoteCart[existingIndex].qty) || 0) - 1;
-            if (quoteCart[existingIndex].qty <= 0) {
-                quoteCart.splice(existingIndex, 1);
-            }
-
+            if (quoteCart[existingIndex].qty <= 0) { quoteCart.splice(existingIndex, 1); }
             renderCatalog();
             renderQuote();
         }
@@ -780,18 +629,13 @@
         function updateQuoteQuantity(quoteIndex, change) {
             if (!quoteCart[quoteIndex]) return;
             quoteCart[quoteIndex].qty = (Number(quoteCart[quoteIndex].qty) || 0) + change;
-            if (quoteCart[quoteIndex].qty <= 0) {
-                quoteCart.splice(quoteIndex, 1);
-            }
-
+            if (quoteCart[quoteIndex].qty <= 0) { quoteCart.splice(quoteIndex, 1); }
             renderCatalog();
             renderQuote();
         }
 
         function renderQuote() {
-            let totalInstall = 0;
-            let totalProgramming = 0;
-            let totalQuantity = 0;
+            let totalInstall = 0, totalProgramming = 0, totalQuantity = 0;
             quoteList.innerHTML = '';
 
             if (quoteCart.length === 0) {
@@ -851,17 +695,9 @@
             document.getElementById('materialsAmount').textContent = currencyFormatter.format(materialsFee);
 
             const categoryTotals = {};
-            quoteCart.forEach(item => {
-                categoryTotals[item.category] = (categoryTotals[item.category] || 0) + (item.totalHours * item.qty);
-            });
+            quoteCart.forEach(item => { categoryTotals[item.category] = (categoryTotals[item.category] || 0) + (item.totalHours * item.qty); });
             const breakdown = document.getElementById('categoryBreakdown');
-            breakdown.innerHTML = quoteCart.length
-                ? '<div class="text-xs uppercase tracking-wider text-textMuted mb-2">Labor by category</div>' +
-                  Object.entries(categoryTotals)
-                    .sort((a, b) => b[1] - a[1])
-                    .map(([category, hours]) => `<div class="flex justify-between text-sm"><span>${escapeHtml(category)}</span><span class="font-mono">${hours.toFixed(2)} hrs</span></div>`)
-                    .join('')
-                : '';
+            breakdown.innerHTML = quoteCart.length ? '<div class="text-xs uppercase tracking-wider text-textMuted mb-2">Labor by category</div>' + Object.entries(categoryTotals).sort((a, b) => b[1] - a[1]).map(([category, hours]) => `<div class="flex justify-between text-sm"><span>${escapeHtml(category)}</span><span class="font-mono">${hours.toFixed(2)} hrs</span></div>`).join('') : '';
 
             const data = currentProjectData();
             document.getElementById('projectInfoPrint').innerHTML = `
@@ -871,17 +707,11 @@
                     <div><strong>Build Date:</strong> ${escapeHtml(BUILD_DATE)}</div>
                 </div>
             `;
-            const notesPrint = document.getElementById('notesPrint');
-            if (notesPrint) notesPrint.innerHTML = '';
         }
 
         function toggleFavorite(itemId) {
-            if (favoriteIds.has(itemId)) {
-                favoriteIds.delete(itemId);
-            } else {
-                favoriteIds.add(itemId);
-            }
-
+            if (favoriteIds.has(itemId)) { favoriteIds.delete(itemId); } 
+            else { favoriteIds.add(itemId); }
             localStorage.setItem('asbcFavoriteIds', JSON.stringify([...favoriteIds]));
             renderCatalog();
         }
@@ -895,7 +725,6 @@
             const modal = document.getElementById('customItemModal');
             modal.classList.toggle('hidden', !show);
             modal.classList.toggle('flex', show);
-
             if (show) {
                 document.getElementById('customName').value = '';
                 document.getElementById('customInstall').value = '';
@@ -909,20 +738,10 @@
             const installHours = Number(document.getElementById('customInstall').value) || 0;
             const programmingHours = Number(document.getElementById('customProgramming').value) || 0;
 
-            if (installHours === 0 && programmingHours === 0) {
-                alert('Please enter at least some labor hours.');
-                return;
-            }
+            if (installHours === 0 && programmingHours === 0) return alert('Please enter at least some labor hours.');
 
             quoteCart.push({
-                id: `custom-${Date.now()}`,
-                category: 'Custom',
-                name,
-                installHours,
-                programmingHours,
-                totalHours: installHours + programmingHours,
-                qty: 1,
-                isCustom: true
+                id: `custom-${Date.now()}`, category: 'Custom', name, installHours, programmingHours, totalHours: installHours + programmingHours, qty: 1, isCustom: true
             });
 
             toggleCustomModal(false);
@@ -940,17 +759,9 @@
 
         productGrid.addEventListener('click', event => {
             const quantityButton = event.target.closest('.quantity-button');
-            if (quantityButton) {
-                const productId = quantityButton.dataset.productId;
-                const change = Number(quantityButton.dataset.change);
-                updateProductQuantity(productId, change);
-                return;
-            }
-
+            if (quantityButton) return updateProductQuantity(quantityButton.dataset.productId, Number(quantityButton.dataset.change));
             const favoriteButton = event.target.closest('.favorite-button');
-            if (favoriteButton) {
-                toggleFavorite(favoriteButton.dataset.favoriteId);
-            }
+            if (favoriteButton) toggleFavorite(favoriteButton.dataset.favoriteId);
         });
 
         quoteList.addEventListener('click', event => {
@@ -968,20 +779,13 @@
             renderCatalog();
         });
 
-        [recyclingToggle, materialsMarkup].forEach(control => {
-            control.addEventListener('change', renderQuote);
-        });
-
+        [recyclingToggle, materialsMarkup].forEach(control => { control.addEventListener('change', renderQuote); });
         document.addEventListener('keydown', event => {
-            if (event.key === 'Escape') {
-                toggleCustomModal(false);
-                toggleEstimate(false);
-            }
+            if (event.key === 'Escape') { toggleCustomModal(false); toggleEstimate(false); }
         });
 
         let deferredInstallPrompt = null;
         const installAppButton = document.getElementById('installAppButton');
-
         window.addEventListener('beforeinstallprompt', event => {
             event.preventDefault();
             deferredInstallPrompt = event;
@@ -1003,6 +807,16 @@
 
         document.getElementById('versionNumber').textContent = `v${APP_VERSION} (${BUILD_DATE})`;
         document.title = `Labor Calculator | ASBC v${APP_VERSION}`;
+
+        // Bind UI functions to window object so inline HTML triggers can access them inside the module
+        window.saveEstimate = saveEstimate;
+        window.loadEstimate = loadEstimate;
+        window.deleteEstimate = deleteEstimate;
+        window.toggleCustomModal = toggleCustomModal;
+        window.addCustomItem = addCustomItem;
+        window.clearQuote = clearQuote;
+        window.toggleEstimate = toggleEstimate;
+        window.loadCatalog = loadCatalog;
 
         applyProjectData();
         refreshSavedEstimateList();
