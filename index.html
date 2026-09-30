@@ -90,7 +90,7 @@
             }
 
             #projectTools, #savedEstimateControls { display: none !important; }
-            #projectInfoPrint, #notesPrint, #scopePrint, #categoryBreakdown { display: block !important; }
+            #projectInfoPrint, #notesPrint, #categoryBreakdown { display: block !important; }
             #quoteList { overflow: visible !important; }
             #quoteList > div {
                 background: white !important;
@@ -151,9 +151,9 @@
 
         <section
             id="estimatePanel"
-            class="fixed md:static inset-x-0 bottom-0 z-40 md:z-auto w-full md:w-1/3 h-[88vh] md:h-auto bg-bgPanel flex flex-col shadow-2xl md:shadow-none rounded-t-2xl md:rounded-none border-t md:border-t-0 border-gray-700 translate-y-full md:translate-y-0 transition-transform duration-300"
+            class="fixed md:static inset-x-0 bottom-0 z-40 md:z-auto w-full md:w-1/3 h-[88vh] md:h-full bg-bgPanel flex flex-col overflow-y-auto shadow-2xl md:shadow-none rounded-t-2xl md:rounded-none border-t md:border-t-0 border-gray-700 translate-y-full md:translate-y-0 transition-transform duration-300"
         >
-            <div class="p-4 border-b border-gray-800 flex justify-between items-center shrink-0">
+            <div class="sticky top-0 z-20 p-4 border-b border-gray-800 flex justify-between items-center shrink-0 bg-bgPanel">
                 <div>
                     <h2 class="text-xl font-semibold text-brandGold">Current Estimate</h2>
                     <p id="quoteItemCount" class="text-xs text-textMuted">0 items</p>
@@ -172,17 +172,12 @@
             <div id="projectTools" class="p-4 border-b border-gray-800 space-y-3 shrink-0 print-hide">
                 <div class="grid grid-cols-2 gap-2">
                     <input id="customerName" type="text" placeholder="Customer name" class="bg-gray-900 border border-gray-700 rounded-lg p-2.5 text-sm">
-                    <input id="projectName" type="text" placeholder="Project name" class="bg-gray-900 border border-gray-700 rounded-lg p-2.5 text-sm">
                     <input id="projectLocation" type="text" placeholder="Location" class="bg-gray-900 border border-gray-700 rounded-lg p-2.5 text-sm">
                     <input id="salespersonName" type="text" placeholder="Salesperson" class="bg-gray-900 border border-gray-700 rounded-lg p-2.5 text-sm">
-                    <input id="proposalNumber" type="text" placeholder="Proposal number" class="bg-gray-900 border border-gray-700 rounded-lg p-2.5 text-sm">
                     <input id="projectDate" type="date" class="bg-gray-900 border border-gray-700 rounded-lg p-2.5 text-sm">
                 </div>
                 <textarea id="projectNotes" rows="2" placeholder="Project notes" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2.5 text-sm"></textarea>
-                <div class="grid grid-cols-2 gap-2">
-                    <button type="button" onclick="saveEstimate()" class="bg-brandGold text-bgDark font-bold rounded-lg py-2.5">Save Estimate</button>
-                    <button type="button" onclick="generateScope()" class="border border-brandGold text-brandGold font-bold rounded-lg py-2.5">Generate Scope</button>
-                </div>
+                <button type="button" onclick="saveEstimate()" class="w-full bg-brandGold text-bgDark font-bold rounded-lg py-2.5">Save Estimate</button>
                 <div id="savedEstimateControls" class="flex gap-2">
                     <select id="savedEstimates" class="flex-1 min-w-0 bg-gray-900 border border-gray-700 rounded-lg p-2.5 text-sm">
                         <option value="">Saved estimates...</option>
@@ -193,12 +188,11 @@
             </div>
 
             <div id="projectInfoPrint" class="hidden px-4 pt-4 text-sm"></div>
-            <div id="quoteList" class="flex-1 overflow-y-auto p-4 space-y-3"></div>
+            <div id="quoteList" class="shrink-0 p-4 space-y-3"></div>
             <div id="categoryBreakdown" class="px-4 pb-3"></div>
             <div id="notesPrint" class="hidden px-4 pb-3 text-sm"></div>
-            <div id="scopePrint" class="hidden px-4 pb-4 text-sm"></div>
 
-            <div class="p-4 sm:p-6 bg-gray-900 border-t border-gray-800 shrink-0 safe-bottom">
+            <div class="sticky bottom-0 z-20 p-4 sm:p-6 bg-gray-900 border-t border-gray-800 shrink-0 safe-bottom shadow-[0_-10px_20px_rgba(0,0,0,0.45)]">
                 <div class="grid grid-cols-2 gap-3 mb-3 print-hide">
                     <label class="text-xs text-textMuted">
                         Crew size
@@ -992,14 +986,11 @@
         const crewSize = document.getElementById('crewSize');
         const workdayHours = document.getElementById('workdayHours');
         const customerName = document.getElementById('customerName');
-        const projectName = document.getElementById('projectName');
         const projectLocation = document.getElementById('projectLocation');
         const salespersonName = document.getElementById('salespersonName');
-        const proposalNumber = document.getElementById('proposalNumber');
         const projectDate = document.getElementById('projectDate');
         const projectNotes = document.getElementById('projectNotes');
         const savedEstimates = document.getElementById('savedEstimates');
-        let generatedScope = '';
 
         function getSavedEstimateMap() {
             try { return JSON.parse(localStorage.getItem('asbcSavedEstimates') || '{}'); }
@@ -1023,10 +1014,8 @@
         function currentProjectData() {
             return {
                 customerName: customerName.value.trim(),
-                projectName: projectName.value.trim(),
                 projectLocation: projectLocation.value.trim(),
                 salespersonName: salespersonName.value.trim(),
-                proposalNumber: proposalNumber.value.trim(),
                 projectDate: projectDate.value,
                 projectNotes: projectNotes.value.trim()
             };
@@ -1034,42 +1023,28 @@
 
         function applyProjectData(data = {}) {
             customerName.value = data.customerName || '';
-            projectName.value = data.projectName || '';
             projectLocation.value = data.projectLocation || '';
             salespersonName.value = data.salespersonName || '';
-            proposalNumber.value = data.proposalNumber || '';
             projectDate.value = data.projectDate || new Date().toISOString().slice(0, 10);
             projectNotes.value = data.projectNotes || '';
         }
 
-        function createProposalNumber() {
-            const year = new Date().getFullYear();
-            const key = `asbcProposalSequence-${year}`;
-            const next = (Number(localStorage.getItem(key)) || 0) + 1;
-            localStorage.setItem(key, String(next));
-            return `ASBC-${year}-${String(next).padStart(3, '0')}`;
-        }
 
         function saveEstimate() {
             const data = currentProjectData();
-            if (!data.customerName && !data.projectName) {
-                alert('Enter a customer or project name before saving.');
+            if (!data.customerName) {
+                alert('Enter a customer name before saving.');
                 return;
-            }
-            if (!data.proposalNumber) {
-                data.proposalNumber = createProposalNumber();
-                proposalNumber.value = data.proposalNumber;
             }
             const saved = getSavedEstimateMap();
             const existingId = savedEstimates.value;
             const id = existingId || `estimate-${Date.now()}`;
-            const label = [data.customerName, data.projectName].filter(Boolean).join(' - ');
+            const label = [data.customerName, data.projectLocation].filter(Boolean).join(' - ');
             saved[id] = {
                 id,
                 label,
                 project: data,
                 quoteCart,
-                generatedScope,
                 options: {
                     recycling: recyclingToggle.value,
                     markup: materialsMarkup.value,
@@ -1089,7 +1064,6 @@
             if (!record) return alert('Saved estimate not found.');
             quoteCart = Array.isArray(record.quoteCart) ? record.quoteCart : [];
             applyProjectData(record.project);
-            generatedScope = record.generatedScope || '';
             recyclingToggle.value = record.options?.recycling || 'no';
             materialsMarkup.value = record.options?.markup || '0';
             crewSize.value = record.options?.crew || '2';
@@ -1109,16 +1083,6 @@
             refreshSavedEstimateList();
         }
 
-        function generateScope() {
-            if (!quoteCart.length) return alert('Add products before generating a scope.');
-            const lines = quoteCart.map(item => {
-                const qtyText = item.qty === 1 ? 'one' : item.qty;
-                return `Install and configure ${qtyText} ${item.name}`;
-            });
-            generatedScope = `${lines.join('; ')}. Complete system setup, testing, software updates where applicable, and customer orientation.`;
-            renderQuote();
-            toggleEstimate(true);
-        }
 
 
         function escapeHtml(value) {
@@ -1330,17 +1294,12 @@
             document.getElementById('projectInfoPrint').innerHTML = `
                 <div class="grid grid-cols-2 gap-x-6 gap-y-1 mb-4 border-b border-gray-300 pb-3">
                     <div><strong>Customer:</strong> ${escapeHtml(data.customerName || '—')}</div>
-                    <div><strong>Project:</strong> ${escapeHtml(data.projectName || '—')}</div>
                     <div><strong>Location:</strong> ${escapeHtml(data.projectLocation || '—')}</div>
                     <div><strong>Salesperson:</strong> ${escapeHtml(data.salespersonName || '—')}</div>
-                    <div><strong>Proposal:</strong> ${escapeHtml(data.proposalNumber || '—')}</div>
                     <div><strong>Date:</strong> ${escapeHtml(data.projectDate || '—')}</div>
                 </div>`;
             document.getElementById('notesPrint').innerHTML = data.projectNotes
                 ? `<h3 class="font-bold mb-1">Project Notes</h3><p class="whitespace-pre-wrap">${escapeHtml(data.projectNotes)}</p>`
-                : '';
-            document.getElementById('scopePrint').innerHTML = generatedScope
-                ? `<h3 class="font-bold mb-1">Scope of Work</h3><p>${escapeHtml(generatedScope)}</p>`
                 : '';
         }
 
@@ -1451,7 +1410,7 @@
         buildCategoryButtons();
         applyProjectData({ projectDate: new Date().toISOString().slice(0, 10) });
         refreshSavedEstimateList();
-        [customerName, projectName, projectLocation, salespersonName, proposalNumber, projectDate, projectNotes].forEach(control => {
+        [customerName, projectLocation, salespersonName, projectDate, projectNotes].forEach(control => {
             control.addEventListener('input', renderQuote);
         });
         renderCatalog();
