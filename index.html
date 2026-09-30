@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- ASBC Labor Calculator v7.8.0 | Template Engine & Auto-Forking | Build 2026-09-30 -->
+<!-- ASBC Labor Calculator v7.9.0 | Zones, Crew Size, Offline Cache | Build 2026-09-30 -->
 <html lang="en">
 <head>
     <link rel="manifest" href="./manifest.json">
@@ -9,7 +9,7 @@
     <meta name="theme-color" content="#b08d57">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="application-version" content="7.8.0">
+    <meta name="application-version" content="7.9.0">
     <meta name="build-date" content="2026-09-30">
     <meta name="theme-color" content="#050505">
     <title>Labor Calculator | ASBC</title>
@@ -124,6 +124,13 @@
             #quoteList > div {
                 background: white !important;
                 border: 1px solid #ddd !important;
+                margin-bottom: 6px;
+            }
+            .zone-header-print {
+                color: black !important;
+                border-bottom: 1px solid #ccc;
+                margin-top: 15px !important;
+                padding-bottom: 4px;
             }
             * { color: black !important; }
         }
@@ -177,8 +184,19 @@
         <section id="catalogPanel" class="w-full md:w-2/3 flex flex-col border-r border-gray-800 pb-20 md:pb-0">
             <div class="p-3 sm:p-4 bg-bgPanel border-b border-gray-800 space-y-3 shrink-0">
                 <div class="flex gap-2">
-                    <input id="searchInput" type="search" autocomplete="off" placeholder="Search products..." class="flex-1 min-w-0 bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-base outline-none focus:border-brandGold focus:ring-1 focus:ring-brandGold">
-                    <button type="button" onclick="toggleCustomModal(true)" class="min-h-12 bg-gray-800 border border-gray-700 rounded-xl px-3 sm:px-4 font-medium hover:bg-brandGold hover:text-bgDark">+ Custom</button>
+                    <div class="w-1/3 relative shrink-0">
+                        <input list="zoneOptions" id="activeZone" placeholder="Zone..." value="General" class="w-full h-12 bg-gray-900 border border-gray-700 rounded-xl px-3 text-sm text-brandGold font-medium outline-none focus:border-brandGold">
+                        <datalist id="zoneOptions">
+                            <option value="General"></option>
+                            <option value="Living Room"></option>
+                            <option value="Master Bedroom"></option>
+                            <option value="Home Theater"></option>
+                            <option value="Outdoor"></option>
+                            <option value="Rack / Head End"></option>
+                        </datalist>
+                    </div>
+                    <input id="searchInput" type="search" autocomplete="off" placeholder="Search products..." class="flex-1 min-w-0 bg-gray-900 border border-gray-700 rounded-xl px-4 h-12 text-base outline-none focus:border-brandGold focus:ring-1 focus:ring-brandGold">
+                    <button type="button" onclick="toggleCustomModal(true)" class="h-12 bg-gray-800 border border-gray-700 rounded-xl px-3 sm:px-4 font-medium hover:bg-brandGold hover:text-bgDark shrink-0">+ Custom</button>
                 </div>
 
                 <div id="categoryButtons" class="flex gap-2 overflow-x-auto pb-1"></div>
@@ -207,22 +225,34 @@
             </div>
 
             <div id="projectInfoPrint" class="hidden px-4 pt-4 text-sm"></div>
-            <div id="quoteList" class="shrink-0 p-4 space-y-3"></div>
+            <div id="quoteList" class="shrink-0 p-4 pb-8 space-y-2"></div>
             <div id="categoryBreakdown" class="px-4 pb-3"></div>
 
             <div class="sticky bottom-0 z-20 p-3 sm:p-4 bg-gray-900 border-t border-gray-800 shrink-0 safe-bottom shadow-[0_-10px_20px_rgba(0,0,0,0.45)]">
-                <div class="grid grid-cols-2 gap-2 mb-3 print-hide">
-                    <label class="text-xs text-textMuted">
-                        Recycling
-                        <select id="recyclingToggle" class="mt-1 w-full bg-bgDark border border-gray-700 rounded-lg p-2.5 text-base">
+                <div class="grid grid-cols-3 gap-1.5 sm:gap-2 mb-3 print-hide">
+                    <label class="text-[10px] sm:text-xs text-textMuted flex flex-col">
+                        <span>Recycling</span>
+                        <select id="recyclingToggle" class="mt-1 w-full bg-bgDark border border-gray-700 rounded-lg p-2 sm:p-2.5 text-sm sm:text-base outline-none focus:border-brandGold">
                             <option value="no">No</option>
                             <option value="yes">Yes (+$75)</option>
+                            <option value="custom">Custom...</option>
+                        </select>
+                        <input type="number" id="customRecyclingInput" inputmode="decimal" class="hidden mt-1 w-full bg-gray-900 border border-brandGold rounded-lg p-2 text-sm sm:text-base outline-none" placeholder="$">
+                    </label>
+
+                    <label class="text-[10px] sm:text-xs text-textMuted flex flex-col">
+                        <span>Crew Size</span>
+                        <select id="crewSize" class="mt-1 w-full bg-bgDark border border-gray-700 rounded-lg p-2 sm:p-2.5 text-sm sm:text-base outline-none focus:border-brandGold">
+                            <option value="1">1 Tech</option>
+                            <option value="2">2 Techs</option>
+                            <option value="3">3 Techs</option>
+                            <option value="4">4 Techs</option>
                         </select>
                     </label>
 
-                    <label class="text-xs text-textMuted">
-                        Materials fee
-                        <select id="materialsMarkup" class="mt-1 w-full bg-bgDark border border-gray-700 rounded-lg p-2.5 text-base">
+                    <label class="text-[10px] sm:text-xs text-textMuted flex flex-col">
+                        <span>Materials fee</span>
+                        <select id="materialsMarkup" class="mt-1 w-full bg-bgDark border border-gray-700 rounded-lg p-2 sm:p-2.5 text-sm sm:text-base outline-none focus:border-brandGold">
                             <option value="0">0%</option>
                             <option value="5">5%</option>
                             <option value="10">10%</option>
@@ -234,7 +264,13 @@
                     <div class="flex justify-between text-textMuted"><span>Install hours</span><span id="installTotal" class="text-white font-mono">0.00</span></div>
                     <div class="flex justify-between text-textMuted"><span>Programming hours</span><span id="programmingTotal" class="text-white font-mono">0.00</span></div>
                     <div class="flex justify-between text-textMuted"><span>Total labor hours</span><span id="hoursTotal" class="text-white font-mono">0.00</span></div>
-                    <div id="recyclingRow" class="hidden flex justify-between text-brandGold"><span>Recycling fee</span><span>$75.00</span></div>
+                    
+                    <div class="flex justify-between text-[#888] text-[11px] pt-1 pb-1 border-t border-gray-800">
+                        <span>Est. Days (<span id="crewSizeDisplay">1</span> tech)</span>
+                        <span id="daysTotal" class="font-mono">0.0 days</span>
+                    </div>
+
+                    <div id="recyclingRow" class="hidden flex justify-between text-brandGold"><span id="recyclingLabel">Recycling fee</span><span id="recyclingAmount">$75.00</span></div>
                     <div id="materialsRow" class="hidden flex justify-between text-brandGold"><span id="materialsLabel">Materials fee</span><span id="materialsAmount">$0.00</span></div>
                 </div>
 
@@ -311,7 +347,7 @@
               }
           });
 
-        const APP_VERSION = '7.8.0';
+        const APP_VERSION = '7.9.0';
         const BUILD_DATE = '2026-09-30';
         const HOURLY_RATE = 200;
         const RECYCLING_FEE = 75;
@@ -391,26 +427,47 @@
                     return { ...item, id, category, name, installHours, programmingHours, totalHours: installHours + programmingHours };
                 });
 
-                migrateLegacyFavoriteIds();
+                // Caching the catalog for Offline Mode
+                localStorage.setItem('asbcCachedCatalog', JSON.stringify(catalog));
                 catalogLoadError = null;
+
+                migrateLegacyFavoriteIds();
                 searchInput.placeholder = `Search ${catalog.length} products...`;
                 buildCategoryButtons();
                 updateViewToggleButton();
                 renderCatalog();
                 renderQuote();
+
             } catch (error) {
-                catalog = [];
-                catalogLoadError = error;
-                console.error('Failed to load Google Sheet catalog:', error);
-                document.getElementById('categoryButtons').innerHTML = '';
-                resultCount.textContent = 'Catalog unavailable';
-                productGrid.innerHTML = `
-                    <div class="col-span-full mx-auto max-w-lg text-center py-12 px-5">
-                        <div class="text-red-400 font-semibold mb-2">Unable to load catalog from Google Sheets</div>
-                        <div class="text-sm text-textMuted mb-4">${escapeHtml(error.message)}</div>
-                        <button type="button" onclick="loadCatalog()" class="bg-brandGold text-bgDark font-bold px-4 py-2.5 rounded-xl">Try Again</button>
-                    </div>
-                `;
+                // OFFLINE FALLBACK: Load from localStorage
+                const cached = localStorage.getItem('asbcCachedCatalog');
+                if (cached) {
+                    catalog = JSON.parse(cached);
+                    console.log('Loaded catalog from offline cache.');
+                    
+                    migrateLegacyFavoriteIds();
+                    catalogLoadError = null;
+                    searchInput.placeholder = `Search ${catalog.length} products...`;
+                    buildCategoryButtons();
+                    updateViewToggleButton();
+                    renderCatalog();
+                    renderQuote();
+                    
+                    document.getElementById('resultCount').innerHTML = `<span class="text-brandGold">Offline Cache Active</span>`;
+                } else {
+                    catalog = [];
+                    catalogLoadError = error;
+                    console.error('Failed to load Google Sheet catalog:', error);
+                    document.getElementById('categoryButtons').innerHTML = '';
+                    resultCount.textContent = 'Catalog unavailable';
+                    productGrid.innerHTML = `
+                        <div class="col-span-full mx-auto max-w-lg text-center py-12 px-5">
+                            <div class="text-red-400 font-semibold mb-2">Unable to load catalog</div>
+                            <div class="text-sm text-textMuted mb-4">No internet connection and no offline cache found.</div>
+                            <button type="button" onclick="loadCatalog()" class="bg-brandGold text-bgDark font-bold px-4 py-2.5 rounded-xl">Try Again</button>
+                        </div>
+                    `;
+                }
             }
         }
 
@@ -423,6 +480,7 @@
             style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2
         });
 
+        const activeZone = document.getElementById('activeZone');
         const searchInput = document.getElementById('searchInput');
         const productGrid = document.getElementById('productGrid');
         const quoteList = document.getElementById('quoteList');
@@ -430,6 +488,8 @@
         const favoritesFilterButton = document.getElementById('favoritesFilterButton');
         const viewToggleButton = document.getElementById('viewToggleButton');
         const recyclingToggle = document.getElementById('recyclingToggle');
+        const customRecyclingInput = document.getElementById('customRecyclingInput');
+        const crewSize = document.getElementById('crewSize');
         const materialsMarkup = document.getElementById('materialsMarkup');
         const isTemplateCheckbox = document.getElementById('isTemplateCheckbox');
         
@@ -508,9 +568,9 @@
 
         function serializeQuoteCart() {
             return quoteCart.map(item => item.isCustom ? {
-                id: item.id, category: 'Custom', name: item.name, installHours: item.installHours, programmingHours: item.programmingHours, qty: item.qty, isCustom: true
+                id: item.id, category: 'Custom', name: item.name, installHours: item.installHours, programmingHours: item.programmingHours, qty: item.qty, isCustom: true, zone: item.zone || 'General'
             } : {
-                id: item.id, qty: item.qty, isCustom: false
+                id: item.id, qty: item.qty, isCustom: false, zone: item.zone || 'General'
             });
         }
 
@@ -520,12 +580,14 @@
 
             savedItems.forEach(savedItem => {
                 const qty = Math.max(1, Number(savedItem.qty) || 1);
+                const zone = savedItem.zone || 'General';
+
                 if (savedItem.isCustom) {
                     const installHours = Number(savedItem.installHours) || 0;
                     const programmingHours = Number(savedItem.programmingHours) || 0;
                     rebuilt.push({
                         id: savedItem.id || `custom-${Date.now()}-${rebuilt.length}`,
-                        category: 'Custom', name: savedItem.name || 'Custom Labor', installHours, programmingHours, totalHours: installHours + programmingHours, qty, isCustom: true
+                        category: 'Custom', name: savedItem.name || 'Custom Labor', installHours, programmingHours, totalHours: installHours + programmingHours, qty, isCustom: true, zone
                     });
                     return;
                 }
@@ -536,7 +598,7 @@
                     catalogItem = catalog.find(item => item.name === savedItem.name && (!savedItem.category || item.category === savedItem.category));
                 }
 
-                if (catalogItem) { rebuilt.push({ ...catalogItem, qty, isCustom: false }); } 
+                if (catalogItem) { rebuilt.push({ ...catalogItem, qty, isCustom: false, zone }); } 
                 else { missing.push(savedItem.name || savedItem.id || 'Unknown item'); }
             });
 
@@ -555,7 +617,6 @@
             const label = data.customerName;
 
             if (id) {
-                // If it WAS a template but they UNCHECKED the box, silently fork it to protect the blueprint
                 if (currentLoadedIsTemplate && !wantsToSaveAsTemplate) {
                     id = `estimate-${Date.now()}`;
                     savedEstimates.value = '';
@@ -577,7 +638,9 @@
                 items: serializeQuoteCart(),
                 options: {
                     recycling: recyclingToggle.value,
-                    markup: materialsMarkup.value
+                    customRecycling: customRecyclingInput.value,
+                    markup: materialsMarkup.value,
+                    crewSize: crewSize.value
                 },
                 updatedAt: new Date(),
                 isTemplate: wantsToSaveAsTemplate
@@ -608,8 +671,11 @@
 
                     quoteCart = rebuilt;
                     applyProjectData(record.project);
+                    
                     recyclingToggle.value = record.options?.recycling || 'no';
+                    customRecyclingInput.value = record.options?.customRecycling || '';
                     materialsMarkup.value = record.options?.markup || '0';
+                    crewSize.value = record.options?.crewSize || '1';
                     
                     currentLoadedIsTemplate = !!record.isTemplate;
                     isTemplateCheckbox.checked = currentLoadedIsTemplate;
@@ -704,6 +770,7 @@
 
         function renderCatalog() {
             const visibleItems = getVisibleCatalogItems();
+            const currentZone = activeZone.value.trim() || 'General';
             productGrid.innerHTML = '';
             document.getElementById('resultCount').textContent = `${visibleItems.length} product${visibleItems.length === 1 ? '' : 's'}`;
 
@@ -720,7 +787,8 @@
             }
 
             visibleItems.forEach(item => {
-                const quoteItem = quoteCart.find(cartItem => cartItem.id === item.id && !cartItem.isCustom);
+                // Only show quantity for the actively selected zone
+                const quoteItem = quoteCart.find(cartItem => cartItem.id === item.id && cartItem.zone === currentZone && !cartItem.isCustom);
                 const quantity = quoteItem ? quoteItem.qty : 0;
                 const card = document.createElement('article');
 
@@ -768,19 +836,27 @@
         function addToQuote(productId) {
             const item = catalog.find(catalogItem => catalogItem.id === productId);
             if (!item) return;
-            const existingItem = quoteCart.find(cartItem => cartItem.id === productId && !cartItem.isCustom);
+            
+            const currentZone = activeZone.value.trim() || 'General';
+            const existingItem = quoteCart.find(cartItem => cartItem.id === productId && cartItem.zone === currentZone && !cartItem.isCustom);
+            
             if (existingItem) { existingItem.qty = (Number(existingItem.qty) || 0) + 1; } 
-            else { quoteCart.push({ ...item, qty: 1, isCustom: false }); }
+            else { quoteCart.push({ ...item, qty: 1, isCustom: false, zone: currentZone }); }
+            
             renderCatalog();
             renderQuote();
         }
 
         function updateProductQuantity(productId, change) {
+            const currentZone = activeZone.value.trim() || 'General';
             if (change > 0) return addToQuote(productId);
-            const existingIndex = quoteCart.findIndex(cartItem => cartItem.id === productId && !cartItem.isCustom);
+            
+            const existingIndex = quoteCart.findIndex(cartItem => cartItem.id === productId && cartItem.zone === currentZone && !cartItem.isCustom);
             if (existingIndex === -1) return;
+            
             quoteCart[existingIndex].qty = (Number(quoteCart[existingIndex].qty) || 0) - 1;
             if (quoteCart[existingIndex].qty <= 0) { quoteCart.splice(existingIndex, 1); }
+            
             renderCatalog();
             renderQuote();
         }
@@ -800,48 +876,82 @@
             if (quoteCart.length === 0) {
                 quoteList.innerHTML = '<div class="text-textMuted text-center mt-10 italic">No items added yet.</div>';
             } else {
-                quoteCart.forEach((item, quoteIndex) => {
-                    const installHours = Number(item.installHours) || 0;
-                    const programmingHours = Number(item.programmingHours) || 0;
-                    const quantity = Math.max(1, Number(item.qty) || 1);
-                    const totalHoursPerItem = installHours + programmingHours;
+                // Group cart items by Zone
+                const zonesObj = {};
+                quoteCart.forEach((item, originalIndex) => {
+                    const z = item.zone || 'General';
+                    if (!zonesObj[z]) zonesObj[z] = [];
+                    zonesObj[z].push({ ...item, originalIndex });
+                });
 
-                    item.installHours = installHours;
-                    item.programmingHours = programmingHours;
-                    item.totalHours = totalHoursPerItem;
-                    item.qty = quantity;
+                Object.keys(zonesObj).sort().forEach(zoneName => {
+                    const zoneHeader = document.createElement('div');
+                    zoneHeader.className = 'text-[11px] text-brandGold uppercase tracking-wider mt-5 mb-1.5 font-bold px-1 zone-header-print';
+                    zoneHeader.textContent = zoneName;
+                    quoteList.appendChild(zoneHeader);
 
-                    totalInstall += installHours * quantity;
-                    totalProgramming += programmingHours * quantity;
-                    totalQuantity += quantity;
+                    zonesObj[zoneName].forEach(item => {
+                        const installHours = Number(item.installHours) || 0;
+                        const programmingHours = Number(item.programmingHours) || 0;
+                        const quantity = Math.max(1, Number(item.qty) || 1);
+                        const totalHoursPerItem = installHours + programmingHours;
 
-                    const row = document.createElement('div');
-                    row.className = 'bg-gray-900 p-3 rounded-xl border border-gray-800 flex justify-between items-center';
-                    row.innerHTML = `
-                        <div class="flex-1 pr-3">
-                            <div class="text-sm font-medium leading-tight mb-1 text-brandGold">${escapeHtml(item.name)}</div>
-                            <div class="text-xs text-textMuted font-mono">${(totalHoursPerItem * quantity).toFixed(2)} hrs</div>
-                        </div>
-                        <div class="flex items-center bg-gray-800 rounded-lg print-hide">
-                            <button type="button" data-quote-index="${quoteIndex}" data-change="-1" class="quote-quantity-button w-10 h-10 text-lg">−</button>
-                            <span class="w-7 text-center font-mono">${quantity}</span>
-                            <button type="button" data-quote-index="${quoteIndex}" data-change="1" class="quote-quantity-button w-10 h-10 text-lg">+</button>
-                        </div>
-                    `;
-                    quoteList.appendChild(row);
+                        item.installHours = installHours;
+                        item.programmingHours = programmingHours;
+                        item.totalHours = totalHoursPerItem;
+                        item.qty = quantity;
+
+                        totalInstall += installHours * quantity;
+                        totalProgramming += programmingHours * quantity;
+                        totalQuantity += quantity;
+
+                        const row = document.createElement('div');
+                        row.className = 'bg-gray-900 p-2.5 rounded-xl border border-gray-800 flex justify-between items-center';
+                        row.innerHTML = `
+                            <div class="flex-1 pr-3">
+                                <div class="text-sm font-medium leading-tight mb-1 text-brandGold">${escapeHtml(item.name)}</div>
+                                <div class="text-xs text-textMuted font-mono">${(totalHoursPerItem * quantity).toFixed(2)} hrs</div>
+                            </div>
+                            <div class="flex items-center bg-gray-800 rounded-lg print-hide shrink-0">
+                                <button type="button" data-quote-index="${item.originalIndex}" data-change="-1" class="quote-quantity-button w-9 h-9 text-lg">−</button>
+                                <span class="w-7 text-center font-mono">${quantity}</span>
+                                <button type="button" data-quote-index="${item.originalIndex}" data-change="1" class="quote-quantity-button w-9 h-9 text-lg">+</button>
+                            </div>
+                        `;
+                        quoteList.appendChild(row);
+                    });
                 });
             }
 
             const totalHours = totalInstall + totalProgramming;
             const baseLaborPrice = totalHours * HOURLY_RATE;
-            const recyclingFee = recyclingToggle.value === 'yes' ? RECYCLING_FEE : 0;
+            
+            // Custom Recycling Logic
+            let recyclingFee = 0;
+            let recyclingLabelText = 'Recycling fee';
+            if (recyclingToggle.value === 'yes') {
+                recyclingFee = RECYCLING_FEE;
+            } else if (recyclingToggle.value === 'custom') {
+                recyclingFee = Number(customRecyclingInput.value) || 0;
+                recyclingLabelText = 'Recycling (Custom)';
+            }
+            customRecyclingInput.classList.toggle('hidden', recyclingToggle.value !== 'custom');
+
             const markupPercent = Number(materialsMarkup.value) || 0;
             const materialsFee = baseLaborPrice * (markupPercent / 100);
             const finalPrice = baseLaborPrice + recyclingFee + materialsFee;
+            
+            // Days on Site calculation
+            const selectedCrewSize = Number(crewSize.value) || 1;
+            const daysOnSite = totalHours / (selectedCrewSize * 8);
 
             document.getElementById('installTotal').textContent = totalInstall.toFixed(2);
             document.getElementById('programmingTotal').textContent = totalProgramming.toFixed(2);
             document.getElementById('hoursTotal').textContent = totalHours.toFixed(2);
+            
+            document.getElementById('daysTotal').textContent = daysOnSite.toFixed(1) + ' days';
+            document.getElementById('crewSizeDisplay').textContent = selectedCrewSize;
+
             document.getElementById('priceTotal').textContent = currencyFormatter.format(finalPrice);
             document.getElementById('quoteItemCount').textContent = `${totalQuantity} item${totalQuantity === 1 ? '' : 's'}`;
             document.getElementById('mobileItemCount').textContent = totalQuantity;
@@ -850,6 +960,8 @@
 
             document.getElementById('recyclingRow').classList.toggle('hidden', recyclingFee === 0);
             document.getElementById('materialsRow').classList.toggle('hidden', materialsFee === 0);
+            document.getElementById('recyclingLabel').textContent = recyclingLabelText;
+            document.getElementById('recyclingAmount').textContent = currencyFormatter.format(recyclingFee);
             document.getElementById('materialsLabel').textContent = `Materials fee (${markupPercent}%)`;
             document.getElementById('materialsAmount').textContent = currencyFormatter.format(materialsFee);
 
@@ -900,8 +1012,10 @@
 
             if (installHours === 0 && programmingHours === 0) return alert('Please enter at least some labor hours.');
 
+            const currentZone = activeZone.value.trim() || 'General';
+
             quoteCart.push({
-                id: `custom-${Date.now()}`, category: 'Custom', name, installHours, programmingHours, totalHours: installHours + programmingHours, qty: 1, isCustom: true
+                id: `custom-${Date.now()}`, category: 'Custom', name, installHours, programmingHours, totalHours: installHours + programmingHours, qty: 1, isCustom: true, zone: currentZone
             });
 
             toggleCustomModal(false);
@@ -931,6 +1045,8 @@
             const data = currentProjectData();
             const projectName = data.customerName || 'ASBC Estimate';
             const totalHours = document.getElementById('hoursTotal').textContent;
+            const daysTotal = document.getElementById('daysTotal').textContent;
+            const selectedCrew = crewSize.value;
             const totalPrice = document.getElementById('priceTotal').textContent;
 
             let shareText = `ASBC Labor Estimate\n`;
@@ -939,11 +1055,23 @@
                 shareText += `Sales Manager: ${data.salesManagerName}\n`;
             }
             shareText += `Total Labor: ${totalHours} hrs\n`;
+            shareText += `Est. Schedule: ${daysTotal} (${selectedCrew} Techs)\n`;
             shareText += `Total Price: ${totalPrice}\n\n`;
             shareText += `Breakdown:\n`;
             
-            quoteCart.forEach(item => {
-                shareText += `- ${item.qty}x ${item.name} (${(item.totalHours * item.qty).toFixed(2)} hrs)\n`;
+            // Group share text by zone
+            const zonesObj = {};
+            quoteCart.forEach((item) => {
+                const z = item.zone || 'General';
+                if (!zonesObj[z]) zonesObj[z] = [];
+                zonesObj[z].push(item);
+            });
+
+            Object.keys(zonesObj).sort().forEach(zoneName => {
+                shareText += `\n[${zoneName}]\n`;
+                zonesObj[zoneName].forEach(item => {
+                    shareText += `- ${item.qty}x ${item.name} (${(item.totalHours * item.qty).toFixed(2)} hrs)\n`;
+                });
             });
 
             if (navigator.share) {
@@ -985,8 +1113,10 @@
         });
 
         searchInput.addEventListener('input', renderCatalog);
+        activeZone.addEventListener('input', renderCatalog);
         customerName.addEventListener('input', renderQuote);
         salesManagerName.addEventListener('input', renderQuote);
+        customRecyclingInput.addEventListener('input', renderQuote);
 
         favoritesFilterButton.addEventListener('click', () => {
             favoritesOnly = !favoritesOnly;
@@ -995,7 +1125,7 @@
             renderCatalog();
         });
 
-        [recyclingToggle, materialsMarkup].forEach(control => { control.addEventListener('change', renderQuote); });
+        [recyclingToggle, materialsMarkup, crewSize].forEach(control => { control.addEventListener('change', renderQuote); });
         document.addEventListener('keydown', event => {
             if (event.key === 'Escape') { toggleCustomModal(false); toggleEstimate(false); }
         });
@@ -1057,7 +1187,6 @@
         applyProjectData();
         refreshSavedEstimateList();
         
-        renderQuote();
         loadCatalog();
     </script>
     <script>
