@@ -732,12 +732,17 @@
         }
 
         // Original working quote logic, preserved and made explicit.
-        function addToQuote(catalogIndex) {
-            const item = catalog[catalogIndex];
-            const existingItem = quoteCart.find(cartItem => cartItem.id === item.id && !cartItem.isCustom);
+        function addToQuote(productId) {
+            const item = catalog.find(catalogItem => catalogItem.id === productId);
+            if (!item) {
+                console.error('Catalog item not found:', productId);
+                return;
+            }
+
+            const existingItem = quoteCart.find(cartItem => cartItem.id === productId && !cartItem.isCustom);
 
             if (existingItem) {
-                existingItem.qty += 1;
+                existingItem.qty = (Number(existingItem.qty) || 0) + 1;
             } else {
                 quoteCart.push({ ...item, qty: 1, isCustom: false });
             }
@@ -746,16 +751,16 @@
             renderQuote();
         }
 
-        function updateProductQuantity(catalogIndex, change) {
+        function updateProductQuantity(productId, change) {
             if (change > 0) {
-                addToQuote(catalogIndex);
+                addToQuote(productId);
                 return;
             }
 
-            const existingIndex = quoteCart.findIndex(cartItem => cartItem.id === catalogIndex && !cartItem.isCustom);
+            const existingIndex = quoteCart.findIndex(cartItem => cartItem.id === productId && !cartItem.isCustom);
             if (existingIndex === -1) return;
 
-            quoteCart[existingIndex].qty -= 1;
+            quoteCart[existingIndex].qty = (Number(quoteCart[existingIndex].qty) || 0) - 1;
             if (quoteCart[existingIndex].qty <= 0) {
                 quoteCart.splice(existingIndex, 1);
             }
@@ -765,7 +770,8 @@
         }
 
         function updateQuoteQuantity(quoteIndex, change) {
-            quoteCart[quoteIndex].qty += change;
+            if (!quoteCart[quoteIndex]) return;
+            quoteCart[quoteIndex].qty = (Number(quoteCart[quoteIndex].qty) || 0) + change;
             if (quoteCart[quoteIndex].qty <= 0) {
                 quoteCart.splice(quoteIndex, 1);
             }
@@ -784,20 +790,30 @@
                 quoteList.innerHTML = '<div class="text-textMuted text-center mt-10 italic">No items added yet.</div>';
             } else {
                 quoteCart.forEach((item, quoteIndex) => {
-                    totalInstall += item.installHours * item.qty;
-                    totalProgramming += item.programmingHours * item.qty;
-                    totalQuantity += item.qty;
+                    const installHours = Number(item.installHours) || 0;
+                    const programmingHours = Number(item.programmingHours) || 0;
+                    const quantity = Math.max(1, Number(item.qty) || 1);
+                    const totalHoursPerItem = installHours + programmingHours;
+
+                    item.installHours = installHours;
+                    item.programmingHours = programmingHours;
+                    item.totalHours = totalHoursPerItem;
+                    item.qty = quantity;
+
+                    totalInstall += installHours * quantity;
+                    totalProgramming += programmingHours * quantity;
+                    totalQuantity += quantity;
 
                     const row = document.createElement('div');
                     row.className = 'bg-gray-900 p-3 rounded-xl border border-gray-800 flex justify-between items-center';
                     row.innerHTML = `
                         <div class="flex-1 pr-3">
                             <div class="text-sm font-medium leading-tight mb-1 text-brandGold">${escapeHtml(item.name)}</div>
-                            <div class="text-xs text-textMuted font-mono">${(item.totalHours * item.qty).toFixed(2)} hrs</div>
+                            <div class="text-xs text-textMuted font-mono">${(totalHoursPerItem * quantity).toFixed(2)} hrs</div>
                         </div>
                         <div class="flex items-center bg-gray-800 rounded-lg print-hide">
                             <button type="button" data-quote-index="${quoteIndex}" data-change="-1" class="quote-quantity-button w-10 h-10 text-lg">−</button>
-                            <span class="w-7 text-center font-mono">${item.qty}</span>
+                            <span class="w-7 text-center font-mono">${quantity}</span>
                             <button type="button" data-quote-index="${quoteIndex}" data-change="1" class="quote-quantity-button w-10 h-10 text-lg">+</button>
                         </div>
                     `;
@@ -913,7 +929,7 @@
         productGrid.addEventListener('click', event => {
             const quantityButton = event.target.closest('.quantity-button');
             if (quantityButton) {
-                const productId = Number(quantityButton.dataset.productId);
+                const productId = quantityButton.dataset.productId;
                 const change = Number(quantityButton.dataset.change);
                 updateProductQuantity(productId, change);
                 return;
@@ -921,7 +937,7 @@
 
             const favoriteButton = event.target.closest('.favorite-button');
             if (favoriteButton) {
-                toggleFavorite(Number(favoriteButton.dataset.favoriteId));
+                toggleFavorite(favoriteButton.dataset.favoriteId);
             }
         });
 
