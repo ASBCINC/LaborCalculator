@@ -32,11 +32,16 @@
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #D4AF37; }
 
-        .category-active,
+        .category-active {
+            background: #111111 !important;
+            border-color: #C7A66A !important;
+            color: #C7A66A !important;
+        }
+
         .favorites-active {
-            background: #D4AF37 !important;
-            border-color: #D4AF37 !important;
-            color: #0A0A0A !important;
+            background: #111111 !important;
+            border-color: #C7A66A !important;
+            color: #C7A66A !important;
         }
 
         /* Version 3.2 brand styling: colors and borders only */
@@ -1076,7 +1081,7 @@
                 const button = document.createElement('button');
                 button.type = 'button';
                 button.textContent = category;
-                button.className = 'category-button shrink-0 min-h-10 px-4 rounded-full border border-gray-700 bg-gray-900 text-sm';
+                button.className = 'category-button shrink-0 min-h-10 px-4 rounded-full border border-[#242424] bg-[#0F0F0F] text-white text-sm transition-colors duration-200 hover:border-[#555555]';
                 button.dataset.category = category;
                 button.addEventListener('click', () => {
                     selectedCategory = category;
