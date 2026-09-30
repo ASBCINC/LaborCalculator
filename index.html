@@ -1,10 +1,13 @@
 <!DOCTYPE html>
+<!-- ASBC Labor Calculator v7.0.0 | Build 2026-09-30 -->
 <html lang="en">
 <head>
     <link rel="manifest" href="./manifest.json">
 <meta name="theme-color" content="#b08d57">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="application-version" content="7.0.0">
+    <meta name="build-date" content="2026-09-30">
     <meta name="theme-color" content="#050505">
     <title>Labor Calculator | ASBC</title>
 
@@ -150,7 +153,10 @@
                 >
                     Install App
                 </button>
-                <div class="text-xs sm:text-sm text-[#666666] whitespace-nowrap">$200/hr</div>
+                <div class="text-right leading-tight">
+                    <div class="text-xs sm:text-sm text-[#666666] whitespace-nowrap">$200/hr</div>
+                    <div id="versionNumber" class="text-[9px] sm:text-[10px] text-[#999999] whitespace-nowrap"></div>
+                </div>
             </div>
         </div>
 
@@ -346,6 +352,8 @@
     </div>
 
     <script>
+        const APP_VERSION = '7.0.0';
+        const BUILD_DATE = '2026-09-30';
         const HOURLY_RATE = 200;
         const RECYCLING_FEE = 75;
 
@@ -856,9 +864,13 @@
                 : '';
 
             const data = currentProjectData();
-            document.getElementById('projectInfoPrint').innerHTML = data.customerName
-                ? `<div class="mb-4 border-b border-gray-300 pb-3"><strong>Customer / Quote:</strong> ${escapeHtml(data.customerName)}</div>`
-                : '';
+            document.getElementById('projectInfoPrint').innerHTML = `
+                <div class="mb-4 border-b border-gray-300 pb-3 space-y-1">
+                    ${data.customerName ? `<div><strong>Customer / Quote:</strong> ${escapeHtml(data.customerName)}</div>` : ''}
+                    <div><strong>Calculator Version:</strong> v${escapeHtml(APP_VERSION)}</div>
+                    <div><strong>Build Date:</strong> ${escapeHtml(BUILD_DATE)}</div>
+                </div>
+            `;
             const notesPrint = document.getElementById('notesPrint');
             if (notesPrint) notesPrint.innerHTML = '';
         }
@@ -988,6 +1000,9 @@
             deferredInstallPrompt = null;
             installAppButton.classList.add('hidden');
         });
+
+        document.getElementById('versionNumber').textContent = `v${APP_VERSION} (${BUILD_DATE})`;
+        document.title = `Labor Calculator | ASBC v${APP_VERSION}`;
 
         applyProjectData();
         refreshSavedEstimateList();
