@@ -1,17 +1,20 @@
 <!DOCTYPE html>
-<!-- ASBC Labor Calculator v7.1.0 | Cloud Sync Enabled | Build 2026-09-30 -->
+<!-- ASBC Labor Calculator v7.2.0 | Cloud Sync & Live Sheets Enabled | Build 2026-09-30 -->
 <html lang="en">
 <head>
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#b08d57">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="application-version" content="7.1.0">
+    <meta name="application-version" content="7.2.0">
     <meta name="build-date" content="2026-09-30">
     <meta name="theme-color" content="#050505">
     <title>Labor Calculator | ASBC</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- PapaParse for reading the Google Sheets CSV -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    
     <script>
         tailwind.config = {
             theme: {
@@ -264,10 +267,11 @@
         </div>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js";
-        import { getFirestore, doc, setDoc, getDoc, getDocs, deleteDoc, collection } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js";
+    <!-- Use Firebase Compat libraries to allow local file:// execution -->
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
 
+    <script>
         const firebaseConfig = {
             apiKey: "AIzaSyCSf560VkBf2esIH5rC-_Vcx349o7iIC-0",
             authDomain: "asbc-calculator.firebaseapp.com",
@@ -277,10 +281,11 @@
             appId: "1:1060301879727:web:3eb390503974dc60ea175a"
         };
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
 
-        const APP_VERSION = '7.1.0';
+        const APP_VERSION = '7.2.0';
         const BUILD_DATE = '2026-09-30';
         const HOURLY_RATE = 200;
         const RECYCLING_FEE = 75;
@@ -315,24 +320,38 @@
             const resultCount = document.getElementById('resultCount');
             const searchInput = document.getElementById('searchInput');
 
-            productGrid.innerHTML = '<div class="col-span-full text-center text-textMuted py-12">Loading labor catalog...</div>';
-            resultCount.textContent = 'Loading products...';
+            productGrid.innerHTML = '<div class="col-span-full text-center text-textMuted py-12">Loading live catalog...</div>';
+            resultCount.textContent = 'Syncing...';
 
             try {
-                const response = await fetch('./labor-catalog.json', { cache: 'no-store' });
+                // The live CSV link provided by you
+                const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRsbZr5FARHKDrv0f9oFQ2Pp7kwIHu4xBkHaPUXZ1c2PzAmYlQy-Z__WfpOdB1g2_WUtoTgiXHL1cwu/pub?gid=0&single=true&output=csv';
+                
+                const response = await fetch(sheetUrl, { cache: 'no-store' });
                 if (!response.ok) throw new Error(`HTTP ${response.status} ${response.statusText}`);
-                const data = await response.json();
-                if (!Array.isArray(data)) throw new Error('labor-catalog.json must contain a JSON array.');
+                
+                const csvText = await response.text();
+                
+                // Parse the CSV text into JSON objects
+                const parsedData = Papa.parse(csvText, {
+                    header: true,
+                    skipEmptyLines: true,
+                    dynamicTyping: true
+                });
 
-                catalog = data.map((item, index) => {
+                if (parsedData.errors.length) {
+                    console.error("CSV Parsing errors:", parsedData.errors);
+                }
+
+                catalog = parsedData.data.map((item, index) => {
                     const category = String(item.category || '').trim();
                     const name = String(item.name || '').trim();
                     const installHours = Number(item.installHours ?? 0);
                     const programmingHours = Number(item.programmingHours ?? 0);
                     const id = getStableCatalogId(item, category, name);
 
-                    if (!category || !name) throw new Error(`Catalog item ${index + 1} is missing a category or name.`);
-                    if (!Number.isFinite(installHours) || !Number.isFinite(programmingHours)) throw new Error(`Catalog item ${index + 1} contains invalid labor hours.`);
+                    if (!category || !name) throw new Error(`Row ${index + 2} is missing a category or name.`);
+                    if (!Number.isFinite(installHours) || !Number.isFinite(programmingHours)) throw new Error(`Row ${index + 2} contains invalid labor hours.`);
 
                     return { ...item, id, category, name, installHours, programmingHours, totalHours: installHours + programmingHours };
                 });
@@ -346,12 +365,12 @@
             } catch (error) {
                 catalog = [];
                 catalogLoadError = error;
-                console.error('Failed to load labor-catalog.json:', error);
+                console.error('Failed to load Google Sheet catalog:', error);
                 document.getElementById('categoryButtons').innerHTML = '';
                 resultCount.textContent = 'Catalog unavailable';
                 productGrid.innerHTML = `
                     <div class="col-span-full mx-auto max-w-lg text-center py-12 px-5">
-                        <div class="text-red-400 font-semibold mb-2">Unable to load labor-catalog.json</div>
+                        <div class="text-red-400 font-semibold mb-2">Unable to load catalog from Google Sheets</div>
                         <div class="text-sm text-textMuted mb-4">${escapeHtml(error.message)}</div>
                         <button type="button" onclick="loadCatalog()" class="bg-brandGold text-bgDark font-bold px-4 py-2.5 rounded-xl">Try Again</button>
                     </div>
@@ -381,7 +400,7 @@
         async function refreshSavedEstimateList(selectedId = '') {
             savedEstimates.innerHTML = '<option value="">Syncing with cloud...</option>';
             try {
-                const querySnapshot = await getDocs(collection(db, "quotes"));
+                const querySnapshot = await db.collection("quotes").get();
                 savedEstimates.innerHTML = '<option value="">Saved quotes...</option>';
                 const quotes = [];
                 querySnapshot.forEach((doc) => {
@@ -471,7 +490,7 @@
             };
 
             try {
-                await setDoc(doc(db, "quotes", id), quoteDocument);
+                await db.collection("quotes").doc(id).set(quoteDocument);
                 alert(`Saved ${label} to the cloud!`);
                 await refreshSavedEstimateList(id);
             } catch (error) {
@@ -486,8 +505,8 @@
             if (!catalog.length) return alert('The labor catalog is still loading. Please try again.');
 
             try {
-                const docSnap = await getDoc(doc(db, "quotes", id));
-                if (docSnap.exists()) {
+                const docSnap = await db.collection("quotes").doc(id).get();
+                if (docSnap.exists) {
                     const record = docSnap.data();
                     const savedItems = Array.isArray(record.items) ? record.items : (Array.isArray(record.quoteCart) ? record.quoteCart : []);
                     const { rebuilt, missing } = rebuildQuoteCart(savedItems);
@@ -520,7 +539,7 @@
             if (!window.confirm(`Delete ${label} from the cloud?`)) return;
 
             try {
-                await deleteDoc(doc(db, "quotes", id));
+                await db.collection("quotes").doc(id).delete();
                 await refreshSavedEstimateList();
             } catch (error) {
                 console.error("Cloud delete failed: ", error);
@@ -807,16 +826,6 @@
 
         document.getElementById('versionNumber').textContent = `v${APP_VERSION} (${BUILD_DATE})`;
         document.title = `Labor Calculator | ASBC v${APP_VERSION}`;
-
-        // Bind UI functions to window object so inline HTML triggers can access them inside the module
-        window.saveEstimate = saveEstimate;
-        window.loadEstimate = loadEstimate;
-        window.deleteEstimate = deleteEstimate;
-        window.toggleCustomModal = toggleCustomModal;
-        window.addCustomItem = addCustomItem;
-        window.clearQuote = clearQuote;
-        window.toggleEstimate = toggleEstimate;
-        window.loadCatalog = loadCatalog;
 
         applyProjectData();
         refreshSavedEstimateList();
