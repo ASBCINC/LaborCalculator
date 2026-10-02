@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- ASBC Labor Calculator v7.9.3 | Restored 60-Day Warning | Build 2026-10-02 -->
+<!-- ASBC Labor Calculator v7.9.4 | Admin Sheet Editor | Build 2026-10-02 -->
 <html lang="en">
 <head>
     <link rel="manifest" href="./manifest.json">
@@ -9,7 +9,7 @@
     <meta name="theme-color" content="#b08d57">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="application-version" content="7.9.3">
+    <meta name="application-version" content="7.9.4">
     <meta name="build-date" content="2026-10-02">
     <meta name="theme-color" content="#050505">
     <title>Labor Calculator | ASBC</title>
@@ -61,7 +61,8 @@
         .hover\:border-brandGold:hover { border-color: #C7A66A !important; }
         #catalogPanel input, #catalogPanel select,
         #estimatePanel input, #estimatePanel select,
-        #customItemModal input, #customItemModal select { color-scheme: dark; }
+        #customItemModal input, #customItemModal select,
+        #adminItemModal input, #adminItemModal select { color-scheme: dark; }
         input:focus, select:focus {
             border-color: #C7A66A !important;
             box-shadow: 0 0 0 1px rgba(199, 166, 106, 0.28);
@@ -71,7 +72,6 @@
         .estimate-open { transform: translateY(0) !important; }
         .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
 
-        /* Hide hours state utility */
         body.hide-item-hours .item-hours-display {
             display: none !important;
         }
@@ -94,6 +94,7 @@
             #estimateBackdrop,
             #closeEstimateButton,
             #customItemModal,
+            #adminItemModal,
             .print-hide {
                 display: none !important;
             }
@@ -165,7 +166,7 @@
                 </button>
                 <div class="text-right leading-tight">
                     <div class="text-xs sm:text-sm text-[#666666] whitespace-nowrap">$200/hr</div>
-                    <div id="versionNumber" class="text-[9px] sm:text-[10px] text-[#999999] whitespace-nowrap"></div>
+                    <div id="versionNumber" class="text-[9px] sm:text-[10px] text-[#999999] whitespace-nowrap cursor-pointer select-none"></div>
                 </div>
             </div>
         </div>
@@ -183,8 +184,7 @@
                 <span class="text-[11px] font-bold text-black uppercase tracking-wide mt-0.5">Template</span>
             </label>
 
-            <!-- Hide Hours Toggle -->
-            <label class="flex items-center gap-1.5 shrink-0 bg-[#EAEAEA] border border-[#D0D0D0] rounded-md px-2.5 h-9 cursor-pointer hover:bg-[#E0E0E0] transition-colors" title="Hide individual labor hours on cards, quote list, and printouts">
+            <label class="flex items-center gap-1.5 shrink-0 bg-[#EAEAEA] border border-[#D0D0D0] rounded-md px-2.5 h-9 cursor-pointer hover:bg-[#E0E0E0] transition-colors" title="Hide individual labor hours on cards, quote list, and PDF print">
                 <input type="checkbox" id="hideHoursCheckbox" class="w-3.5 h-3.5 rounded-sm border-gray-400 text-black focus:ring-black">
                 <span class="text-[11px] font-bold text-black uppercase tracking-wide mt-0.5">Hide Hours</span>
             </label>
@@ -321,6 +321,7 @@
 
     <div id="estimateBackdrop" onclick="toggleEstimate(false)" class="hidden md:hidden fixed inset-0 z-30 bg-black/70"></div>
 
+    <!-- Custom Labor Modal -->
     <div id="customItemModal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 p-4">
         <div class="bg-bgPanel border border-gray-700 p-5 rounded-2xl shadow-2xl w-full max-w-md">
             <div class="flex justify-between items-center mb-4">
@@ -345,6 +346,54 @@
             </div>
 
             <button type="button" onclick="addCustomItem()" class="mt-5 w-full bg-brandGold text-bgDark font-bold py-3.5 rounded-xl">Add to Estimate</button>
+        </div>
+    </div>
+
+    <!-- Hidden Admin Sheet Editor Modal -->
+    <div id="adminItemModal" class="fixed inset-0 bg-black/85 hidden items-center justify-center z-50 p-4">
+        <div class="bg-bgPanel border border-brandGold/40 p-5 rounded-2xl shadow-2xl w-full max-w-md">
+            <div class="flex justify-between items-center mb-3">
+                <div>
+                    <h3 class="text-lg font-bold text-brandGold">Google Sheet Database Editor</h3>
+                    <p class="text-[11px] text-textMuted">Add new or update labor hours in the cloud catalog</p>
+                </div>
+                <button type="button" onclick="toggleAdminModal(false)" class="w-10 h-10 rounded-full bg-gray-800">×</button>
+            </div>
+
+            <div class="space-y-3 mt-3">
+                <label class="block text-xs text-textMuted uppercase tracking-wider">
+                    Existing Catalog Item (Select to edit)
+                    <select id="adminItemSelect" class="mt-1 w-full bg-gray-900 border border-gray-700 rounded-xl p-2.5 text-sm outline-none focus:border-brandGold">
+                        <option value="">-- Add Brand New Item --</option>
+                    </select>
+                </label>
+
+                <div class="grid grid-cols-2 gap-2.5">
+                    <label class="text-xs text-textMuted uppercase tracking-wider">
+                        Category
+                        <input id="adminCategory" list="adminCategoryOptions" type="text" placeholder="e.g. Speakers" class="mt-1 w-full bg-gray-900 border border-gray-700 rounded-xl p-2.5 text-sm">
+                        <datalist id="adminCategoryOptions"></datalist>
+                    </label>
+                    <label class="text-xs text-textMuted uppercase tracking-wider">
+                        Item Name
+                        <input id="adminName" type="text" placeholder="e.g. Beosound Stage" class="mt-1 w-full bg-gray-900 border border-gray-700 rounded-xl p-2.5 text-sm">
+                    </label>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2.5">
+                    <label class="text-xs text-textMuted uppercase tracking-wider">
+                        Install Hours
+                        <input id="adminInstall" type="number" inputmode="decimal" min="0" step="0.25" placeholder="0" class="mt-1 w-full bg-gray-900 border border-gray-700 rounded-xl p-2.5 text-sm">
+                    </label>
+                    <label class="text-xs text-textMuted uppercase tracking-wider">
+                        Programming Hours
+                        <input id="adminProgramming" type="number" inputmode="decimal" min="0" step="0.25" placeholder="0" class="mt-1 w-full bg-gray-900 border border-gray-700 rounded-xl p-2.5 text-sm">
+                    </label>
+                </div>
+            </div>
+
+            <button id="adminSaveButton" type="button" onclick="saveAdminSheetItem()" class="mt-5 w-full bg-brandGold text-bgDark font-bold py-3.5 rounded-xl">Save to Google Sheet</button>
+            <div id="adminStatus" class="mt-2 text-center text-xs text-textMuted min-h-[1.25rem]"></div>
         </div>
     </div>
 
@@ -373,10 +422,14 @@
               }
           });
 
-        const APP_VERSION = '7.9.3';
+        const APP_VERSION = '7.9.4';
         const BUILD_DATE = '2026-10-02';
         const HOURLY_RATE = 200;
         const RECYCLING_FEE = 75;
+        const ADMIN_PIN = '1925';
+
+        // Google Apps Script Web App Endpoint
+        const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwy_WAUk5mv1IguezH95RxSqbNlh2or5HKINXJhl9P3m-c-iVWpR7Wo0ByGgTwXP9DJGA/exec';
 
         let catalog = [];
         let catalogLoadError = null;
@@ -463,6 +516,7 @@
                 updateViewToggleButton();
                 renderCatalog();
                 renderQuote();
+                populateAdminItemList();
 
             } catch (error) {
                 const cached = localStorage.getItem('asbcCachedCatalog');
@@ -477,6 +531,7 @@
                     updateViewToggleButton();
                     renderCatalog();
                     renderQuote();
+                    populateAdminItemList();
                     
                     document.getElementById('resultCount').innerHTML = `<span class="text-brandGold">Offline Cache Active</span>`;
                 } else {
@@ -858,7 +913,7 @@
                             <div class="item-hours-display text-xs text-textMuted font-mono">${item.installHours.toFixed(2)} install + ${item.programmingHours.toFixed(2)} prog</div>
                             <div class="flex items-center bg-gray-800 rounded-xl overflow-hidden shrink-0 ml-auto">
                                 <button type="button" data-product-id="${item.id}" data-change="-1" class="quantity-button w-9 h-9 text-lg">−</button>
-                                <span class="w-7 text-center text-sm font-mono font-bold">${quantity}</span>
+                                <span class="w-7 text-center font-mono text-sm font-bold">${quantity}</span>
                                 <button type="button" data-product-id="${item.id}" data-change="1" class="quantity-button w-9 h-9 text-lg hover:bg-brandGold hover:text-bgDark">+</button>
                             </div>
                         </div>
@@ -1055,6 +1110,157 @@
             toggleEstimate(true);
         }
 
+        /* ── Hidden Admin Modal & Sheet Logic ── */
+        let versionClickCount = 0;
+        let versionClickTimer = null;
+        const versionNumberEl = document.getElementById('versionNumber');
+
+        versionNumberEl.addEventListener('click', () => {
+            versionClickCount++;
+            clearTimeout(versionClickTimer);
+            versionClickTimer = setTimeout(() => {
+                versionClickCount = 0;
+            }, 800);
+
+            if (versionClickCount >= 3) {
+                versionClickCount = 0;
+                promptAdminAccess();
+            }
+        });
+
+        function promptAdminAccess() {
+            const pin = window.prompt("Enter Admin PIN:");
+            if (pin === ADMIN_PIN) {
+                toggleAdminModal(true);
+            } else if (pin !== null) {
+                alert("Incorrect PIN.");
+            }
+        }
+
+        function populateAdminItemList() {
+            const select = document.getElementById('adminItemSelect');
+            const catList = document.getElementById('adminCategoryOptions');
+            if (!select) return;
+
+            select.innerHTML = '<option value="">-- Add Brand New Item --</option>';
+            const sortedCatalog = [...catalog].sort((a, b) => a.name.localeCompare(b.name));
+            sortedCatalog.forEach(item => {
+                const opt = document.createElement('option');
+                opt.value = item.id;
+                opt.textContent = `[${item.category}] ${item.name}`;
+                select.appendChild(opt);
+            });
+
+            const uniqueCats = [...new Set(catalog.map(i => i.category))];
+            catList.innerHTML = uniqueCats.map(cat => `<option value="${escapeHtml(cat)}"></option>`).join('');
+        }
+
+        const adminItemSelect = document.getElementById('adminItemSelect');
+        const adminCategory = document.getElementById('adminCategory');
+        const adminName = document.getElementById('adminName');
+        const adminInstall = document.getElementById('adminInstall');
+        const adminProgramming = document.getElementById('adminProgramming');
+        const adminStatus = document.getElementById('adminStatus');
+        const adminSaveButton = document.getElementById('adminSaveButton');
+
+        adminItemSelect.addEventListener('change', () => {
+            const selectedId = adminItemSelect.value;
+            if (!selectedId) {
+                adminCategory.value = '';
+                adminName.value = '';
+                adminName.readOnly = false;
+                adminCategory.readOnly = false;
+                adminInstall.value = '';
+                adminProgramming.value = '';
+                return;
+            }
+
+            const item = catalog.find(i => i.id === selectedId);
+            if (item) {
+                adminCategory.value = item.category;
+                adminName.value = item.name;
+                adminInstall.value = item.installHours;
+                adminProgramming.value = item.programmingHours;
+                adminCategory.readOnly = true;
+                adminName.readOnly = true;
+            }
+        });
+
+        function toggleAdminModal(show) {
+            const modal = document.getElementById('adminItemModal');
+            modal.classList.toggle('hidden', !show);
+            modal.classList.toggle('flex', show);
+            adminStatus.textContent = '';
+            if (show) {
+                populateAdminItemList();
+                adminItemSelect.value = '';
+                adminCategory.value = '';
+                adminName.value = '';
+                adminCategory.readOnly = false;
+                adminName.readOnly = false;
+                adminInstall.value = '';
+                adminProgramming.value = '';
+            }
+        }
+
+        async function saveAdminSheetItem() {
+            const category = adminCategory.value.trim();
+            const name = adminName.value.trim();
+            const installHours = Number(adminInstall.value) || 0;
+            const programmingHours = Number(adminProgramming.value) || 0;
+
+            if (!category || !name) {
+                alert("Category and Item Name are required.");
+                return;
+            }
+
+            adminSaveButton.disabled = true;
+            adminSaveButton.textContent = "Updating Google Sheet...";
+            adminStatus.textContent = "Writing to Google Sheet database...";
+
+            try {
+                await fetch(GOOGLE_APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ category, name, installHours, programmingHours })
+                });
+
+                const existingIdx = catalog.findIndex(i => i.name.toLowerCase() === name.toLowerCase() && i.category.toLowerCase() === category.toLowerCase());
+                if (existingIdx > -1) {
+                    catalog[existingIdx].installHours = installHours;
+                    catalog[existingIdx].programmingHours = programmingHours;
+                    catalog[existingIdx].totalHours = installHours + programmingHours;
+                } else {
+                    const newItem = {
+                        id: getStableCatalogId({}, category, name),
+                        category,
+                        name,
+                        installHours,
+                        programmingHours,
+                        totalHours: installHours + programmingHours
+                    };
+                    catalog.push(newItem);
+                }
+
+                localStorage.setItem('asbcCachedCatalog', JSON.stringify(catalog));
+                renderCatalog();
+                renderQuote();
+
+                adminStatus.innerHTML = `<span class="text-green-400">Saved to Google Sheet! Catalog updated.</span>`;
+                setTimeout(() => {
+                    toggleAdminModal(false);
+                }, 1500);
+
+            } catch (err) {
+                console.error("Failed to update Google Sheet:", err);
+                adminStatus.innerHTML = `<span class="text-red-400">Failed to save: ${err.message}</span>`;
+            } finally {
+                adminSaveButton.disabled = false;
+                adminSaveButton.textContent = "Save to Google Sheet";
+            }
+        }
+
         function clearQuote() {
             if (quoteCart.length === 0 || window.confirm('Clear the entire estimate?')) {
                 quoteCart = [];
@@ -1162,7 +1368,7 @@
 
         [recyclingToggle, materialsMarkup, crewSize].forEach(control => { control.addEventListener('change', renderQuote); });
         document.addEventListener('keydown', event => {
-            if (event.key === 'Escape') { toggleCustomModal(false); toggleEstimate(false); }
+            if (event.key === 'Escape') { toggleCustomModal(false); toggleEstimate(false); toggleAdminModal(false); }
         });
 
         let deferredInstallPrompt = null;
@@ -1218,6 +1424,8 @@
         window.toggleEstimate = toggleEstimate;
         window.loadCatalog = loadCatalog;
         window.shareQuote = shareQuote;
+        window.toggleAdminModal = toggleAdminModal;
+        window.saveAdminSheetItem = saveAdminSheetItem;
 
         applyHideHoursState();
         applyProjectData();
