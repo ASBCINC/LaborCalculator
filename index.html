@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- ASBC Labor Calculator v7.9.4 | Admin Sheet Editor | Build 2026-10-02 -->
+<!-- ASBC Labor Calculator v7.9.5 | Default Hidden Hours | Build 2026-10-02 -->
 <html lang="en">
 <head>
     <link rel="manifest" href="./manifest.json">
@@ -9,7 +9,7 @@
     <meta name="theme-color" content="#b08d57">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="application-version" content="7.9.4">
+    <meta name="application-version" content="7.9.5">
     <meta name="build-date" content="2026-10-02">
     <meta name="theme-color" content="#050505">
     <title>Labor Calculator | ASBC</title>
@@ -72,7 +72,8 @@
         .estimate-open { transform: translateY(0) !important; }
         .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
 
-        body.hide-item-hours .item-hours-display {
+        /* Hours hidden by default unless unhidden */
+        body:not(.show-item-hours) .item-hours-display {
             display: none !important;
         }
 
@@ -84,7 +85,7 @@
                 overflow: visible !important;
             }
 
-            body.hide-item-hours .item-hours-display {
+            body:not(.show-item-hours) .item-hours-display {
                 display: none !important;
             }
 
@@ -184,9 +185,10 @@
                 <span class="text-[11px] font-bold text-black uppercase tracking-wide mt-0.5">Template</span>
             </label>
 
-            <label class="flex items-center gap-1.5 shrink-0 bg-[#EAEAEA] border border-[#D0D0D0] rounded-md px-2.5 h-9 cursor-pointer hover:bg-[#E0E0E0] transition-colors" title="Hide individual labor hours on cards, quote list, and PDF print">
-                <input type="checkbox" id="hideHoursCheckbox" class="w-3.5 h-3.5 rounded-sm border-gray-400 text-black focus:ring-black">
-                <span class="text-[11px] font-bold text-black uppercase tracking-wide mt-0.5">Hide Hours</span>
+            <!-- Show Hours Toggle (Unchecked = Hours Hidden by Default) -->
+            <label class="flex items-center gap-1.5 shrink-0 bg-[#EAEAEA] border border-[#D0D0D0] rounded-md px-2.5 h-9 cursor-pointer hover:bg-[#E0E0E0] transition-colors" title="Check to show individual line-item hours on cards, quote list, and PDF printouts">
+                <input type="checkbox" id="showHoursCheckbox" class="w-3.5 h-3.5 rounded-sm border-gray-400 text-black focus:ring-black">
+                <span class="text-[11px] font-bold text-black uppercase tracking-wide mt-0.5">Show Hours</span>
             </label>
 
             <button type="button" onclick="saveEstimate()" class="h-9 shrink-0 bg-black text-white font-medium rounded-md px-4 text-sm">Save</button>
@@ -422,7 +424,7 @@
               }
           });
 
-        const APP_VERSION = '7.9.4';
+        const APP_VERSION = '7.9.5';
         const BUILD_DATE = '2026-10-02';
         const HOURLY_RATE = 200;
         const RECYCLING_FEE = 75;
@@ -434,7 +436,8 @@
         let catalog = [];
         let catalogLoadError = null;
         let isListView = localStorage.getItem('asbcListView') === 'true';
-        let isHoursHidden = localStorage.getItem('asbcHideHours') === 'true';
+        // DEFAULT IS FALSE (HOURS HIDDEN)
+        let isHoursShown = localStorage.getItem('asbcShowHours') === 'true';
         let currentLoadedIsTemplate = false;
 
         function slugify(value) {
@@ -572,21 +575,21 @@
         const crewSize = document.getElementById('crewSize');
         const materialsMarkup = document.getElementById('materialsMarkup');
         const isTemplateCheckbox = document.getElementById('isTemplateCheckbox');
-        const hideHoursCheckbox = document.getElementById('hideHoursCheckbox');
+        const showHoursCheckbox = document.getElementById('showHoursCheckbox');
         
         const customerName = document.getElementById('customerName');
         const salesManagerName = document.getElementById('salesManagerName');
         const savedEstimates = document.getElementById('savedEstimates');
 
-        function applyHideHoursState() {
-            document.body.classList.toggle('hide-item-hours', isHoursHidden);
-            if (hideHoursCheckbox) hideHoursCheckbox.checked = isHoursHidden;
+        function applyShowHoursState() {
+            document.body.classList.toggle('show-item-hours', isHoursShown);
+            if (showHoursCheckbox) showHoursCheckbox.checked = isHoursShown;
         }
 
-        hideHoursCheckbox.addEventListener('change', (e) => {
-            isHoursHidden = e.target.checked;
-            localStorage.setItem('asbcHideHours', isHoursHidden);
-            applyHideHoursState();
+        showHoursCheckbox.addEventListener('change', (e) => {
+            isHoursShown = e.target.checked;
+            localStorage.setItem('asbcShowHours', isHoursShown);
+            applyShowHoursState();
         });
 
         async function refreshSavedEstimateList(selectedId = '') {
@@ -1307,7 +1310,7 @@
             Object.keys(zonesObj).sort().forEach(zoneName => {
                 shareText += `\n[${zoneName}]\n`;
                 zonesObj[zoneName].forEach(item => {
-                    if (isHoursHidden) {
+                    if (!isHoursShown) {
                         shareText += `- ${item.qty}x ${item.name}\n`;
                     } else {
                         shareText += `- ${item.qty}x ${item.name} (${(item.totalHours * item.qty).toFixed(2)} hrs)\n`;
@@ -1427,7 +1430,7 @@
         window.toggleAdminModal = toggleAdminModal;
         window.saveAdminSheetItem = saveAdminSheetItem;
 
-        applyHideHoursState();
+        applyShowHoursState();
         applyProjectData();
         refreshSavedEstimateList();
         
