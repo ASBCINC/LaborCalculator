@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- ASBC Labor Calculator v7.9.2 | Restored 60-Day Warning | Build 2026-09-30 -->
+<!-- ASBC Labor Calculator v7.9.3 | Restored 60-Day Warning | Build 2026-10-02 -->
 <html lang="en">
 <head>
     <link rel="manifest" href="./manifest.json">
@@ -9,8 +9,8 @@
     <meta name="theme-color" content="#b08d57">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="application-version" content="7.9.2">
-    <meta name="build-date" content="2026-09-30">
+    <meta name="application-version" content="7.9.3">
+    <meta name="build-date" content="2026-10-02">
     <meta name="theme-color" content="#050505">
     <title>Labor Calculator | ASBC</title>
 
@@ -71,12 +71,21 @@
         .estimate-open { transform: translateY(0) !important; }
         .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
 
+        /* Hide hours state utility */
+        body.hide-item-hours .item-hours-display {
+            display: none !important;
+        }
+
         @media print {
             body {
                 background: white !important;
                 color: black !important;
                 height: auto !important;
                 overflow: visible !important;
+            }
+
+            body.hide-item-hours .item-hours-display {
+                display: none !important;
             }
 
             header,
@@ -174,6 +183,12 @@
                 <span class="text-[11px] font-bold text-black uppercase tracking-wide mt-0.5">Template</span>
             </label>
 
+            <!-- Hide Hours Toggle -->
+            <label class="flex items-center gap-1.5 shrink-0 bg-[#EAEAEA] border border-[#D0D0D0] rounded-md px-2.5 h-9 cursor-pointer hover:bg-[#E0E0E0] transition-colors" title="Hide individual labor hours on cards, quote list, and printouts">
+                <input type="checkbox" id="hideHoursCheckbox" class="w-3.5 h-3.5 rounded-sm border-gray-400 text-black focus:ring-black">
+                <span class="text-[11px] font-bold text-black uppercase tracking-wide mt-0.5">Hide Hours</span>
+            </label>
+
             <button type="button" onclick="saveEstimate()" class="h-9 shrink-0 bg-black text-white font-medium rounded-md px-4 text-sm">Save</button>
             <button type="button" onclick="loadEstimate()" class="h-9 shrink-0 bg-white border border-[#CFCFCF] text-black font-medium rounded-md px-4 text-sm">Load</button>
             <button type="button" onclick="deleteEstimate()" class="h-9 shrink-0 bg-white border border-[#DCCFCF] text-[#8C3333] font-medium rounded-md px-4 text-sm">Delete</button>
@@ -184,7 +199,6 @@
         <section id="catalogPanel" class="w-full md:w-2/3 flex flex-col border-r border-gray-800 pb-20 md:pb-0">
             <div class="p-3 sm:p-4 bg-bgPanel border-b border-gray-800 space-y-3 shrink-0">
                 <div class="flex gap-2">
-                    <!-- The Spaces Combobox -->
                     <div class="w-5/12 sm:w-1/3 relative shrink-0">
                         <input list="zoneOptions" id="activeZone" placeholder="Spaces I.E. Family room, bedroom..." value="" class="w-full h-12 bg-gray-900 border border-gray-700 rounded-xl px-3 text-xs sm:text-sm text-brandGold font-medium outline-none focus:border-brandGold placeholder:text-[#888888] placeholder:font-normal truncate">
                         <datalist id="zoneOptions">
@@ -214,7 +228,6 @@
                     <span id="resultCount">0 products</span>
                     <div class="flex gap-2">
                         <button id="viewToggleButton" type="button" class="border border-gray-700 rounded-full px-3 py-1.5 flex items-center transition-colors hover:border-[#555555]">
-                            <!-- Icon updates dynamically -->
                         </button>
                         <button id="favoritesFilterButton" type="button" class="border border-gray-700 rounded-full px-3 py-1.5 transition-colors hover:border-[#555555]">☆ Favorites</button>
                     </div>
@@ -360,14 +373,15 @@
               }
           });
 
-        const APP_VERSION = '7.9.2';
-        const BUILD_DATE = '2026-09-30';
+        const APP_VERSION = '7.9.3';
+        const BUILD_DATE = '2026-10-02';
         const HOURLY_RATE = 200;
         const RECYCLING_FEE = 75;
 
         let catalog = [];
         let catalogLoadError = null;
         let isListView = localStorage.getItem('asbcListView') === 'true';
+        let isHoursHidden = localStorage.getItem('asbcHideHours') === 'true';
         let currentLoadedIsTemplate = false;
 
         function slugify(value) {
@@ -440,7 +454,6 @@
                     return { ...item, id, category, name, installHours, programmingHours, totalHours: installHours + programmingHours };
                 });
 
-                // Caching the catalog for Offline Mode
                 localStorage.setItem('asbcCachedCatalog', JSON.stringify(catalog));
                 catalogLoadError = null;
 
@@ -452,7 +465,6 @@
                 renderQuote();
 
             } catch (error) {
-                // OFFLINE FALLBACK: Load from localStorage
                 const cached = localStorage.getItem('asbcCachedCatalog');
                 if (cached) {
                     catalog = JSON.parse(cached);
@@ -505,10 +517,22 @@
         const crewSize = document.getElementById('crewSize');
         const materialsMarkup = document.getElementById('materialsMarkup');
         const isTemplateCheckbox = document.getElementById('isTemplateCheckbox');
+        const hideHoursCheckbox = document.getElementById('hideHoursCheckbox');
         
         const customerName = document.getElementById('customerName');
         const salesManagerName = document.getElementById('salesManagerName');
         const savedEstimates = document.getElementById('savedEstimates');
+
+        function applyHideHoursState() {
+            document.body.classList.toggle('hide-item-hours', isHoursHidden);
+            if (hideHoursCheckbox) hideHoursCheckbox.checked = isHoursHidden;
+        }
+
+        hideHoursCheckbox.addEventListener('change', (e) => {
+            isHoursHidden = e.target.checked;
+            localStorage.setItem('asbcHideHours', isHoursHidden);
+            applyHideHoursState();
+        });
 
         async function refreshSavedEstimateList(selectedId = '') {
             savedEstimates.innerHTML = '<option value="">Syncing with cloud...</option>';
@@ -524,7 +548,6 @@
                     const data = doc.data();
                     const quoteDate = data.updatedAt?.toMillis ? data.updatedAt.toMillis() : (data.updatedAt || 0);
 
-                    // Shield Templates from Auto-Purge
                     if (data.isTemplate) {
                         templates.push(data);
                     } else if (quoteDate > 0 && quoteDate < cutoff) {
@@ -800,7 +823,6 @@
             }
 
             visibleItems.forEach(item => {
-                // Only show quantity for the actively selected zone
                 const quoteItem = quoteCart.find(cartItem => cartItem.id === item.id && cartItem.zone === currentZone && !cartItem.isCustom);
                 const quantity = quoteItem ? quoteItem.qty : 0;
                 const card = document.createElement('article');
@@ -814,7 +836,7 @@
                                 <div class="text-[10px] text-brandGold uppercase tracking-wider truncate">${escapeHtml(item.category)}</div>
                             </div>
                             <h3 class="font-medium text-sm leading-snug truncate whitespace-nowrap">${escapeHtml(item.name)}</h3>
-                            <div class="text-[10px] text-textMuted font-mono mt-0.5">${item.installHours.toFixed(2)} inst + ${item.programmingHours.toFixed(2)} prog</div>
+                            <div class="item-hours-display text-[10px] text-textMuted font-mono mt-0.5">${item.installHours.toFixed(2)} inst + ${item.programmingHours.toFixed(2)} prog</div>
                         </div>
                         <div class="flex items-center bg-gray-800 rounded-xl overflow-hidden shrink-0">
                             <button type="button" data-product-id="${item.id}" data-change="-1" class="quantity-button w-9 h-9 text-lg">−</button>
@@ -833,8 +855,8 @@
                             <h3 class="font-medium text-sm leading-snug mb-2">${escapeHtml(item.name)}</h3>
                         </div>
                         <div class="flex justify-between items-center gap-2 border-t border-gray-800 pt-2.5">
-                            <div class="text-xs text-textMuted font-mono">${item.installHours.toFixed(2)} install + ${item.programmingHours.toFixed(2)} prog</div>
-                            <div class="flex items-center bg-gray-800 rounded-xl overflow-hidden shrink-0">
+                            <div class="item-hours-display text-xs text-textMuted font-mono">${item.installHours.toFixed(2)} install + ${item.programmingHours.toFixed(2)} prog</div>
+                            <div class="flex items-center bg-gray-800 rounded-xl overflow-hidden shrink-0 ml-auto">
                                 <button type="button" data-product-id="${item.id}" data-change="-1" class="quantity-button w-9 h-9 text-lg">−</button>
                                 <span class="w-7 text-center text-sm font-mono font-bold">${quantity}</span>
                                 <button type="button" data-product-id="${item.id}" data-change="1" class="quantity-button w-9 h-9 text-lg hover:bg-brandGold hover:text-bgDark">+</button>
@@ -889,7 +911,6 @@
             if (quoteCart.length === 0) {
                 quoteList.innerHTML = '<div class="text-textMuted text-center mt-10 italic">No items added yet.</div>';
             } else {
-                // Group cart items by Zone
                 const zonesObj = {};
                 quoteCart.forEach((item, originalIndex) => {
                     const z = item.zone || 'General';
@@ -923,7 +944,7 @@
                         row.innerHTML = `
                             <div class="flex-1 pr-3">
                                 <div class="text-sm font-medium leading-tight mb-1 text-brandGold">${escapeHtml(item.name)}</div>
-                                <div class="text-xs text-textMuted font-mono">${(totalHoursPerItem * quantity).toFixed(2)} hrs</div>
+                                <div class="item-hours-display text-xs text-textMuted font-mono">${(totalHoursPerItem * quantity).toFixed(2)} hrs</div>
                             </div>
                             <div class="flex items-center bg-gray-800 rounded-lg print-hide shrink-0">
                                 <button type="button" data-quote-index="${item.originalIndex}" data-change="-1" class="quote-quantity-button w-9 h-9 text-lg">−</button>
@@ -939,7 +960,6 @@
             const totalHours = totalInstall + totalProgramming;
             const baseLaborPrice = totalHours * HOURLY_RATE;
             
-            // Custom Recycling Logic
             let recyclingFee = 0;
             let recyclingLabelText = 'Recycling fee';
             if (recyclingToggle.value === 'yes') {
@@ -954,7 +974,6 @@
             const materialsFee = baseLaborPrice * (markupPercent / 100);
             const finalPrice = baseLaborPrice + recyclingFee + materialsFee;
             
-            // Days on Site calculation
             const selectedCrewSize = Number(crewSize.value) || 1;
             const daysOnSite = totalHours / (selectedCrewSize * 8);
 
@@ -1072,7 +1091,6 @@
             shareText += `Total Price: ${totalPrice}\n\n`;
             shareText += `Breakdown:\n`;
             
-            // Group share text by zone
             const zonesObj = {};
             quoteCart.forEach((item) => {
                 const z = item.zone || 'General';
@@ -1083,7 +1101,11 @@
             Object.keys(zonesObj).sort().forEach(zoneName => {
                 shareText += `\n[${zoneName}]\n`;
                 zonesObj[zoneName].forEach(item => {
-                    shareText += `- ${item.qty}x ${item.name} (${(item.totalHours * item.qty).toFixed(2)} hrs)\n`;
+                    if (isHoursHidden) {
+                        shareText += `- ${item.qty}x ${item.name}\n`;
+                    } else {
+                        shareText += `- ${item.qty}x ${item.name} (${(item.totalHours * item.qty).toFixed(2)} hrs)\n`;
+                    }
                 });
             });
 
@@ -1197,6 +1219,7 @@
         window.loadCatalog = loadCatalog;
         window.shareQuote = shareQuote;
 
+        applyHideHoursState();
         applyProjectData();
         refreshSavedEstimateList();
         
