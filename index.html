@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- ASBC Labor Calculator v7.9.5 | Default Hidden Hours | Build 2026-10-02 -->
+<!-- ASBC Labor Calculator v8.0.0 | Zone Breakdown & Polished SOW Print | Build 2026-10-02 -->
 <html lang="en">
 <head>
     <link rel="manifest" href="./manifest.json">
@@ -9,7 +9,7 @@
     <meta name="theme-color" content="#b08d57">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="application-version" content="7.9.5">
+    <meta name="application-version" content="8.0.0">
     <meta name="build-date" content="2026-10-02">
     <meta name="theme-color" content="#050505">
     <title>Labor Calculator | ASBC</title>
@@ -72,17 +72,22 @@
         .estimate-open { transform: translateY(0) !important; }
         .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
 
-        /* Hours hidden by default unless unhidden */
         body:not(.show-item-hours) .item-hours-display {
             display: none !important;
         }
 
         @media print {
+            @page {
+                size: letter portrait;
+                margin: 12mm 15mm;
+            }
+
             body {
                 background: white !important;
-                color: black !important;
+                color: #111 !important;
                 height: auto !important;
                 overflow: visible !important;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
             }
 
             body:not(.show-item-hours) .item-hours-display {
@@ -108,7 +113,7 @@
 
             #estimatePanel {
                 position: static !important;
-                display: flex !important;
+                display: block !important;
                 transform: none !important;
                 width: 100% !important;
                 height: auto !important;
@@ -116,34 +121,74 @@
                 background: white !important;
                 box-shadow: none !important;
                 border: 0 !important;
-            }
-
-            #estimatePanel::before {
-                content: "ASBC Project Labor Estimate";
-                display: block;
-                font-size: 24px;
-                font-weight: bold;
-                text-align: center;
-                margin-bottom: 20px;
-                padding-bottom: 10px;
-                border-bottom: 2px solid black;
+                padding: 0 !important;
             }
 
             #projectTools, #savedEstimateControls { display: none !important; }
-            #projectInfoPrint, #categoryBreakdown { display: block !important; }
-            #quoteList { overflow: visible !important; }
-            #quoteList > div {
+            #projectInfoPrint { display: block !important; }
+            
+            #quoteList { 
+                overflow: visible !important; 
+                padding: 0 !important;
+            }
+            
+            .print-zone-card {
+                border: 1px solid #e0e0e0 !important;
+                border-radius: 8px !important;
+                margin-bottom: 14px !important;
+                background: #fafafa !important;
+                page-break-inside: avoid;
+            }
+
+            .print-zone-header {
+                background: #111 !important;
+                color: white !important;
+                padding: 6px 12px !important;
+                font-weight: 700 !important;
+                font-size: 11px !important;
+                letter-spacing: 0.08em !important;
+                text-transform: uppercase !important;
+                border-top-left-radius: 7px;
+                border-top-right-radius: 7px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .print-zone-header * {
+                color: white !important;
+            }
+
+            .print-item-row {
                 background: white !important;
-                border: 1px solid #ddd !important;
-                margin-bottom: 6px;
+                border-bottom: 1px solid #f0f0f0 !important;
+                padding: 7px 12px !important;
+                display: flex !important;
+                justify-content: space-between !important;
+                align-items: center !important;
+                font-size: 12px !important;
             }
-            .zone-header-print {
-                color: black !important;
-                border-bottom: 1px solid #ccc;
-                margin-top: 15px !important;
-                padding-bottom: 4px;
+
+            .print-item-row:last-child {
+                border-bottom: none !important;
             }
-            * { color: black !important; }
+
+            #summaryPrintBlock {
+                page-break-inside: avoid;
+                margin-top: 18px;
+                border-top: 2px solid #111;
+                padding-top: 14px;
+            }
+
+            #signatureBlockPrint {
+                display: block !important;
+                page-break-inside: avoid;
+                margin-top: 24px;
+                padding-top: 14px;
+                border-top: 1px solid #ccc;
+            }
+
+            * { color: #111 !important; }
         }
     </style>
 </head>
@@ -185,7 +230,6 @@
                 <span class="text-[11px] font-bold text-black uppercase tracking-wide mt-0.5">Template</span>
             </label>
 
-            <!-- Show Hours Toggle (Unchecked = Hours Hidden by Default) -->
             <label class="flex items-center gap-1.5 shrink-0 bg-[#EAEAEA] border border-[#D0D0D0] rounded-md px-2.5 h-9 cursor-pointer hover:bg-[#E0E0E0] transition-colors" title="Check to show individual line-item hours on cards, quote list, and PDF printouts">
                 <input type="checkbox" id="showHoursCheckbox" class="w-3.5 h-3.5 rounded-sm border-gray-400 text-black focus:ring-black">
                 <span class="text-[11px] font-bold text-black uppercase tracking-wide mt-0.5">Show Hours</span>
@@ -240,7 +284,7 @@
         </section>
 
         <section id="estimatePanel" class="fixed md:static inset-x-0 bottom-0 z-40 md:z-auto w-full md:w-1/3 h-[88vh] md:h-full bg-bgPanel flex flex-col overflow-y-auto shadow-2xl md:shadow-none rounded-t-2xl md:rounded-none border-t md:border-t-0 border-gray-700 translate-y-full md:translate-y-0 transition-transform duration-300">
-            <div class="sticky top-0 z-20 p-4 border-b border-gray-800 flex justify-between items-center shrink-0 bg-bgPanel">
+            <div class="sticky top-0 z-20 p-4 border-b border-gray-800 flex justify-between items-center shrink-0 bg-bgPanel print-hide">
                 <div>
                     <h2 class="text-xl font-medium tracking-wide text-white">Project Estimate</h2>
                     <p id="quoteItemCount" class="text-xs text-textMuted">0 items</p>
@@ -248,11 +292,48 @@
                 <button id="closeEstimateButton" type="button" onclick="toggleEstimate(false)" class="md:hidden w-11 h-11 bg-gray-800 rounded-full text-xl" aria-label="Close estimate">×</button>
             </div>
 
-            <div id="projectInfoPrint" class="hidden px-4 pt-4 text-sm"></div>
-            <div id="quoteList" class="shrink-0 p-4 pb-8 space-y-2"></div>
-            <div id="categoryBreakdown" class="px-4 pb-3"></div>
+            <!-- Enhanced Print Document Header -->
+            <div id="projectInfoPrint" class="hidden mb-6">
+                <div class="flex justify-between items-start border-b-2 border-black pb-4 mb-4">
+                    <div>
+                        <div class="text-2xl font-bold tracking-tight text-black uppercase">Scope of Work &amp; Labor Estimate</div>
+                        <div class="text-xs text-gray-600 tracking-wider uppercase mt-0.5">Bang &amp; Olufsen California · ASBC Inc.</div>
+                    </div>
+                    <div class="text-right text-xs text-gray-700 space-y-0.5">
+                        <div><strong>Date:</strong> <span id="printDate"></span></div>
+                        <div><strong>Labor Rate:</strong> $200.00 / hr</div>
+                        <div><strong>Standard Day:</strong> 8 hrs / technician</div>
+                    </div>
+                </div>
 
-            <div class="sticky bottom-0 z-20 p-3 sm:p-4 bg-gray-900 border-t border-gray-800 shrink-0 safe-bottom shadow-[0_-10px_20px_rgba(0,0,0,0.45)]">
+                <div class="grid grid-cols-2 gap-4 bg-gray-100 p-3 rounded text-xs border border-gray-300">
+                    <div>
+                        <span class="text-gray-500 uppercase tracking-wide font-semibold block text-[10px]">Client / Project</span>
+                        <span id="printCustomerName" class="font-bold text-sm text-black">General Project</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-500 uppercase tracking-wide font-semibold block text-[10px]">Sales &amp; Project Manager</span>
+                        <span id="printSalesManager" class="font-bold text-sm text-black">ASBC Operations</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quote Items (Separated into Zones) -->
+            <div id="quoteList" class="shrink-0 p-4 pb-4 space-y-3"></div>
+
+            <!-- Space / Zone Labor Breakdown Summary -->
+            <div id="zoneBreakdownSection" class="px-4 pb-3">
+                <div class="border-t border-gray-800 pt-3">
+                    <div class="text-xs uppercase tracking-wider text-textMuted mb-2 font-medium">Labor by Space / Zone</div>
+                    <div id="zoneBreakdownList" class="space-y-1.5 text-xs sm:text-sm"></div>
+                </div>
+            </div>
+
+            <!-- Category Breakdown Summary -->
+            <div id="categoryBreakdown" class="px-4 pb-4"></div>
+
+            <!-- Cost & Schedule Summary Block -->
+            <div id="summaryPrintBlock" class="sticky bottom-0 z-20 p-3 sm:p-4 bg-gray-900 border-t border-gray-800 shrink-0 safe-bottom shadow-[0_-10px_20px_rgba(0,0,0,0.45)]">
                 <div class="grid grid-cols-3 gap-1.5 sm:gap-2 mb-3 print-hide">
                     <label class="text-[10px] sm:text-xs text-textMuted flex flex-col">
                         <span>Recycling</span>
@@ -299,19 +380,36 @@
                 </div>
 
                 <div class="flex justify-between items-end border-t border-gray-700 pt-3 mb-3">
-                    <span class="uppercase tracking-wider text-textMuted">Total</span>
+                    <span class="uppercase tracking-wider text-textMuted font-bold">Total Estimate</span>
                     <span id="priceTotal" class="text-2xl sm:text-3xl font-bold text-brandGold font-mono">$0.00</span>
                 </div>
 
                 <div class="grid grid-cols-3 gap-2 print-hide">
                     <button type="button" onclick="clearQuote()" class="bg-[#171717] border border-[#2A2A2A] font-semibold py-3 rounded-xl">Clear</button>
-                    <button type="button" onclick="window.print()" class="bg-white text-black font-bold py-3 rounded-xl">Print</button>
+                    <button type="button" onclick="prepareAndPrint()" class="bg-white text-black font-bold py-3 rounded-xl">Print SOW</button>
                     <button type="button" onclick="shareQuote()" class="bg-brandGold text-bgDark font-bold py-3 rounded-xl">Share</button>
                 </div>
                 
                 <p class="text-[10px] sm:text-xs text-textMuted mt-3.5 text-center leading-relaxed print-hide px-2">
                     <span class="text-brandGold font-medium">Note:</span> Cloud quotes are automatically purged after 60 days to optimize system performance. Please <strong>Print</strong> or <strong>Share</strong> estimates for long-term project records.
                 </p>
+            </div>
+
+            <!-- Formal Client SOW Signature Block (Printed PDF Only) -->
+            <div id="signatureBlockPrint" class="hidden text-xs">
+                <div class="text-[10px] text-gray-500 leading-normal mb-4">
+                    Labor estimates are formulated based on the defined scope of work, access, and architectural site conditions. Modifications requested during installation or unforeseen concealed site conditions will be billed at the standard hourly labor rate of $200.00/hr.
+                </div>
+                <div class="grid grid-cols-2 gap-8 pt-4">
+                    <div class="border-t border-black pt-1">
+                        <div class="font-bold text-black">Client Authorized Signature</div>
+                        <div class="text-[10px] text-gray-500">Date: ________________________</div>
+                    </div>
+                    <div class="border-t border-black pt-1">
+                        <div class="font-bold text-black">ASBC Project Specialist</div>
+                        <div class="text-[10px] text-gray-500">Date: ________________________</div>
+                    </div>
+                </div>
             </div>
         </section>
     </main>
@@ -424,19 +522,16 @@
               }
           });
 
-        const APP_VERSION = '7.9.5';
+        const APP_VERSION = '8.0.0';
         const BUILD_DATE = '2026-10-02';
         const HOURLY_RATE = 200;
         const RECYCLING_FEE = 75;
         const ADMIN_PIN = '1925';
-
-        // Google Apps Script Web App Endpoint
         const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwy_WAUk5mv1IguezH95RxSqbNlh2or5HKINXJhl9P3m-c-iVWpR7Wo0ByGgTwXP9DJGA/exec';
 
         let catalog = [];
         let catalogLoadError = null;
         let isListView = localStorage.getItem('asbcListView') === 'true';
-        // DEFAULT IS FALSE (HOURS HIDDEN)
         let isHoursShown = localStorage.getItem('asbcShowHours') === 'true';
         let currentLoadedIsTemplate = false;
 
@@ -493,10 +588,6 @@
                     }
                 });
 
-                if (parsedData.errors.length) {
-                    console.error("CSV Parsing errors:", parsedData.errors);
-                }
-
                 catalog = parsedData.data.map((item, index) => {
                     const category = String(item.category || '').trim();
                     const name = String(item.name || '').trim();
@@ -525,8 +616,6 @@
                 const cached = localStorage.getItem('asbcCachedCatalog');
                 if (cached) {
                     catalog = JSON.parse(cached);
-                    console.log('Loaded catalog from offline cache.');
-                    
                     migrateLegacyFavoriteIds();
                     catalogLoadError = null;
                     searchInput.placeholder = `Search ${catalog.length} products...`;
@@ -535,12 +624,10 @@
                     renderCatalog();
                     renderQuote();
                     populateAdminItemList();
-                    
                     document.getElementById('resultCount').innerHTML = `<span class="text-brandGold">Offline Cache Active</span>`;
                 } else {
                     catalog = [];
                     catalogLoadError = error;
-                    console.error('Failed to load Google Sheet catalog:', error);
                     document.getElementById('categoryButtons').innerHTML = '';
                     resultCount.textContent = 'Catalog unavailable';
                     productGrid.innerHTML = `
@@ -584,6 +671,7 @@
         function applyShowHoursState() {
             document.body.classList.toggle('show-item-hours', isHoursShown);
             if (showHoursCheckbox) showHoursCheckbox.checked = isHoursShown;
+            renderQuote();
         }
 
         showHoursCheckbox.addEventListener('change', (e) => {
@@ -966,21 +1054,46 @@
             let totalInstall = 0, totalProgramming = 0, totalQuantity = 0;
             quoteList.innerHTML = '';
 
+            const zonesObj = {};
+            const zoneTotals = {};
+
             if (quoteCart.length === 0) {
                 quoteList.innerHTML = '<div class="text-textMuted text-center mt-10 italic">No items added yet.</div>';
+                document.getElementById('zoneBreakdownSection').classList.add('hidden');
             } else {
-                const zonesObj = {};
+                document.getElementById('zoneBreakdownSection').classList.remove('hidden');
+
                 quoteCart.forEach((item, originalIndex) => {
                     const z = item.zone || 'General';
                     if (!zonesObj[z]) zonesObj[z] = [];
                     zonesObj[z].push({ ...item, originalIndex });
+
+                    const inst = Number(item.installHours) || 0;
+                    const prog = Number(item.programmingHours) || 0;
+                    const qty = Math.max(1, Number(item.qty) || 1);
+                    zoneTotals[z] = (zoneTotals[z] || 0) + ((inst + prog) * qty);
                 });
 
                 Object.keys(zonesObj).sort().forEach(zoneName => {
+                    const zoneCard = document.createElement('div');
+                    zoneCard.className = 'print-zone-card bg-gray-900 rounded-xl border border-gray-800 overflow-hidden';
+
                     const zoneHeader = document.createElement('div');
-                    zoneHeader.className = 'text-[11px] text-brandGold uppercase tracking-wider mt-5 mb-1.5 font-bold px-1 zone-header-print';
-                    zoneHeader.textContent = zoneName;
-                    quoteList.appendChild(zoneHeader);
+                    zoneHeader.className = 'print-zone-header bg-gray-800/80 px-3 py-2 border-b border-gray-800 flex justify-between items-center';
+                    
+                    const zoneTotalHours = zoneTotals[zoneName] || 0;
+                    const zoneCost = zoneTotalHours * HOURLY_RATE;
+
+                    zoneHeader.innerHTML = `
+                        <div class="text-[11px] text-brandGold uppercase tracking-wider font-bold">${escapeHtml(zoneName)}</div>
+                        <div class="text-[10px] text-textMuted font-mono">
+                            ${isHoursShown ? `${zoneTotalHours.toFixed(2)} hrs · ` : ''}${currencyFormatter.format(zoneCost)}
+                        </div>
+                    `;
+                    zoneCard.appendChild(zoneHeader);
+
+                    const itemsContainer = document.createElement('div');
+                    itemsContainer.className = 'divide-y divide-gray-800/60';
 
                     zonesObj[zoneName].forEach(item => {
                         const installHours = Number(item.installHours) || 0;
@@ -998,22 +1111,46 @@
                         totalQuantity += quantity;
 
                         const row = document.createElement('div');
-                        row.className = 'bg-gray-900 p-2.5 rounded-xl border border-gray-800 flex justify-between items-center';
+                        row.className = 'print-item-row p-2.5 flex justify-between items-center hover:bg-gray-800/30 transition-colors';
                         row.innerHTML = `
                             <div class="flex-1 pr-3">
-                                <div class="text-sm font-medium leading-tight mb-1 text-brandGold">${escapeHtml(item.name)}</div>
-                                <div class="item-hours-display text-xs text-textMuted font-mono">${(totalHoursPerItem * quantity).toFixed(2)} hrs</div>
+                                <div class="text-sm font-medium leading-tight mb-0.5 text-white flex items-center gap-2">
+                                    <span class="hidden print:inline-block w-3 h-3 border border-gray-400 rounded-sm"></span>
+                                    <span>${escapeHtml(item.name)}</span>
+                                </div>
+                                <div class="item-hours-display text-xs text-textMuted font-mono">${(totalHoursPerItem * quantity).toFixed(2)} hrs (${installHours.toFixed(2)} inst + ${programmingHours.toFixed(2)} prog)</div>
                             </div>
                             <div class="flex items-center bg-gray-800 rounded-lg print-hide shrink-0">
                                 <button type="button" data-quote-index="${item.originalIndex}" data-change="-1" class="quote-quantity-button w-9 h-9 text-lg">−</button>
-                                <span class="w-7 text-center font-mono">${quantity}</span>
+                                <span class="w-7 text-center font-mono text-sm">${quantity}</span>
                                 <button type="button" data-quote-index="${item.originalIndex}" data-change="1" class="quote-quantity-button w-9 h-9 text-lg">+</button>
                             </div>
+                            <div class="hidden print:block text-xs font-mono font-bold text-black">
+                                Qty: ${quantity}
+                            </div>
                         `;
-                        quoteList.appendChild(row);
+                        itemsContainer.appendChild(row);
                     });
+
+                    zoneCard.appendChild(itemsContainer);
+                    quoteList.appendChild(zoneCard);
                 });
             }
+
+            // Render Zone Breakdown List
+            const zoneBreakdownList = document.getElementById('zoneBreakdownList');
+            zoneBreakdownList.innerHTML = Object.entries(zoneTotals).sort((a,b) => b[1] - a[1]).map(([zName, hrs]) => {
+                const cost = hrs * HOURLY_RATE;
+                return `
+                    <div class="flex justify-between items-center text-textMuted">
+                        <span class="truncate pr-2">${escapeHtml(zName)}</span>
+                        <span class="font-mono text-white shrink-0">
+                            ${isHoursShown ? `<span class="text-textMuted mr-2">${hrs.toFixed(2)} hrs</span>` : ''}
+                            <span class="text-brandGold font-medium">${currencyFormatter.format(cost)}</span>
+                        </span>
+                    </div>
+                `;
+            }).join('');
 
             const totalHours = totalInstall + totalProgramming;
             const baseLaborPrice = totalHours * HOURLY_RATE;
@@ -1058,17 +1195,21 @@
             const categoryTotals = {};
             quoteCart.forEach(item => { categoryTotals[item.category] = (categoryTotals[item.category] || 0) + (item.totalHours * item.qty); });
             const breakdown = document.getElementById('categoryBreakdown');
-            breakdown.innerHTML = quoteCart.length ? '<div class="text-xs uppercase tracking-wider text-textMuted mb-2">Labor by category</div>' + Object.entries(categoryTotals).sort((a, b) => b[1] - a[1]).map(([category, hours]) => `<div class="flex justify-between text-sm"><span>${escapeHtml(category)}</span><span class="font-mono">${hours.toFixed(2)} hrs</span></div>`).join('') : '';
+            breakdown.innerHTML = quoteCart.length ? '<div class="text-xs uppercase tracking-wider text-textMuted mb-2 font-medium">Labor by category</div>' + Object.entries(categoryTotals).sort((a, b) => b[1] - a[1]).map(([category, hours]) => `<div class="flex justify-between text-xs sm:text-sm text-textMuted"><span>${escapeHtml(category)}</span><span class="font-mono text-white">${isHoursShown ? `${hours.toFixed(2)} hrs · ` : ''}${currencyFormatter.format(hours * HOURLY_RATE)}</span></div>`).join('') : '';
 
+            // Update Print Header Details
             const data = currentProjectData();
-            document.getElementById('projectInfoPrint').innerHTML = `
-                <div class="mb-4 border-b border-gray-300 pb-3 space-y-1">
-                    ${data.customerName ? `<div><strong>Customer / Quote:</strong> ${escapeHtml(data.customerName)}</div>` : ''}
-                    ${data.salesManagerName ? `<div><strong>Sales Manager:</strong> ${escapeHtml(data.salesManagerName)}</div>` : ''}
-                    <div><strong>Calculator Version:</strong> v${escapeHtml(APP_VERSION)}</div>
-                    <div><strong>Build Date:</strong> ${escapeHtml(BUILD_DATE)}</div>
-                </div>
-            `;
+            document.getElementById('printCustomerName').textContent = data.customerName || 'Standard Estimate';
+            document.getElementById('printSalesManager').textContent = data.salesManagerName || 'ASBC Operations';
+            document.getElementById('printDate').textContent = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+        }
+
+        function prepareAndPrint() {
+            if (quoteCart.length === 0) {
+                alert('Add some items before generating a PDF.');
+                return;
+            }
+            window.print();
         }
 
         function toggleFavorite(itemId) {
@@ -1298,7 +1439,7 @@
             shareText += `Total Labor: ${totalHours} hrs\n`;
             shareText += `Est. Schedule: ${daysTotal} (${selectedCrew} Techs)\n`;
             shareText += `Total Price: ${totalPrice}\n\n`;
-            shareText += `Breakdown:\n`;
+            shareText += `Breakdown by Space:\n`;
             
             const zonesObj = {};
             quoteCart.forEach((item) => {
@@ -1429,6 +1570,7 @@
         window.shareQuote = shareQuote;
         window.toggleAdminModal = toggleAdminModal;
         window.saveAdminSheetItem = saveAdminSheetItem;
+        window.prepareAndPrint = prepareAndPrint;
 
         applyShowHoursState();
         applyProjectData();
