@@ -1,0 +1,15 @@
+{
+  "name": "Summit Ridge Labor Estimator",
+  "short_name": "Summit Ridge Labor",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#06100E",
+  "theme_color": "#3BB39A",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
