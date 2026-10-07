@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- ASBC Labor Calculator v8.0.1 | Zone Breakdown & Polished SOW Print | Build 2026-10-02 -->
+<!-- ASBC Labor Calculator v8.0.2 | Zone Breakdown & Polished SOW Print | Build 2026-10-02 -->
 <html lang="en">
 <head>
     <link rel="manifest" href="./manifest.json">
@@ -9,7 +9,7 @@
     <meta name="theme-color" content="#b08d57">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="application-version" content="8.0.0">
+    <meta name="application-version" content="8.0.2">
     <meta name="build-date" content="2026-10-02">
     <meta name="theme-color" content="#050505">
     <title>Labor Calculator | ASBC</title>
@@ -190,7 +190,13 @@
 
             * { color: #111 !important; }
         }
-    </style>
+            /* Printed scope of work: show the totals block as black on white */
+        @media print {
+            #summaryPrintBlock { position: static !important; background: #fff !important; box-shadow: none !important; border-top: 2px solid #000 !important; padding: 12px 0 !important; }
+            #summaryPrintBlock, #summaryPrintBlock * { color: #000 !important; border-color: #000 !important; }
+            #summaryPrintBlock #priceTotal { font-size: 22px !important; }
+        }
+</style>
 </head>
 
 <body class="bg-bgDark text-white h-screen overflow-hidden font-sans">
@@ -523,7 +529,7 @@
               }
           });
 
-        const APP_VERSION = '8.0.0';
+        const APP_VERSION = '8.0.2';
         const BUILD_DATE = '2026-10-02';
         const HOURLY_RATE = 200;
         const RECYCLING_FEE = 75;
