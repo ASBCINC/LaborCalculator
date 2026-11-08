@@ -612,7 +612,7 @@
               }
           });
 
-        const APP_VERSION = '8.9.3';
+        const APP_VERSION = '8.9.4';
         const BUILD_DATE = '2026-11-08';
         let HOURLY_RATE = 200;
 
@@ -2349,7 +2349,6 @@
         activeZone.addEventListener('change', renderCatalog);
         customerName.addEventListener('input', renderQuote);
         salesManagerName.addEventListener('input', renderQuote);
-        salesManagerName.addEventListener('change', loadOppsForRep);
         const dtoolsOpportunity = document.getElementById('dtoolsOpportunity');
         if (dtoolsOpportunity) {
         let dtoolsOppsCache = [];
@@ -2375,6 +2374,7 @@
                 dtoolsOpportunity.innerHTML = '<option value="">Opportunities unavailable</option>';
             }
         }
+        salesManagerName.addEventListener('change', loadOppsForRep);
         dtoolsOpportunity.addEventListener('change', () => {
             const o = dtoolsOppsCache.find(x => x.id === dtoolsOpportunity.value);
             if (o) { customerName.value = o.name; renderQuote(); }
