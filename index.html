@@ -270,7 +270,9 @@
                 <option value="Stefn Sandberg">Stefn Sandberg</option>
                 <option value="Enid Shor">Enid Shor</option>
             </select>
-            
+            <select id="dtoolsOpportunity" class="h-9 w-40 sm:w-48 shrink-0 bg-white border border-[#D8D8D8] rounded-md px-2 text-sm text-black">
+                <option value="">D-Tools opportunities</option>
+            </select>
             <select id="savedEstimates" class="h-9 w-40 sm:w-48 shrink-0 bg-white border border-[#D8D8D8] rounded-md px-3 text-sm text-black">
                 <option value="">Saved quotes...</option>
             </select>
@@ -610,7 +612,7 @@
               }
           });
 
-        const APP_VERSION = '8.9.2';
+        const APP_VERSION = '8.9.3';
         const BUILD_DATE = '2026-11-08';
         let HOURLY_RATE = 200;
 
@@ -2349,6 +2351,7 @@
         salesManagerName.addEventListener('input', renderQuote);
         salesManagerName.addEventListener('change', loadOppsForRep);
         const dtoolsOpportunity = document.getElementById('dtoolsOpportunity');
+        if (dtoolsOpportunity) {
         let dtoolsOppsCache = [];
         async function loadOppsForRep() {
             const rep = salesManagerName.value;
@@ -2376,6 +2379,7 @@
             const o = dtoolsOppsCache.find(x => x.id === dtoolsOpportunity.value);
             if (o) { customerName.value = o.name; renderQuote(); }
         });
+        }
         customRecyclingInput.addEventListener('input', renderQuote);
 
         favoritesFilterButton.addEventListener('click', () => {
