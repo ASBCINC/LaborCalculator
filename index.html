@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- ASBC Labor Calculator v8.8.3 | Firestore-primary catalog, offline-first boot, draft auto-save, admin tools | Build 2026-11-08 -->
+<!-- ASBC Labor Calculator v8.8.4 | Firestore-primary catalog, offline-first boot, draft auto-save, admin tools | Build 2026-11-08 -->
 <html lang="en">
 <head>
     <link rel="manifest" href="./manifest.json">
@@ -8,7 +8,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="application-version" content="8.8.3">
+    <meta name="application-version" content="8.8.4">
     <meta name="build-date" content="2026-11-07">
     <meta name="theme-color" content="#050505">
     <title>Labor Calculator | ASBC</title>
@@ -627,7 +627,7 @@
               }
           });
 
-        const APP_VERSION = '8.8.3';
+        const APP_VERSION = '8.8.4';
         const BUILD_DATE = '2026-11-08';
         let HOURLY_RATE = 200;
 
@@ -1752,7 +1752,7 @@
             logo.addEventListener('click', () => {
                 clicks++;
                 clearTimeout(timer);
-                timer = setTimeout(() => { clicks = 0; }, 900);
+                timer = setTimeout(() => { clicks = 0; }, 1400);
                 if (clicks >= 3) { clicks = 0; clearTimeout(timer); forceAppRefresh(); }
             });
         })();
