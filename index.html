@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- ASBC Labor Calculator v8.8.1 | Firestore-primary catalog, offline-first boot, draft auto-save, admin tools | Build 2026-11-08 -->
+<!-- ASBC Labor Calculator v8.8.2 | Firestore-primary catalog, offline-first boot, draft auto-save, admin tools | Build 2026-11-08 -->
 <html lang="en">
 <head>
     <link rel="manifest" href="./manifest.json">
@@ -8,7 +8,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="application-version" content="8.8.1">
+    <meta name="application-version" content="8.8.2">
     <meta name="build-date" content="2026-11-07">
     <meta name="theme-color" content="#050505">
     <title>Labor Calculator | ASBC</title>
@@ -232,7 +232,7 @@
             <div class="flex items-center gap-3 sm:gap-5 min-w-0">
                 <img src="./bo-california-logo.png" alt="Bang &amp; Olufsen California" class="h-9 sm:h-11 w-auto max-w-[62vw] sm:max-w-none object-contain">
                 <div class="w-px h-9 bg-[#D8D8D8] shrink-0"></div>
-                <img src="./asbc-logo.png" alt="ASBC" class="h-7 sm:h-8 w-auto object-contain shrink-0">
+                <img src="./asbc-logo.png" alt="ASBC" id="asbcLogo" class="h-7 sm:h-8 w-auto object-contain shrink-0">
                 <div class="hidden lg:block min-w-0 border-l border-[#E2E2E2] pl-5">
                     <div class="text-[10px] uppercase tracking-[0.24em] text-[#777777]">Internal Project Tool</div>
                     <div class="text-sm tracking-wide text-black">Labor Estimator</div>
@@ -627,7 +627,7 @@
               }
           });
 
-        const APP_VERSION = '8.8.1';
+        const APP_VERSION = '8.8.2';
         const BUILD_DATE = '2026-11-08';
         let HOURLY_RATE = 200;
 
@@ -1723,6 +1723,39 @@
         }
         attachSuggestions(document.getElementById('activeZone'), 'zoneOptions');
         attachSuggestions(document.getElementById('adminCategory'), 'adminCategoryOptions');
+
+        function forceAppRefresh() {
+            const banner = document.createElement('div');
+            banner.textContent = 'Updating app...';
+            banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:300;background:#C7A66A;color:#141414;font:600 13px/1.4 sans-serif;text-align:center;padding:8px 12px;';
+            document.body.appendChild(banner);
+            (async () => {
+                try {
+                    if ('caches' in window) {
+                        const keys = await caches.keys();
+                        await Promise.all(keys.filter(k => k.startsWith('asbc-calc-')).map(k => caches.delete(k)));
+                    }
+                    if (navigator.serviceWorker) {
+                        const reg = await navigator.serviceWorker.getRegistration();
+                        if (reg && reg.update) await reg.update();
+                    }
+                } catch (e) { /* reload anyway */ }
+                setTimeout(() => window.location.reload(), 700);
+            })();
+        }
+        (function initLogoRefresh() {
+            const logo = document.getElementById('asbcLogo');
+            if (!logo) return;
+            let clicks = 0, timer = null;
+            logo.style.cursor = 'pointer';
+            logo.title = 'Triple-tap to refresh the app';
+            logo.addEventListener('click', () => {
+                clicks++;
+                clearTimeout(timer);
+                timer = setTimeout(() => { clicks = 0; }, 900);
+                if (clicks >= 3) { clicks = 0; clearTimeout(timer); forceAppRefresh(); }
+            });
+        })();
 
         let selectedOriginalId = null;
         const adminItemSelect = document.getElementById('adminItemSelect');
