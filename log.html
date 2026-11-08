@@ -202,12 +202,12 @@ function renderList() {
         <div style="margin-top:4px"><b>Total: ${fmt(p.total)}</b></div>
         ${a ? `<div style="margin-top:8px"><span class="badge b-a">ACTUALS</span> est ${Number(a.totalEstHours).toFixed(2)} hrs vs actual ${Number(a.totalActualHours).toFixed(2)} hrs${a.notes ? ` &middot; notes: ${esc(a.notes)}` : ''}</div>` : ''}
       </div>`;
-    return `<div class="qrow" onclick="this.classList.toggle('open')">
+    return `<div class="qrow" onclick="if(event.target.closest('.qactions'))return;this.classList.toggle('open')">
       <div class="qtop">
         <div><div class="qname">${cust} ${badges}</div><div class="qmeta">${mgr ? mgr + ' &middot; ' : ''}${date}</div></div>
         <div class="qnums"><div class="qnum-b">${fmt(p.total)}</div><div class="qmeta">${info.hours.toFixed(2)} hrs</div></div>
       </div>
-      <div class="qactions" onclick="event.stopPropagation()">
+      <div class="qactions">
         <button class="qbtn qbtn-load" data-act="load" data-id="${r._id}">Load</button>
         <button class="qbtn qbtn-save" data-act="save" data-id="${r._id}">Save</button>
         <button class="qbtn qbtn-del" data-act="delete" data-id="${r._id}">Delete</button>
