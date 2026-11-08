@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- ASBC Labor Calculator v8.1.0 | Typed quantities | Build 2026-10-08 -->
+<!-- ASBC Labor Calculator v8.3.0 | Add-on dropdown on product tiles | Build 2026-11-07 -->
 <html lang="en">
 <head>
     <link rel="manifest" href="./manifest.json">
@@ -9,8 +9,8 @@
     <meta name="theme-color" content="#b08d57">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="application-version" content="8.1.0">
-    <meta name="build-date" content="2026-10-02">
+    <meta name="application-version" content="8.3.0">
+    <meta name="build-date" content="2026-11-07">
     <meta name="theme-color" content="#050505">
     <title>Labor Calculator | ASBC</title>
 
@@ -67,6 +67,17 @@
             border-color: #C7A66A !important;
             box-shadow: 0 0 0 1px rgba(199, 166, 106, 0.28);
             outline: none;
+        }
+
+        .addon-select {
+            height: 26px;
+            width: 100%;
+            background-color: #171717;
+            border: 1px solid #242424;
+            border-radius: 8px;
+            color: #C7A66A;
+            font-size: 10px;
+            padding: 0 6px;
         }
 
         .estimate-open { transform: translateY(0) !important; }
@@ -533,9 +544,20 @@
               }
           });
 
-        const APP_VERSION = '8.2.0';
+        const APP_VERSION = '8.3.0';
         const BUILD_DATE = '2026-10-02';
         const HOURLY_RATE = 200;
+
+        // Add-on labor options for the dropdown on every product tile.
+        // Picking one stacks its hours on top of that product's own hours, per unit of quantity.
+        const ADDONS = [
+            { name: 'Pre-wire / rough-in', installHours: 1.00, programmingHours: 0.00 },
+            { name: 'Backbox / in-wall prep', installHours: 0.50, programmingHours: 0.00 },
+            { name: 'Trim-out & finish', installHours: 0.50, programmingHours: 0.00 },
+            { name: 'Mount / bracket install', installHours: 0.50, programmingHours: 0.00 },
+            { name: 'Rack integration & dressing', installHours: 1.00, programmingHours: 0.00 },
+            { name: 'Program & commission', installHours: 0.00, programmingHours: 0.25 }
+        ];
         const RECYCLING_FEE = 75;
         const ADMIN_PIN = '1925';
         const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwy_WAUk5mv1IguezH95RxSqbNlh2or5HKINXJhl9P3m-c-iVWpR7Wo0ByGgTwXP9DJGA/exec';
@@ -657,6 +679,33 @@
         let favoritesOnly = false;
         let favoriteIds = new Set(JSON.parse(localStorage.getItem('asbcFavoriteIds') || '[]'));
 
+        let tileAddons = {};
+        try { tileAddons = JSON.parse(localStorage.getItem('asbcTileAddons') || '{}') || {}; } catch (error) { tileAddons = {}; }
+
+        function tileAddonKey(productId, zone) { return `${String(productId)}||${zone || 'General'}`; }
+        function currentZoneName() { return activeZone.value.trim() || 'General'; }
+        function getTileAddon(productId) { return tileAddons[tileAddonKey(productId, currentZoneName())] || null; }
+        function normalizeAddon(addon) {
+            if (!addon || !addon.name) return null;
+            return { name: String(addon.name), installHours: Number(addon.installHours) || 0, programmingHours: Number(addon.programmingHours) || 0 };
+        }
+        function setTileAddon(productId, addon) {
+            const zone = currentZoneName();
+            const key = tileAddonKey(productId, zone);
+            const clean = normalizeAddon(addon);
+            if (clean) { tileAddons[key] = clean; } else { delete tileAddons[key]; }
+            localStorage.setItem('asbcTileAddons', JSON.stringify(tileAddons));
+            const cartItem = quoteCart.find(cartItem => cartItem.id === productId && (cartItem.zone || 'General') === zone && !cartItem.isCustom);
+            if (cartItem) { cartItem.addon = clean ? { ...clean } : null; }
+            renderCatalog();
+            renderQuote();
+        }
+        function addonOptionsHtml(selectedName) {
+            return `<option value="">Add-on: none</option>` + ADDONS.map((addon, index) =>
+                `<option value="${index}" ${selectedName === addon.name ? 'selected' : ''}>${escapeHtml(addon.name)} (+${(addon.installHours + addon.programmingHours).toFixed(2)} hr)</option>`
+            ).join('');
+        }
+
         const currencyFormatter = new Intl.NumberFormat('en-US', {
             style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2
         });
@@ -763,7 +812,7 @@
             return quoteCart.map(item => item.isCustom ? {
                 id: item.id, category: 'Custom', name: item.name, installHours: item.installHours, programmingHours: item.programmingHours, qty: item.qty, isCustom: true, zone: item.zone || 'General'
             } : {
-                id: item.id, qty: item.qty, isCustom: false, zone: item.zone || 'General'
+                id: item.id, qty: item.qty, isCustom: false, zone: item.zone || 'General', addon: normalizeAddon(item.addon)
             });
         }
 
@@ -791,7 +840,7 @@
                     catalogItem = catalog.find(item => item.name === savedItem.name && (!savedItem.category || item.category === savedItem.category));
                 }
 
-                if (catalogItem) { rebuilt.push({ ...catalogItem, qty, isCustom: false, zone }); } 
+                if (catalogItem) { rebuilt.push({ ...catalogItem, qty, isCustom: false, zone, addon: normalizeAddon(savedItem.addon) }); } 
                 else { missing.push(savedItem.name || savedItem.id || 'Unknown item'); }
             });
 
@@ -863,6 +912,10 @@
                     const { rebuilt, missing } = rebuildQuoteCart(savedItems);
 
                     quoteCart = rebuilt;
+                    rebuilt.forEach(item => {
+                        if (!item.isCustom && item.addon) { tileAddons[tileAddonKey(item.id, item.zone || 'General')] = { ...item.addon }; }
+                    });
+                    localStorage.setItem('asbcTileAddons', JSON.stringify(tileAddons));
                     applyProjectData(record.project);
                     
                     recyclingToggle.value = record.options?.recycling || 'no';
@@ -982,6 +1035,7 @@
             visibleItems.forEach(item => {
                 const quoteItem = quoteCart.find(cartItem => cartItem.id === item.id && cartItem.zone === currentZone && !cartItem.isCustom);
                 const quantity = quoteItem ? quoteItem.qty : 0;
+                const tileAddon = getTileAddon(item.id);
                 const card = document.createElement('article');
 
                 if (isListView) {
@@ -993,7 +1047,8 @@
                                 <div class="text-[10px] text-brandGold uppercase tracking-wider truncate">${escapeHtml(item.category)}</div>
                             </div>
                             <h3 class="font-medium text-sm leading-snug truncate whitespace-nowrap">${escapeHtml(item.name)}</h3>
-                            <div class="item-hours-display text-[10px] text-textMuted font-mono mt-0.5">${item.installHours.toFixed(2)} inst + ${item.programmingHours.toFixed(2)} prog</div>
+                            <div class="item-hours-display text-[10px] text-textMuted font-mono mt-0.5">${item.installHours.toFixed(2)} inst + ${item.programmingHours.toFixed(2)} prog${tileAddon ? ` + ${(tileAddon.installHours + tileAddon.programmingHours).toFixed(2)} add-on` : ''}</div>
+                            <select data-addon-product-id="${item.id}" class="addon-select mt-1">${addonOptionsHtml(tileAddon ? tileAddon.name : '')}</select>
                         </div>
                         <div class="flex items-center bg-gray-800 rounded-xl overflow-hidden shrink-0">
                             <button type="button" data-product-id="${item.id}" data-change="-1" class="quantity-button w-9 h-9 text-lg">−</button>
@@ -1009,10 +1064,11 @@
                                 <div class="text-xs text-brandGold mb-1 uppercase tracking-wider">${escapeHtml(item.category)}</div>
                                 <button type="button" data-favorite-id="${item.id}" class="favorite-button -mt-1.5 -mr-1.5 w-9 h-9 text-lg ${favoriteIds.has(item.id) ? 'text-brandGold' : 'text-textMuted'}">${favoriteIds.has(item.id) ? '★' : '☆'}</button>
                             </div>
-                            <h3 class="font-medium text-sm leading-snug mb-2">${escapeHtml(item.name)}</h3>
+                            <h3 class="font-medium text-sm leading-snug">${escapeHtml(item.name)}</h3>
+                            <select data-addon-product-id="${item.id}" class="addon-select mt-2 mb-2">${addonOptionsHtml(tileAddon ? tileAddon.name : '')}</select>
                         </div>
                         <div class="flex justify-between items-center gap-2 border-t border-gray-800 pt-2.5">
-                            <div class="item-hours-display text-xs text-textMuted font-mono">${item.installHours.toFixed(2)} install + ${item.programmingHours.toFixed(2)} prog</div>
+                            <div class="item-hours-display text-xs text-textMuted font-mono">${item.installHours.toFixed(2)} install + ${item.programmingHours.toFixed(2)} prog${tileAddon ? ` + ${(tileAddon.installHours + tileAddon.programmingHours).toFixed(2)} add-on` : ''}</div>
                             <div class="flex items-center bg-gray-800 rounded-xl overflow-hidden shrink-0 ml-auto">
                                 <button type="button" data-product-id="${item.id}" data-change="-1" class="quantity-button w-9 h-9 text-lg">−</button>
                                 <input type="number" inputmode="numeric" pattern="[0-9]*" min="0" step="1" value="${quantity}" data-qty-product-id="${item.id}" aria-label="Quantity" class="qty-input w-11 h-9 text-center font-mono text-sm font-bold">
@@ -1033,7 +1089,7 @@
             const existingItem = quoteCart.find(cartItem => cartItem.id === productId && cartItem.zone === currentZone && !cartItem.isCustom);
             
             if (existingItem) { existingItem.qty = (Number(existingItem.qty) || 0) + 1; } 
-            else { quoteCart.push({ ...item, qty: 1, isCustom: false, zone: currentZone }); }
+            else { quoteCart.push({ ...item, qty: 1, isCustom: false, zone: currentZone, addon: normalizeAddon(getTileAddon(productId)) }); }
             
             renderCatalog();
             renderQuote();
@@ -1068,7 +1124,7 @@
             const existingIndex = quoteCart.findIndex(cartItem => cartItem.id === productId && cartItem.zone === currentZone && !cartItem.isCustom);
             if (qty === 0) { if (existingIndex !== -1) quoteCart.splice(existingIndex, 1); }
             else if (existingIndex !== -1) { quoteCart[existingIndex].qty = qty; }
-            else { quoteCart.push({ ...item, qty, isCustom: false, zone: currentZone }); }
+            else { quoteCart.push({ ...item, qty, isCustom: false, zone: currentZone, addon: normalizeAddon(getTileAddon(productId)) }); }
             renderCatalog();
             renderQuote();
         }
@@ -1112,7 +1168,8 @@
                     const inst = Number(item.installHours) || 0;
                     const prog = Number(item.programmingHours) || 0;
                     const qty = Math.max(1, Number(item.qty) || 1);
-                    zoneTotals[z] = (zoneTotals[z] || 0) + ((inst + prog) * qty);
+                    const addonZoneHours = (Number(item.addon && item.addon.installHours) || 0) + (Number(item.addon && item.addon.programmingHours) || 0);
+                    zoneTotals[z] = (zoneTotals[z] || 0) + ((inst + prog + addonZoneHours) * qty);
                 });
 
                 Object.keys(zonesObj).sort().forEach(zoneName => {
@@ -1139,16 +1196,19 @@
                     zonesObj[zoneName].forEach(item => {
                         const installHours = Number(item.installHours) || 0;
                         const programmingHours = Number(item.programmingHours) || 0;
+                        const addonInst = Number(item.addon && item.addon.installHours) || 0;
+                        const addonProg = Number(item.addon && item.addon.programmingHours) || 0;
+                        const addonHoursPerItem = addonInst + addonProg;
                         const quantity = Math.max(1, Number(item.qty) || 1);
-                        const totalHoursPerItem = installHours + programmingHours;
+                        const totalHoursPerItem = installHours + programmingHours + addonHoursPerItem;
 
                         item.installHours = installHours;
                         item.programmingHours = programmingHours;
                         item.totalHours = totalHoursPerItem;
                         item.qty = quantity;
 
-                        totalInstall += installHours * quantity;
-                        totalProgramming += programmingHours * quantity;
+                        totalInstall += (installHours + addonInst) * quantity;
+                        totalProgramming += (programmingHours + addonProg) * quantity;
                         totalQuantity += quantity;
 
                         const row = document.createElement('div');
@@ -1160,6 +1220,7 @@
                                     <span>${escapeHtml(item.name)}</span>
                                 </div>
                                 <div class="item-hours-display text-xs text-textMuted font-mono">${(totalHoursPerItem * quantity).toFixed(2)} hrs (${installHours.toFixed(2)} inst + ${programmingHours.toFixed(2)} prog)</div>
+                                ${item.addon ? `<div class="text-[11px] text-brandGold font-mono mt-0.5">+ ${escapeHtml(item.addon.name)} · ${(addonHoursPerItem * quantity).toFixed(2)} hrs add-on</div>` : ''}
                             </div>
                             <div class="flex items-center bg-gray-800 rounded-lg print-hide shrink-0">
                                 <button type="button" data-quote-index="${item.originalIndex}" data-change="-1" class="quote-quantity-button w-9 h-9 text-lg">−</button>
@@ -1449,6 +1510,8 @@
         function clearQuote() {
             if (quoteCart.length === 0 || window.confirm('Clear the entire estimate?')) {
                 quoteCart = [];
+                tileAddons = {};
+                localStorage.setItem('asbcTileAddons', JSON.stringify(tileAddons));
                 savedEstimates.value = '';
                 customerName.value = '';
                 salesManagerName.value = '';
@@ -1539,6 +1602,12 @@
         });
 
         productGrid.addEventListener('change', event => {
+            const addonSelect = event.target.closest('[data-addon-product-id]');
+            if (addonSelect) {
+                const pick = addonSelect.value === '' ? null : ADDONS[Number(addonSelect.value)];
+                setTileAddon(addonSelect.dataset.addonProductId, pick);
+                return;
+            }
             const input = event.target.closest('[data-qty-product-id]');
             if (input) setProductQuantity(input.dataset.qtyProductId, input.value);
         });
