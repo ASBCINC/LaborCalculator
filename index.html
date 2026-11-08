@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- ASBC Labor Calculator v8.6.1 | Firestore-primary catalog, offline-first boot, draft auto-save, admin tools | Build 2026-11-08 -->
+<!-- ASBC Labor Calculator v8.7.0 | Firestore-primary catalog, offline-first boot, draft auto-save, admin tools | Build 2026-11-08 -->
 <html lang="en">
 <head>
     <link rel="manifest" href="./manifest.json">
@@ -8,7 +8,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="application-version" content="8.6.1">
+    <meta name="application-version" content="8.7.0">
     <meta name="build-date" content="2026-11-07">
     <meta name="theme-color" content="#050505">
     <title>Labor Calculator | ASBC</title>
@@ -270,6 +270,7 @@
             <button type="button" id="saveQuoteButton" onclick="saveEstimate()" class="h-9 shrink-0 bg-black text-white font-medium rounded-md px-4 text-sm">Save</button>
             <button type="button" onclick="loadEstimate()" class="h-9 shrink-0 bg-white border border-[#CFCFCF] text-black font-medium rounded-md px-4 text-sm">Load</button>
             <button type="button" onclick="deleteEstimate()" class="h-9 shrink-0 bg-white border border-[#DCCFCF] text-[#8C3333] font-medium rounded-md px-4 text-sm">Delete</button>
+            <a href="./log.html" target="_blank" rel="noopener" title="Browse every saved quote and labor calibration" class="h-9 shrink-0 inline-flex items-center bg-white border border-[#CFCFCF] text-black font-medium rounded-md px-4 text-sm">Log</a>
         </div>
     </header>
 
@@ -420,6 +421,7 @@
                 <div class="grid grid-cols-3 gap-2 print-hide">
                     <button type="button" onclick="clearQuote()" class="bg-[#171717] border border-[#2A2A2A] font-semibold py-3 rounded-xl">Clear</button>
                     <button type="button" onclick="prepareAndPrint()" class="bg-white text-black font-bold py-3 rounded-xl">Print SOW</button>
+                    <button type="button" onclick="toggleActualsModal(true)" class="bg-brandGold text-bgDark font-bold py-3 rounded-xl">Actuals</button>
                     <button type="button" onclick="shareQuote()" class="bg-brandGold text-bgDark font-bold py-3 rounded-xl">Share</button>
                 </div>
                 
@@ -596,7 +598,7 @@
               }
           });
 
-        const APP_VERSION = '8.6.1';
+        const APP_VERSION = '8.7.0';
         const BUILD_DATE = '2026-11-08';
         let HOURLY_RATE = 200;
 
@@ -1091,6 +1093,7 @@
                     currentLoadedIsTemplate = !!record.isTemplate;
                     isTemplateCheckbox.checked = currentLoadedIsTemplate;
                     isLockedCheckbox.checked = !!record.isLocked;
+                    currentActuals = record.actuals || null;
                     hasUnsavedCloudChanges = false; updateSaveIndicator();
                     
                     renderCatalog();
@@ -1944,6 +1947,7 @@
                 materialsMarkup.value = String(appSettings.defaultMarkup ?? '5');
                 crewSize.value = '1';
                 localStorage.removeItem('asbcActiveDraft');
+                currentActuals = null;
                 hasUnsavedCloudChanges = false; updateSaveIndicator();
                 renderCatalog();
                 renderQuote();
@@ -2056,6 +2060,100 @@
         productGrid.addEventListener('input', scheduleDraftSave);
         quoteList.addEventListener('input', scheduleDraftSave);
         quoteList.addEventListener('change', scheduleDraftSave);
+        let currentActuals = null;
+
+        function actualsRowsFromCart() {
+            return currentProjectData().map(entry => {
+                const catItem = catalog.find(i => i.id === entry.id);
+                const name = entry.isCustom ? entry.name : (catItem ? catItem.name : entry.id);
+                const base = entry.isCustom
+                    ? (Number(entry.installHours) || 0) + (Number(entry.programmingHours) || 0)
+                    : (catItem ? (catItem.installHours + catItem.programmingHours) : 0);
+                const addonHours = entry.addon ? (Number(entry.addon.installHours) || 0) + (Number(entry.addon.programmingHours) || 0) : 0;
+                const est = Math.round(((base + addonHours) * entry.qty) * 100) / 100;
+                const prev = ((currentActuals && currentActuals.lines) || []).find(l => l.id === entry.id && (l.zone || 'General') === (entry.zone || 'General'));
+                return { id: entry.id, name, zone: entry.zone || 'General', qty: entry.qty, estHours: est, actualHours: prev && prev.actualHours != null ? prev.actualHours : '' };
+            });
+        }
+
+        function toggleActualsModal(show) {
+            const modal = document.getElementById('actualsModal');
+            if (!show) { modal.classList.add('hidden'); modal.classList.remove('flex'); return; }
+            if (quoteCart.length === 0) { alert('Add some items first.'); return; }
+            if (!savedEstimates.value) { alert('Save the quote first (the Save button), then log actuals against it.'); return; }
+            const rows = actualsRowsFromCart();
+            document.getElementById('actualsList').innerHTML = rows.map((row, i) => `
+                <div class="flex items-center gap-2 bg-gray-900 border border-gray-800 rounded-lg p-2">
+                    <div class="flex-1 min-w-0">
+                        <div class="text-sm text-white truncate">${escapeHtml(row.name)}${row.qty > 1 ? ` ×${row.qty}` : ''}</div>
+                        <div class="text-[10px] text-textMuted">${escapeHtml(row.zone)} · est ${row.estHours.toFixed(2)} hrs</div>
+                    </div>
+                    <input type="number" min="0" step="0.25" inputmode="decimal" data-actual-index="${i}" value="${row.actualHours}" placeholder="actual" class="w-24 bg-gray-900 border border-gray-700 rounded-lg p-2 text-sm text-white text-right font-mono">
+                </div>
+            `).join('');
+            document.getElementById('actualsNotes').value = (currentActuals && currentActuals.notes) || '';
+            document.getElementById('actualsStatus').textContent = '';
+            updateActualsTotals();
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function updateActualsTotals() {
+            const rows = actualsRowsFromCart();
+            const inputs = [...document.querySelectorAll('#actualsList [data-actual-index]')];
+            const estTotal = rows.reduce((s, r) => s + r.estHours, 0);
+            let actTotal = 0; let entered = 0;
+            rows.forEach((row, i) => {
+                const raw = inputs[i] ? inputs[i].value : '';
+                const v = Number(raw);
+                if (raw !== '' && Number.isFinite(v)) { actTotal += v; entered++; }
+            });
+            document.getElementById('actualsTotals').innerHTML =
+                `<span>Estimate: ${estTotal.toFixed(2)} hrs</span>` +
+                `<span class="${actTotal > estTotal ? 'text-red-400' : 'text-green-400'}">Actual${entered ? ` (${entered} line${entered > 1 ? 's' : ''})` : ''}: ${actTotal.toFixed(2)} hrs</span>`;
+        }
+
+        async function saveActuals() {
+            const quoteId = savedEstimates.value;
+            if (!quoteId) { alert('Save the quote first, then log actuals.'); return; }
+            const rows = actualsRowsFromCart();
+            const inputs = [...document.querySelectorAll('#actualsList [data-actual-index]')];
+            const lines = [];
+            rows.forEach((row, i) => {
+                const raw = inputs[i] ? inputs[i].value : '';
+                if (raw !== '' && raw != null) {
+                    const v = Number(raw);
+                    if (Number.isFinite(v) && v >= 0) lines.push({ id: row.id, name: row.name, zone: row.zone, qty: row.qty, estHours: row.estHours, actualHours: v });
+                }
+            });
+            if (!lines.length) { alert('Enter at least one actual hours value.'); return; }
+            const totalEst = rows.reduce((s, r) => s + r.estHours, 0);
+            const totalActual = lines.reduce((s, r) => s + r.actualHours, 0);
+            const payload = {
+                lines,
+                totalEstHours: Math.round(totalEst * 100) / 100,
+                totalActualHours: Math.round(totalActual * 100) / 100,
+                notes: document.getElementById('actualsNotes').value.trim(),
+                savedAt: new Date().toISOString()
+            };
+            const saveBtn = document.getElementById('actualsSaveButton');
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Saving...';
+            document.getElementById('actualsStatus').textContent = 'Saving actual hours...';
+            try {
+                await db.collection('quotes').doc(quoteId).set({ actuals: payload, updatedAt: new Date() }, { merge: true });
+                currentActuals = payload;
+                document.getElementById('actualsStatus').innerHTML = '<span class="text-green-400">Actual hours saved to the quote.</span>';
+                setTimeout(() => toggleActualsModal(false), 1000);
+            } catch (err) {
+                console.error('Failed to save actuals:', err);
+                document.getElementById('actualsStatus').innerHTML = `<span class="text-red-400">Save failed: ${err.message}</span>`;
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Save Actuals';
+            }
+        }
+
         quoteList.addEventListener('click', event => {
             const zoneBtn = event.target.closest('[data-rename-zone]');
             if (zoneBtn) { renameZone(zoneBtn.dataset.renameZone); return; }
@@ -2109,6 +2207,7 @@
             });
         });
 
+        document.getElementById('actualsList').addEventListener('input', updateActualsTotals);
         searchInput.addEventListener('input', renderCatalog);
         activeZone.addEventListener('input', renderCatalog);
         customerName.addEventListener('input', renderQuote);
@@ -2188,6 +2287,8 @@
         window.toggleAdminEditMode = toggleAdminEditMode;
         window.saveGlobalSettings = saveGlobalSettings;
         window.renameZone = renameZone;
+        window.toggleActualsModal = toggleActualsModal;
+        window.saveActuals = saveActuals;
 
         applyShowHoursState();
         applyProjectData();
@@ -2206,5 +2307,22 @@
             });
         }
     </script>
+    <div id="actualsModal" class="fixed inset-0 bg-black/85 hidden items-center justify-center z-50 p-4">
+        <div class="bg-bgDark border border-gray-700 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col p-4 sm:p-6">
+            <div class="flex items-center justify-between mb-2">
+                <h2 class="text-lg font-bold text-white">Log Actual Hours</h2>
+                <button type="button" onclick="toggleActualsModal(false)" class="w-10 h-10 rounded-full bg-gray-800 text-white">&times;</button>
+            </div>
+            <div class="text-xs text-textMuted mb-3">Compare what the estimate said to what the job actually took. Saves against the loaded quote.</div>
+            <div id="actualsList" class="flex-1 overflow-y-auto space-y-2 min-h-[8rem]"></div>
+            <div id="actualsTotals" class="mt-3 pt-3 border-t border-gray-800 flex justify-between text-sm text-white font-bold"></div>
+            <textarea id="actualsNotes" rows="2" placeholder="Notes (optional): what ran over, what went faster..." class="mt-2 w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-xs text-white"></textarea>
+            <div class="grid grid-cols-2 gap-3 mt-3">
+                <button id="actualsSaveButton" type="button" onclick="saveActuals()" class="bg-brandGold text-bgDark font-bold py-3 rounded-xl">Save Actuals</button>
+                <button type="button" onclick="toggleActualsModal(false)" class="bg-transparent border border-gray-700 text-textMuted font-bold py-3 rounded-xl">Close</button>
+            </div>
+            <div id="actualsStatus" class="mt-2 text-center text-xs text-textMuted min-h-[1.25rem]"></div>
+        </div>
+    </div>
 </body>
 </html>

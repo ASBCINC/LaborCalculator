@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#050505">
+<title>Quote Log | ASBC Labor Calculator</title>
+<link rel="icon" href="./favicon.svg">
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
+<style>
+:root { --gold:#C7A66A; --bg:#050505; --card:#111318; --line:#26292f; --muted:#8b8f98; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:#fff; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; }
+.wrap { max-width:860px; margin:0 auto; padding:16px 14px 60px; }
+header { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px; }
+h1 { font-size:20px; margin:0; letter-spacing:.02em; }
+h1 span { color:var(--gold); }
+.btn { display:inline-flex; align-items:center; height:34px; padding:0 12px; border-radius:8px; border:1px solid var(--line); color:#fff; text-decoration:none; font-size:12px; font-weight:600; background:#1a1d23; }
+input, select { background:#101216; border:1px solid var(--line); color:#fff; border-radius:10px; padding:10px 12px; font-size:14px; width:100%; }
+.controls { display:flex; gap:8px; margin-bottom:12px; }
+.badge { display:inline-block; font-size:9px; font-weight:700; letter-spacing:.06em; padding:2px 7px; border-radius:999px; border:1px solid; vertical-align:middle; }
+.b-t { color:#8fb3ff; border-color:#33518f; }
+.b-l { color:#ffd479; border-color:#8a6d2f; }
+.b-a { color:#7ee2a0; border-color:#2f7a4c; }
+.qrow { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin-bottom:8px; cursor:pointer; }
+.qrow:hover { border-color:var(--gold); }
+.qtop { display:flex; justify-content:space-between; gap:10px; align-items:baseline; }
+.qname { font-weight:700; font-size:15px; }
+.qmeta { color:var(--muted); font-size:11px; margin-top:2px; }
+.qnums { text-align:right; font-variant-numeric:tabular-nums; font-size:13px; white-space:nowrap; }
+.qnum-b { color:var(--gold); font-weight:700; }
+.qdetail { display:none; border-top:1px solid var(--line); margin-top:10px; padding-top:10px; font-size:12px; color:#d7d9de; overflow-x:auto; }
+.qrow.open .qdetail { display:block; }
+table { width:100%; border-collapse:collapse; }
+th, td { text-align:left; padding:4px 6px; border-bottom:1px solid #1d2026; font-variant-numeric:tabular-nums; }
+th { color:var(--muted); font-size:10px; text-transform:uppercase; letter-spacing:.05em; }
+.pos { color:#7ee2a0; } .neg { color:#ff8b8b; }
+.sect { margin:18px 0 8px; font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); font-weight:700; }
+.empty { text-align:center; color:var(--muted); padding:30px 0; }
+details summary { cursor:pointer; color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.08em; font-weight:700; }
+details[open] summary { margin-bottom:8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>ASBC <span>Quote Log</span></h1>
+    <a class="btn" href="./index.html">Open Calculator</a>
+  </header>
+  <div class="controls">
+    <input id="search" type="search" placeholder="Search customer or sales manager...">
+    <select id="filter" style="width:auto">
+      <option value="all">All</option>
+      <option value="quotes">Quotes</option>
+      <option value="templates">Templates</option>
+    </select>
+  </div>
+  <details open>
+    <summary>Labor calibration (estimate vs actual)</summary>
+    <div id="calib" class="empty" style="padding:12px 0 0">Loading...</div>
+  </details>
+  <div class="sect">Quotes</div>
+  <div id="list"><div class="empty">Loading quotes...</div></div>
+</div>
+<script>
+const firebaseConfig = {
+            apiKey: "AIzaSyCSf560VkBf2esIH5rC-_Vcx349o7iIC-0",
+            authDomain: "asbc-calculator.firebaseapp.com",
+            projectId: "asbc-calculator",
+            storageBucket: "asbc-calculator.firebasestorage.app",
+            messagingSenderId: "1060301879727",
+            appId: "1:1060301879727:web:3eb390503974dc60ea175a"
+        };
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+let QUOTES = [];
+const CATALOG = new Map();
+const SETTINGS = { hourlyRate: 200, recyclingFee: 75 };
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = v => '$' + Number(v || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+async function boot() {
+  try {
+    const [catSnap, setSnap, quotesSnap] = await Promise.all([
+      db.collection('config').doc('catalog').get(),
+      db.collection('config').doc('settings').get(),
+      db.collection('quotes').get()
+    ]);
+    if (catSnap.exists) (catSnap.data().items || []).forEach(i => CATALOG.set(i.id, i));
+    if (setSnap.exists) {
+      const s = setSnap.data();
+      SETTINGS.hourlyRate = Number(s.hourlyRate) || 200;
+      SETTINGS.recyclingFee = Number(s.recyclingFee) || 75;
+    }
+    quotesSnap.forEach(d => {
+      const r = d.data();
+      r._id = d.id;
+      if (r.updatedAt && r.updatedAt.toMillis) r._t = r.updatedAt.toMillis();
+      else if (typeof r.updatedAt === 'string') r._t = Date.parse(r.updatedAt) || 0;
+      else if (r.updatedAt && r.updatedAt.seconds) r._t = r.updatedAt.seconds * 1000;
+      else r._t = 0;
+      QUOTES.push(r);
+    });
+    QUOTES.sort((a, b) => b._t - a._t);
+    renderCalib();
+    renderList();
+  } catch (err) {
+    document.getElementById('calib').innerHTML = '';
+    document.getElementById('list').innerHTML = `<div class="empty">Could not load quotes: ${esc(err.message)}</div>`;
+  }
+}
+
+function quoteHours(q) {
+  let hours = 0;
+  const lines = [];
+  (q.items || []).forEach(it => {
+    let inst = 0, prog = 0, name = it.name || it.id, missing = false;
+    if (it.isCustom) {
+      inst = Number(it.installHours) || 0;
+      prog = Number(it.programmingHours) || 0;
+    } else {
+      const c = CATALOG.get(it.id);
+      if (c) { inst = Number(c.installHours) || 0; prog = Number(c.programmingHours) || 0; name = c.name; }
+      else { missing = true; }
+    }
+    const addonH = it.addon ? (Number(it.addon.installHours) || 0) + (Number(it.addon.programmingHours) || 0) : 0;
+    const per = inst + prog + addonH;
+    hours += per * (Number(it.qty) || 0);
+    lines.push({ name, zone: it.zone || 'General', qty: it.qty || 0, per, addon: it.addon ? it.addon.name : '', missing });
+  });
+  return { hours, lines };
+}
+
+function quotePrice(q, hours) {
+  const o = q.options || {};
+  const labor = hours * SETTINGS.hourlyRate;
+  const markup = Number(o.markup) || 0;
+  const materials = labor * markup / 100;
+  const rec = (o.recycling === 'yes' || o.recycling === 'custom');
+  const recycling = rec ? (Number(o.customRecycling) || SETTINGS.recyclingFee) : 0;
+  return { labor, materials, recycling, total: labor + materials + recycling };
+}
+
+function renderCalib() {
+  const agg = new Map();
+  QUOTES.forEach(r => {
+    if (!r.actuals || !Array.isArray(r.actuals.lines)) return;
+    r.actuals.lines.forEach(l => {
+      if (!CATALOG.has(l.id)) return;
+      const cur = agg.get(l.id) || { name: l.name, jobs: 0, est: 0, act: 0 };
+      cur.jobs += 1;
+      cur.est += Number(l.estHours) || 0;
+      cur.act += Number(l.actualHours) || 0;
+      agg.set(l.id, cur);
+    });
+  });
+  const box = document.getElementById('calib');
+  const rows = [...agg.values()]
+    .filter(a => a.act > 0)
+    .map(a => Object.assign(a, { delta: a.est ? ((a.act - a.est) / a.est) * 100 : 100 }))
+    .sort((x, y) => Math.abs(y.delta) - Math.abs(x.delta));
+  if (!rows.length) { box.innerHTML = '<div class="empty" style="padding:12px 0 0">No actuals logged yet. Log them from the calculator: open a saved quote, tap Actuals.</div>'; return; }
+  box.innerHTML = `<table><tr><th>Item</th><th>Jobs</th><th>Est hrs</th><th>Actual hrs</th><th>Delta</th></tr>
+  ${rows.map(a => `<tr><td>${esc(a.name)}</td><td>${a.jobs}</td><td>${a.est.toFixed(2)}</td><td>${a.act.toFixed(2)}</td><td class="${a.delta > 10 ? 'neg' : a.delta < -10 ? 'pos' : ''}">${a.delta >= 0 ? '+' : ''}${a.delta.toFixed(0)}%</td></tr>`).join('')}</table>`;
+}
+
+function renderList() {
+  const q = document.getElementById('search').value.trim().toLowerCase();
+  const mode = document.getElementById('filter').value;
+  const items = QUOTES.filter(r => {
+    if (mode === 'templates' && !r.isTemplate) return false;
+    if (mode === 'quotes' && r.isTemplate) return false;
+    const cust = String(r.label || (r.project && r.project.customerName) || '').toLowerCase();
+    const mgr = String((r.project && r.project.salesManagerName) || '').toLowerCase();
+    return !q || cust.includes(q) || mgr.includes(q);
+  });
+  const box = document.getElementById('list');
+  if (!items.length) { box.innerHTML = '<div class="empty">No quotes match.</div>'; return; }
+  box.innerHTML = items.map(r => {
+    const info = quoteHours(r);
+    const p = quotePrice(r, info.hours);
+    const cust = esc(r.label || (r.project && r.project.customerName) || 'Untitled');
+    const mgr = esc((r.project && r.project.salesManagerName) || '');
+    const date = r._t ? new Date(r._t).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+    const badges =
+      (r.isTemplate ? '<span class="badge b-t">TEMPLATE</span> ' : '') +
+      (r.isLocked ? '<span class="badge b-l">LOCKED</span> ' : '') +
+      (r.actuals ? '<span class="badge b-a">ACTUALS</span>' : '');
+    const a = r.actuals;
+    const detail = `
+      <div class="qdetail">
+        <table><tr><th>Item</th><th>Space</th><th>Qty</th><th>Hrs ea</th></tr>
+        ${info.lines.map(l => `<tr><td>${esc(l.name)}${l.addon ? ` <span style="color:#C7A66A">+ ${esc(l.addon)}</span>` : ''}${l.missing ? ' <span class="neg">(no longer in catalog)</span>' : ''}</td><td>${esc(l.zone)}</td><td>${l.qty}</td><td>${l.per.toFixed(2)}</td></tr>`).join('')}
+        </table>
+        <div style="margin-top:8px;color:#8b8f98">Labor ${fmt(p.labor)} &middot; Materials ${fmt(p.materials)} (${Number((r.options || {}).markup) || 0}%) &middot; Recycling ${fmt(p.recycling)} &middot; Crew ${Number((r.options || {}).crewSize) || 1}</div>
+        <div style="margin-top:4px"><b>Total: ${fmt(p.total)}</b></div>
+        ${a ? `<div style="margin-top:8px"><span class="badge b-a">ACTUALS</span> est ${Number(a.totalEstHours).toFixed(2)} hrs vs actual ${Number(a.totalActualHours).toFixed(2)} hrs${a.notes ? ` &middot; notes: ${esc(a.notes)}` : ''}</div>` : ''}
+      </div>`;
+    return `<div class="qrow" onclick="this.classList.toggle('open')">
+      <div class="qtop">
+        <div><div class="qname">${cust} ${badges}</div><div class="qmeta">${mgr ? mgr + ' &middot; ' : ''}${date}</div></div>
+        <div class="qnums"><div class="qnum-b">${fmt(p.total)}</div><div class="qmeta">${info.hours.toFixed(2)} hrs</div></div>
+      </div>
+      ${detail}
+    </div>`;
+  }).join('');
+}
+
+document.getElementById('search').addEventListener('input', renderList);
+document.getElementById('filter').addEventListener('change', renderList);
+boot();
+</script>
+</body>
+</html>
