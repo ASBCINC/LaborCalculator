@@ -231,7 +231,7 @@ document.getElementById('list').addEventListener('click', async (e) => {
   const rec = QUOTES.find(r => r._id === id);
   const label = rec ? (rec.label || (rec.project && rec.project.customerName) || 'Untitled') : 'this quote';
   if (act === 'load') {
-    window.open('index.html?quote=' + encodeURIComponent(id), '_blank');
+    window.location.href = 'index.html?quote=' + encodeURIComponent(id);
     return;
   }
   if (act === 'save') {
