@@ -8,7 +8,7 @@ fields: name, clientName, owner (normalized to rep name when it matches),
 stage, stageGroup, total, price, modifiedDate, isArchived, updatedAt.
 Docs that no longer exist in D-Tools (or are archived) are removed.
 """
-import json, os, urllib.request, urllib.parse
+import json, os, urllib.request, urllib.parse, unicodedata
 
 API_KEY = os.environ['DTS_API_KEY']
 FIREBASE_API_KEY = os.environ.get('FIREBASE_API_KEY', 'AIzaSyCSf560VkBf2esIH5rC-_Vcx349o7iIC-0')
@@ -16,10 +16,24 @@ PROJECT = 'asbc-calculator'
 BASE = 'https://dtcloudapi.d-tools.cloud/api/v1'
 # Public Basic Authorization header documented in the D-Tools Cloud API docs.
 AUTH_BASIC = 'Basic RFRDbG91ZEFQSVVzZXI6MyNRdVkrMkR1QCV3Kk15JTU8Yi1aZzlV'
+# Canonical rep names exactly as they appear in the app dropdown.
 REPS = ['Tom Virasak', 'Tim Parks', 'Brian Chan', 'Matthew Stachnik', 'Oum Sayarad',
         'Jonathan Model', 'Gabriel Clark', 'Josh Silva', 'Noel Salinas', 'Troy Ikeda',
-        'Kwame Yeboah', 'Miguel Sandoval', 'Nawel Girma', 'Stefn Sandberg', 'Enid Shor']
+        'Kwamé Yeboah', 'Miguel Sandoval', 'Nawel Girma', 'Stefn Sandberg', 'Enid Shor']
 LOWER = {r.lower(): r for r in REPS}
+
+
+def _fold_name(s):
+    s = unicodedata.normalize('NFD', s or '')
+    s = ''.join(ch for ch in s if unicodedata.category(ch) != 'Mn')
+    return ' '.join(s.lower().split())
+
+
+# Fold D-Tools owner names onto the app's rep list: accent- and case-insensitive,
+# plus known spelling variants (D-Tools "Timothy Parks" is the app's "Tim Parks",
+# "Kwame Yeboah" is "Kwamé Yeboah").
+_OWNER_FOLD = {_fold_name(r): r for r in REPS}
+_OWNER_FOLD[_fold_name('timothy parks')] = 'Tim Parks'
 
 def http(url, method='GET', headers=None, data=None):
     req = urllib.request.Request(url, method=method, headers=headers or {},
@@ -56,7 +70,7 @@ def main():
         if o.get('isArchived'):
             continue
         owner = o.get('owner') or ''
-        owner = LOWER.get(owner.strip().lower(), owner.strip())
+        owner = _OWNER_FOLD.get(_fold_name(owner), owner.strip())
         keep[o['id']] = {
             'name': o.get('name'), 'number': o.get('number'), 'clientName': o.get('clientName'),
             'owner': owner, 'stage': o.get('stage'), 'stageGroup': o.get('stageGroup'),
