@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- ASBC Labor Calculator v8.3.0 | Add-on dropdown on product tiles | Build 2026-11-07 -->
+<!-- ASBC Labor Calculator v8.3.1 | Per-product opt-in add-ons | Build 2026-11-08 -->
 <html lang="en">
 <head>
     <link rel="manifest" href="./manifest.json">
@@ -544,7 +544,7 @@
               }
           });
 
-        const APP_VERSION = '8.3.0';
+        const APP_VERSION = '8.3.1';
         const BUILD_DATE = '2026-10-02';
         const HOURLY_RATE = 200;
 
@@ -558,6 +558,21 @@
             { name: 'Rack integration & dressing', installHours: 1.00, programmingHours: 0.00 },
             { name: 'Program & commission', installHours: 0.00, programmingHours: 0.25 }
         ];
+
+        // Add-on dropdowns are opt-in per product. Key by stable catalog id
+        // (category--name slug) or exact product name. Value 'all' for every
+        // add-on, or an array of add-on names. Empty map = no tile shows a
+        // dropdown.
+        const PRODUCT_ADDONS = {
+        };
+
+        function getProductAddonOptions(item) {
+            const config = PRODUCT_ADDONS[item.id] ?? PRODUCT_ADDONS[item.name];
+            if (!config) { return null; }
+            if (config === 'all') { return ADDONS; }
+            const wanted = new Set(config);
+            return ADDONS.filter(addon => wanted.has(addon.name));
+        }
         const RECYCLING_FEE = 75;
         const ADMIN_PIN = '1925';
         const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwy_WAUk5mv1IguezH95RxSqbNlh2or5HKINXJhl9P3m-c-iVWpR7Wo0ByGgTwXP9DJGA/exec';
@@ -700,8 +715,8 @@
             renderCatalog();
             renderQuote();
         }
-        function addonOptionsHtml(selectedName) {
-            return `<option value="">Add-on: none</option>` + ADDONS.map((addon, index) =>
+        function addonOptionsHtml(selectedName, options = ADDONS) {
+            return `<option value="">Add-on: none</option>` + options.map((addon, index) =>
                 `<option value="${index}" ${selectedName === addon.name ? 'selected' : ''}>${escapeHtml(addon.name)} (+${(addon.installHours + addon.programmingHours).toFixed(2)} hr)</option>`
             ).join('');
         }
@@ -1036,6 +1051,7 @@
                 const quoteItem = quoteCart.find(cartItem => cartItem.id === item.id && cartItem.zone === currentZone && !cartItem.isCustom);
                 const quantity = quoteItem ? quoteItem.qty : 0;
                 const tileAddon = getTileAddon(item.id);
+                const itemAddonOptions = getProductAddonOptions(item);
                 const card = document.createElement('article');
 
                 if (isListView) {
@@ -1048,7 +1064,7 @@
                             </div>
                             <h3 class="font-medium text-sm leading-snug truncate whitespace-nowrap">${escapeHtml(item.name)}</h3>
                             <div class="item-hours-display text-[10px] text-textMuted font-mono mt-0.5">${item.installHours.toFixed(2)} inst + ${item.programmingHours.toFixed(2)} prog${tileAddon ? ` + ${(tileAddon.installHours + tileAddon.programmingHours).toFixed(2)} add-on` : ''}</div>
-                            <select data-addon-product-id="${item.id}" class="addon-select mt-1">${addonOptionsHtml(tileAddon ? tileAddon.name : '')}</select>
+                            ${itemAddonOptions ? `<select data-addon-product-id="${item.id}" class="addon-select mt-1">${addonOptionsHtml(tileAddon ? tileAddon.name : '', itemAddonOptions)}</select>` : ''}
                         </div>
                         <div class="flex items-center bg-gray-800 rounded-xl overflow-hidden shrink-0">
                             <button type="button" data-product-id="${item.id}" data-change="-1" class="quantity-button w-9 h-9 text-lg">−</button>
@@ -1065,7 +1081,7 @@
                                 <button type="button" data-favorite-id="${item.id}" class="favorite-button -mt-1.5 -mr-1.5 w-9 h-9 text-lg ${favoriteIds.has(item.id) ? 'text-brandGold' : 'text-textMuted'}">${favoriteIds.has(item.id) ? '★' : '☆'}</button>
                             </div>
                             <h3 class="font-medium text-sm leading-snug">${escapeHtml(item.name)}</h3>
-                            <select data-addon-product-id="${item.id}" class="addon-select mt-2 mb-2">${addonOptionsHtml(tileAddon ? tileAddon.name : '')}</select>
+                            ${itemAddonOptions ? `<select data-addon-product-id="${item.id}" class="addon-select mt-2 mb-2">${addonOptionsHtml(tileAddon ? tileAddon.name : '', itemAddonOptions)}</select>` : ''}
                         </div>
                         <div class="flex justify-between items-center gap-2 border-t border-gray-800 pt-2.5">
                             <div class="item-hours-display text-xs text-textMuted font-mono">${item.installHours.toFixed(2)} install + ${item.programmingHours.toFixed(2)} prog${tileAddon ? ` + ${(tileAddon.installHours + tileAddon.programmingHours).toFixed(2)} add-on` : ''}</div>
