@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- ASBC Labor Calculator v8.8.4 | Firestore-primary catalog, offline-first boot, draft auto-save, admin tools | Build 2026-11-08 -->
+<!-- ASBC Labor Calculator v8.8.5 | Firestore-primary catalog, offline-first boot, draft auto-save, admin tools | Build 2026-11-08 -->
 <html lang="en">
 <head>
     <link rel="manifest" href="./manifest.json">
@@ -8,7 +8,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="application-version" content="8.8.4">
+    <meta name="application-version" content="8.8.5">
     <meta name="build-date" content="2026-11-07">
     <meta name="theme-color" content="#050505">
     <title>Labor Calculator | ASBC</title>
@@ -308,7 +308,7 @@
                     <button type="button" onclick="toggleCustomModal(true)" class="h-12 bg-gray-800 border border-gray-700 rounded-xl px-3 sm:px-4 font-medium hover:bg-brandGold hover:text-bgDark shrink-0">+ Custom</button>
                 </div>
 
-                <div id="categoryButtons" class="flex gap-2 overflow-x-auto pb-1"></div>
+                <div id="categoryButtons" class="flex flex-wrap gap-2 pb-1"></div>
 
                 <div class="flex justify-between items-center text-xs text-textMuted">
                     <span id="resultCount">0 products</span>
@@ -627,7 +627,7 @@
               }
           });
 
-        const APP_VERSION = '8.8.4';
+        const APP_VERSION = '8.8.5';
         const BUILD_DATE = '2026-11-08';
         let HOURLY_RATE = 200;
 
@@ -1170,7 +1170,7 @@
                 const button = document.createElement('button');
                 button.type = 'button';
                 button.textContent = category;
-                button.className = 'category-button shrink-0 min-h-10 px-4 rounded-full border border-[#242424] bg-[#0F0F0F] text-white text-sm transition-colors duration-200 hover:border-[#555555]';
+                button.className = 'category-button shrink-0 whitespace-nowrap min-h-10 px-4 rounded-full border border-[#242424] bg-[#0F0F0F] text-white text-sm transition-colors duration-200 hover:border-[#555555]';
                 button.dataset.category = category;
                 button.addEventListener('click', () => {
                     selectedCategory = category;
