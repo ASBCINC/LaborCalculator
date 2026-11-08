@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- ASBC Labor Calculator v8.7.0 | Firestore-primary catalog, offline-first boot, draft auto-save, admin tools | Build 2026-11-08 -->
+<!-- ASBC Labor Calculator v8.8.0 | Firestore-primary catalog, offline-first boot, draft auto-save, admin tools | Build 2026-11-08 -->
 <html lang="en">
 <head>
     <link rel="manifest" href="./manifest.json">
@@ -8,7 +8,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="application-version" content="8.7.0">
+    <meta name="application-version" content="8.8.0">
     <meta name="build-date" content="2026-11-07">
     <meta name="theme-color" content="#050505">
     <title>Labor Calculator | ASBC</title>
@@ -62,6 +62,8 @@
         #estimatePanel input, #estimatePanel select,
         #customItemModal input, #customItemModal select,
         #adminItemModal input, #adminItemModal select { color-scheme: dark; }
+        select, input[list], datalist { color-scheme: dark; }
+        select option, select optgroup, datalist option { background-color: #141414 !important; color: #f5f5f5 !important; }
         input:focus, select:focus {
             border-color: #C7A66A !important;
             box-shadow: 0 0 0 1px rgba(199, 166, 106, 0.28);
@@ -281,20 +283,20 @@
                     <div class="w-5/12 sm:w-1/3 relative shrink-0">
                         <input list="zoneOptions" id="activeZone" placeholder="Spaces I.E. Family room, bedroom..." value="" class="w-full h-12 bg-gray-900 border border-gray-700 rounded-xl px-3 text-xs sm:text-sm text-brandGold font-medium outline-none focus:border-brandGold placeholder:text-[#888888] placeholder:font-normal truncate">
                         <datalist id="zoneOptions">
-                            <option value="General"></option>
-                            <option value="MEC (Equip. Closet)"></option>
-                            <option value="Entry / Foyer"></option>
-                            <option value="Living Room"></option>
-                            <option value="Family Room"></option>
-                            <option value="Great Room"></option>
-                            <option value="Formal Living Room"></option>
-                            <option value="Den"></option>
-                            <option value="Sitting Room"></option>
-                            <option value="Lounge"></option>
-                            <option value="Library"></option>
-                            <option value="Media Room"></option>
-                            <option value="Home Theater"></option>
-                            <option value="Game Room"></option>
+                            <option value="General">General</option>
+                            <option value="MEC (Equip. Closet)">MEC (Equip. Closet)</option>
+                            <option value="Entry / Foyer">Entry / Foyer</option>
+                            <option value="Living Room">Living Room</option>
+                            <option value="Family Room">Family Room</option>
+                            <option value="Great Room">Great Room</option>
+                            <option value="Formal Living Room">Formal Living Room</option>
+                            <option value="Den">Den</option>
+                            <option value="Sitting Room">Sitting Room</option>
+                            <option value="Lounge">Lounge</option>
+                            <option value="Library">Library</option>
+                            <option value="Media Room">Media Room</option>
+                            <option value="Home Theater">Home Theater</option>
+                            <option value="Game Room">Game Room</option>
                         </datalist>
                     </div>
                     
@@ -542,6 +544,11 @@
                     <button id="adminEditModeButton" type="button" onclick="toggleAdminEditMode()" class="text-xs border border-gray-700 text-textMuted py-2 rounded-lg hover:border-brandGold hover:text-brandGold">Toggle Card Edit Mode</button>
                     <button id="exportCatalogButton" type="button" onclick="exportCatalogJson()" class="text-xs border border-gray-700 text-textMuted py-2 rounded-lg hover:border-brandGold hover:text-brandGold">Download labor-catalog.json</button>
                 </div>
+                <div class="grid grid-cols-2 gap-2 mt-2">
+                    <select id="adminRenameFrom" class="bg-gray-900 border border-gray-700 rounded-lg p-2 text-xs text-white"><option value="">-- Choose category --</option></select>
+                    <input id="adminRenameTo" type="text" placeholder="New category name" class="bg-gray-900 border border-gray-700 rounded-lg p-2 text-xs text-white">
+                </div>
+                <button id="renameCategoryButton" type="button" onclick="renameCategory()" class="w-full text-xs border border-gray-700 text-textMuted py-2 rounded-lg hover:border-brandGold hover:text-brandGold mt-2">Rename Category (updates all its items)</button>
                 <details class="bg-gray-900/60 border border-gray-800 rounded-lg">
                     <summary class="px-3 py-2 text-xs font-bold text-textMuted cursor-pointer uppercase tracking-wider">Global Pricing and Room Presets</summary>
                     <div class="px-3 pb-3 pt-2 grid grid-cols-3 gap-2">
@@ -616,7 +623,7 @@
               }
           });
 
-        const APP_VERSION = '8.7.0';
+        const APP_VERSION = '8.8.0';
         const BUILD_DATE = '2026-11-08';
         let HOURLY_RATE = 200;
 
@@ -698,7 +705,7 @@
             RECYCLING_FEE = Number(appSettings.recyclingFee) || 75;
             const zoneList = document.getElementById('zoneOptions');
             if (zoneList && Array.isArray(appSettings.zonePresets) && appSettings.zonePresets.length) {
-                zoneList.innerHTML = appSettings.zonePresets.map(z => `<option value="${escapeHtml(z)}"></option>`).join('');
+                zoneList.innerHTML = appSettings.zonePresets.map(z => `<option value="${escapeHtml(z)}">${escapeHtml(z)}</option>`).join('');
             }
             document.querySelectorAll('[data-rate-display]').forEach(el => { el.textContent = `$${HOURLY_RATE}/hr`; });
             const printRate = document.getElementById('printLaborRate'); if (printRate) printRate.textContent = `$${HOURLY_RATE.toFixed(2)} / hr`;
@@ -1639,7 +1646,41 @@
             });
 
             const uniqueCats = [...new Set(catalog.map(i => i.category))];
-            catList.innerHTML = uniqueCats.map(cat => `<option value="${escapeHtml(cat)}"></option>`).join('');
+            catList.innerHTML = uniqueCats.map(cat => `<option value="${escapeHtml(cat)}">${escapeHtml(cat)}</option>`).join('');
+
+            const renameFrom = document.getElementById('adminRenameFrom');
+            if (renameFrom) {
+                const currentRename = renameFrom.value;
+                renameFrom.innerHTML = '<option value="">-- Choose category --</option>' + uniqueCats.map(cat => `<option value="${escapeHtml(cat)}">${escapeHtml(cat)}</option>`).join('');
+                if (uniqueCats.includes(currentRename)) renameFrom.value = currentRename;
+            }
+        }
+
+        async function renameCategory() {
+            const fromSel = document.getElementById('adminRenameFrom');
+            const toInput = document.getElementById('adminRenameTo');
+            const from = fromSel ? fromSel.value : '';
+            const to = (toInput && toInput.value || '').trim();
+            if (!from) { adminStatus.textContent = 'Choose a category to rename first.'; return; }
+            if (!to) { adminStatus.textContent = 'Enter the new category name.'; return; }
+            if (to === from) { adminStatus.textContent = 'New name is the same as the current one.'; return; }
+            const matches = catalog.filter(i => i.category === from);
+            if (!matches.length) { adminStatus.textContent = 'No items found in that category.'; return; }
+            if (!confirm('Rename category "' + from + '" to "' + to + '"? This updates ' + matches.length + ' item' + (matches.length === 1 ? '' : 's') + ' in the cloud catalog.')) return;
+            adminStatus.textContent = 'Renaming category...';
+            try {
+                catalog.forEach(i => { if (i.category === from) i.category = to; });
+                await persistCatalog();
+                if (selectedCategory === from) selectedCategory = to;
+                populateAdminItemList();
+                buildCategoryButtons();
+                renderCatalog();
+                toInput.value = '';
+                fromSel.value = '';
+                adminStatus.textContent = 'Renamed "' + from + '" to "' + to + '" (' + matches.length + ' items updated).';
+            } catch (err) {
+                adminStatus.textContent = 'Rename failed: ' + (err && err.message ? err.message : err);
+            }
         }
 
         let selectedOriginalId = null;
