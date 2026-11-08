@@ -350,7 +350,7 @@
                         <span>Recycling</span>
                         <select id="recyclingToggle" class="mt-1 w-full bg-bgDark border border-gray-700 rounded-lg p-2 sm:p-2.5 text-sm sm:text-base outline-none focus:border-brandGold">
                             <option value="no">No</option>
-                            <option value="yes">Yes (+$75)</option>
+                            <option value="yes" selected>Yes (+$75)</option>
                             <option value="custom">Custom...</option>
                         </select>
                         <input type="number" id="customRecyclingInput" inputmode="decimal" class="hidden mt-1 w-full bg-gray-900 border border-brandGold rounded-lg p-2 text-sm sm:text-base outline-none" placeholder="$">
@@ -370,7 +370,7 @@
                         <span>Materials fee</span>
                         <select id="materialsMarkup" class="mt-1 w-full bg-bgDark border border-gray-700 rounded-lg p-2 sm:p-2.5 text-sm sm:text-base outline-none focus:border-brandGold">
                             <option value="0">0%</option>
-                            <option value="5">5%</option>
+                            <option value="5" selected>5%</option>
                             <option value="10">10%</option>
                         </select>
                     </label>
@@ -533,7 +533,7 @@
               }
           });
 
-        const APP_VERSION = '8.1.0';
+        const APP_VERSION = '8.2.0';
         const BUILD_DATE = '2026-10-02';
         const HOURLY_RATE = 200;
         const RECYCLING_FEE = 75;
