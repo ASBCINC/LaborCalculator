@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- ASBC Labor Calculator v8.6.0 | Firestore-primary catalog, offline-first boot, draft auto-save, admin tools | Build 2026-11-08 -->
+<!-- ASBC Labor Calculator v8.6.1 | Firestore-primary catalog, offline-first boot, draft auto-save, admin tools | Build 2026-11-08 -->
 <html lang="en">
 <head>
     <link rel="manifest" href="./manifest.json">
@@ -8,7 +8,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="application-version" content="8.6.0">
+    <meta name="application-version" content="8.6.1">
     <meta name="build-date" content="2026-11-07">
     <meta name="theme-color" content="#050505">
     <title>Labor Calculator | ASBC</title>
@@ -596,7 +596,7 @@
               }
           });
 
-        const APP_VERSION = '8.6.0';
+        const APP_VERSION = '8.6.1';
         const BUILD_DATE = '2026-11-08';
         let HOURLY_RATE = 200;
 
@@ -1519,6 +1519,18 @@
                 alert('Add some items before generating a PDF.');
                 return;
             }
+            const missingFields = [];
+            if (!customerName.value.trim()) missingFields.push('Customer Name');
+            if (!salesManagerName.value.trim()) missingFields.push('Sales Manager');
+            if (missingFields.length) {
+                alert(`Please fill in the ${missingFields.join(' and the ')} field${missingFields.length > 1 ? 's' : ''} before generating a PDF.`);
+                if (missingFields.length === 1) {
+                    (missingFields[0] === 'Customer Name' ? customerName : salesManagerName).focus();
+                } else {
+                    customerName.focus();
+                }
+                return;
+            }
             window.print();
         }
 
@@ -1941,6 +1953,18 @@
         async function shareQuote() {
             if (quoteCart.length === 0) {
                 alert('Add some items to the quote first.');
+                return;
+            }
+            const missingFields = [];
+            if (!customerName.value.trim()) missingFields.push('Customer Name');
+            if (!salesManagerName.value.trim()) missingFields.push('Sales Manager');
+            if (missingFields.length) {
+                alert(`Please fill in the ${missingFields.join(' and the ')} field${missingFields.length > 1 ? 's' : ''} before sharing the quote.`);
+                if (missingFields.length === 1) {
+                    (missingFields[0] === 'Customer Name' ? customerName : salesManagerName).focus();
+                } else {
+                    customerName.focus();
+                }
                 return;
             }
 
