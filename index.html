@@ -251,7 +251,7 @@
         </div>
 
         <div id="projectTools" class="h-12 px-3 sm:px-5 flex items-center gap-2 border-t border-[#EBEBEB] bg-[#F7F7F5] print-hide overflow-x-auto">
-            <input id="customerName" type="text" placeholder="Opportunity name" class="h-9 w-40 sm:w-48 shrink-0 bg-white border border-[#D8D8D8] rounded-md px-3 text-sm text-black placeholder:text-[#888888]">
+            <input id="customerName" type="text" placeholder="Opportunity name" class="hidden h-9 w-40 sm:w-48 shrink-0 bg-white border border-[#D8D8D8] rounded-md px-3 text-sm text-black placeholder:text-[#888888]">
             <select id="salesManagerName" class="h-9 w-36 sm:w-44 shrink-0 bg-white border border-[#D8D8D8] rounded-md px-2 text-sm text-black">
                 <option value="">Select sales rep</option>
                 <option value="Tom Virasak">Tom Virasak</option>
@@ -612,7 +612,7 @@
               }
           });
 
-        const APP_VERSION = '8.9.4';
+        const APP_VERSION = '8.9.5';
         const BUILD_DATE = '2026-11-08';
         let HOURLY_RATE = 200;
 
@@ -913,6 +913,7 @@
         const showHoursCheckbox = document.getElementById('showHoursCheckbox');
         
         const customerName = document.getElementById('customerName');
+        function showOppNameField(show) { customerName.classList.toggle('hidden', !show); }
         const salesManagerName = document.getElementById('salesManagerName');
         const savedEstimates = document.getElementById('savedEstimates');
 
@@ -988,12 +989,14 @@
             return { 
                 customerName: customerName.value.trim(),
                 salesManagerName: salesManagerName.value.trim(),
-                dtoolsOpportunityId: dtoolsOpportunity ? dtoolsOpportunity.value : ''
+                dtoolsOpportunityId: dtoolsOpportunity ? (dtoolsOpportunity.value === 'manual' ? '' : dtoolsOpportunity.value) : ''
             };
         }
 
         function applyProjectData(data = {}) {
             customerName.value = data.customerName || '';
+            showOppNameField(true);
+            if (dtoolsOpportunity) dtoolsOpportunity.value = '';
             if (data.salesManagerName && Array.from(salesManagerName.options).some(o => o.value === data.salesManagerName)) salesManagerName.value = data.salesManagerName;
             else salesManagerName.value = '';
         }
@@ -1951,6 +1954,7 @@
                 suppressDraftSave = true;
                 quoteCart = d.cart;
                 if (typeof d.customerName === 'string') customerName.value = d.customerName;
+                showOppNameField(true);
                 if (typeof d.salesManagerName === 'string') salesManagerName.value = d.salesManagerName;
                 if (d.recyclingToggle) recyclingToggle.value = d.recyclingToggle;
                 if (typeof d.customRecyclingInput === 'string') customRecyclingInput.value = d.customRecyclingInput;
@@ -2074,6 +2078,8 @@
                 localStorage.setItem('asbcTileAddons', JSON.stringify(tileAddons));
                 savedEstimates.value = '';
                 customerName.value = '';
+                showOppNameField(false);
+                if (dtoolsOpportunity) dtoolsOpportunity.value = '';
                 salesManagerName.value = '';
                 currentLoadedIsTemplate = false;
                 isTemplateCheckbox.checked = false;
@@ -2364,6 +2370,10 @@
                 const open = dtoolsOppsCache.filter(o => !o.isArchived && o.stage && !/lost|won|closed/i.test(o.stage));
                 const list = open.length ? open : dtoolsOppsCache;
                 dtoolsOpportunity.innerHTML = '<option value="">' + (list.length ? list.length + ' opportunity(ies): pick one' : 'No D-Tools opportunities') + '</option>';
+                const manualOpt = document.createElement('option');
+                manualOpt.value = 'manual';
+                manualOpt.textContent = 'Manual (not in D-Tools)';
+                dtoolsOpportunity.appendChild(manualOpt);
                 for (const o of list) {
                     const opt = document.createElement('option');
                     opt.value = o.id;
@@ -2377,7 +2387,9 @@
         salesManagerName.addEventListener('change', loadOppsForRep);
         dtoolsOpportunity.addEventListener('change', () => {
             const o = dtoolsOppsCache.find(x => x.id === dtoolsOpportunity.value);
-            if (o) { customerName.value = o.name; renderQuote(); }
+            if (o) { customerName.value = o.name; showOppNameField(false); renderQuote(); }
+            else if (dtoolsOpportunity.value === 'manual') { showOppNameField(true); customerName.focus(); }
+            else { showOppNameField(false); }
         });
         }
         customRecyclingInput.addEventListener('input', renderQuote);
