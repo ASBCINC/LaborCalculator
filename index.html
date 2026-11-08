@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- ASBC Labor Calculator v8.9.0 | Firestore-primary catalog, offline-first boot, draft auto-save, admin tools | Build 2026-11-08 -->
+<!-- ASBC Labor Calculator v8.9.1 | Firestore-primary catalog, offline-first boot, draft auto-save, admin tools | Build 2026-11-08 -->
 <html lang="en">
 <head>
     <link rel="manifest" href="./manifest.json">
@@ -8,7 +8,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="application-version" content="8.9.0">
+    <meta name="application-version" content="8.9.1">
     <meta name="build-date" content="2026-11-07">
     <meta name="theme-color" content="#050505">
     <title>Labor Calculator | ASBC</title>
@@ -252,7 +252,24 @@
 
         <div id="projectTools" class="h-12 px-3 sm:px-5 flex items-center gap-2 border-t border-[#EBEBEB] bg-[#F7F7F5] print-hide overflow-x-auto">
             <input id="customerName" type="text" placeholder="Opportunity name" class="h-9 w-40 sm:w-48 shrink-0 bg-white border border-[#D8D8D8] rounded-md px-3 text-sm text-black placeholder:text-[#888888]">
-            <input id="salesManagerName" type="text" placeholder="Sales Manager" class="h-9 w-32 sm:w-40 shrink-0 bg-white border border-[#D8D8D8] rounded-md px-3 text-sm text-black placeholder:text-[#888888]">
+            <select id="salesManagerName" class="h-9 w-36 sm:w-44 shrink-0 bg-white border border-[#D8D8D8] rounded-md px-2 text-sm text-black">
+                <option value="">Select sales rep</option>
+                <option value="Tom Virasak">Tom Virasak</option>
+                <option value="Tim Parks">Tim Parks</option>
+                <option value="Brian Chan">Brian Chan</option>
+                <option value="Matthew Stachnik">Matthew Stachnik</option>
+                <option value="Oum Sayarad">Oum Sayarad</option>
+                <option value="Jonathan Model">Jonathan Model</option>
+                <option value="Gabriel Clark">Gabriel Clark</option>
+                <option value="Josh Silva">Josh Silva</option>
+                <option value="Noel Salinas">Noel Salinas</option>
+                <option value="Troy Ikeda">Troy Ikeda</option>
+                <option value="Kwamé Yeboah">Kwamé Yeboah</option>
+                <option value="Miguel Sandoval">Miguel Sandoval</option>
+                <option value="Nawel Girma">Nawel Girma</option>
+                <option value="Stefn Sandberg">Stefn Sandberg</option>
+                <option value="Enid Shor">Enid Shor</option>
+            </select>
             
             <select id="savedEstimates" class="h-9 w-40 sm:w-48 shrink-0 bg-white border border-[#D8D8D8] rounded-md px-3 text-sm text-black">
                 <option value="">Saved quotes...</option>
@@ -593,7 +610,7 @@
               }
           });
 
-        const APP_VERSION = '8.9.0';
+        const APP_VERSION = '8.9.1';
         const BUILD_DATE = '2026-11-08';
         let HOURLY_RATE = 200;
 
@@ -974,7 +991,8 @@
 
         function applyProjectData(data = {}) {
             customerName.value = data.customerName || '';
-            salesManagerName.value = data.salesManagerName || '';
+            if (data.salesManagerName && Array.from(salesManagerName.options).some(o => o.value === data.salesManagerName)) salesManagerName.value = data.salesManagerName;
+            else salesManagerName.value = '';
         }
 
         function serializeQuoteCart() {
@@ -1020,6 +1038,11 @@
             const data = currentProjectData();
             if (!data.customerName) {
                 alert('Enter an opportunity name before saving.');
+                return;
+            }
+            if (!salesManagerName.value) {
+                alert('Select a sales rep before saving.');
+                salesManagerName.focus();
                 return;
             }
             
