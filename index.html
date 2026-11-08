@@ -529,7 +529,10 @@
                 <p class="text-[10px] text-textMuted mt-1">Extra hours per unit, added on top of the base hours. Leave empty for no dropdown.</p>
             </div>
 
-            <button id="adminSaveButton" type="button" onclick="saveAdminSheetItem()" class="mt-5 w-full bg-brandGold text-bgDark font-bold py-3.5 rounded-xl">Save to Google Sheet</button>
+            <div class="mt-5 grid grid-cols-2 gap-2.5">
+                <button id="adminSaveButton" type="button" onclick="saveAdminSheetItem()" class="bg-brandGold text-bgDark font-bold py-3.5 rounded-xl">Save to Google Sheet</button>
+                <button id="adminDeleteButton" type="button" onclick="deleteAdminSheetItem()" class="bg-transparent border border-[#B0413E] text-[#D98C8A] font-bold py-3.5 rounded-xl">Delete Item</button>
+            </div>
             <div id="adminStatus" class="mt-2 text-center text-xs text-textMuted min-h-[1.25rem]"></div>
         </div>
     </div>
@@ -559,7 +562,7 @@
               }
           });
 
-        const APP_VERSION = '8.4.0';
+        const APP_VERSION = '8.5.0';
         const BUILD_DATE = '2026-11-08';
         const HOURLY_RATE = 200;
 
@@ -1522,6 +1525,7 @@
         const adminProgramming = document.getElementById('adminProgramming');
         const adminStatus = document.getElementById('adminStatus');
         const adminSaveButton = document.getElementById('adminSaveButton');
+        const adminDeleteButton = document.getElementById('adminDeleteButton');
 
         let adminAddons = [];
 
@@ -1654,6 +1658,53 @@
             } finally {
                 adminSaveButton.disabled = false;
                 adminSaveButton.textContent = "Save to Google Sheet";
+            }
+        }
+
+        async function deleteAdminSheetItem() {
+            const category = adminCategory.value.trim();
+            const name = adminName.value.trim();
+
+            if (!category || !name) {
+                alert("Select an existing item (or enter its Category and Name) before deleting.");
+                return;
+            }
+
+            if (!confirm('Delete "' + name + '" from the Google Sheet catalog? This cannot be undone.')) return;
+
+            adminDeleteButton.disabled = true;
+            adminDeleteButton.textContent = "Deleting...";
+            adminStatus.textContent = "Deleting from Google Sheet database...";
+
+            try {
+                await fetch(GOOGLE_APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ category, name, deleteItem: true })
+                });
+
+                const itemId = getStableCatalogId({}, category, name);
+                const idx = catalog.findIndex(i => i.name.toLowerCase() === name.toLowerCase() && i.category.toLowerCase() === category.toLowerCase());
+                if (idx > -1) { catalog.splice(idx, 1); }
+                favoriteIds.delete(itemId);
+                Object.keys(tileAddons).forEach(k => { if (k === itemId || k.indexOf(itemId + '|') === 0) { delete tileAddons[k]; } });
+                localStorage.setItem('asbcTileAddons', JSON.stringify(tileAddons));
+                localStorage.setItem('asbcCachedCatalog', JSON.stringify(catalog));
+                try { localStorage.setItem('asbcFavoriteIds', JSON.stringify([...favoriteIds])); } catch (e2) {}
+
+                renderCatalog();
+                renderQuote();
+
+                adminStatus.innerHTML = '<span class="text-green-400">Deleted from Google Sheet! Catalog updated.</span>';
+                setTimeout(() => { toggleAdminModal(false); }, 1200);
+
+            } catch (err) {
+                console.error("Failed to delete item:", err);
+                adminStatus.innerHTML = '<span class="text-red-400">Failed to delete: ' + err.message + '</span>';
+            } finally {
+                adminDeleteButton.disabled = false;
+                adminDeleteButton.textContent = "Delete Item";
             }
         }
 
@@ -1863,6 +1914,7 @@
         window.loadCatalog = loadCatalog;
         window.shareQuote = shareQuote;
         window.toggleAdminModal = toggleAdminModal;
+        window.deleteAdminSheetItem = deleteAdminSheetItem;
         window.saveAdminSheetItem = saveAdminSheetItem;
         window.prepareAndPrint = prepareAndPrint;
 
