@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- ASBC Labor Calculator v8.3.1 | Per-product opt-in add-ons | Build 2026-11-08 -->
+<!-- ASBC Labor Calculator v8.3.2 | Per-product opt-in add-ons | Build 2026-11-08 -->
 <html lang="en">
 <head>
     <link rel="manifest" href="./manifest.json">
@@ -72,12 +72,18 @@
         .addon-select {
             height: 26px;
             width: 100%;
+            max-width: 100%;
             background-color: #171717;
             border: 1px solid #242424;
             border-radius: 8px;
             color: #C7A66A;
             font-size: 10px;
             padding: 0 6px;
+        }
+        .addon-select-row {
+            width: auto;
+            max-width: 45%;
+            flex-shrink: 0;
         }
 
         .estimate-open { transform: translateY(0) !important; }
@@ -544,7 +550,7 @@
               }
           });
 
-        const APP_VERSION = '8.3.1';
+        const APP_VERSION = '8.3.2';
         const BUILD_DATE = '2026-10-02';
         const HOURLY_RATE = 200;
 
@@ -564,12 +570,19 @@
         // add-on, or an array of add-on names. Empty map = no tile shows a
         // dropdown.
         const PRODUCT_ADDONS = {
+            // Custom per-product option lists (objects with name/installHours/programmingHours).
+            'Beolab 8 (Pair)': [
+                { name: 'Bookshelf', installHours: 0.00, programmingHours: 0.00 },
+                { name: 'Floor stand', installHours: 0.25, programmingHours: 0.00 },
+                { name: 'Wall mount', installHours: 0.50, programmingHours: 0.00 }
+            ]
         };
 
         function getProductAddonOptions(item) {
             const config = PRODUCT_ADDONS[item.id] ?? PRODUCT_ADDONS[item.name];
             if (!config) { return null; }
             if (config === 'all') { return ADDONS; }
+            if (Array.isArray(config) && config.length && typeof config[0] === 'object') { return config; }
             const wanted = new Set(config);
             return ADDONS.filter(addon => wanted.has(addon.name));
         }
@@ -1081,10 +1094,10 @@
                                 <button type="button" data-favorite-id="${item.id}" class="favorite-button -mt-1.5 -mr-1.5 w-9 h-9 text-lg ${favoriteIds.has(item.id) ? 'text-brandGold' : 'text-textMuted'}">${favoriteIds.has(item.id) ? '★' : '☆'}</button>
                             </div>
                             <h3 class="font-medium text-sm leading-snug">${escapeHtml(item.name)}</h3>
-                            ${itemAddonOptions ? `<select data-addon-product-id="${item.id}" class="addon-select mt-2 mb-2">${addonOptionsHtml(tileAddon ? tileAddon.name : '', itemAddonOptions)}</select>` : ''}
                         </div>
                         <div class="flex justify-between items-center gap-2 border-t border-gray-800 pt-2.5">
                             <div class="item-hours-display text-xs text-textMuted font-mono">${item.installHours.toFixed(2)} install + ${item.programmingHours.toFixed(2)} prog${tileAddon ? ` + ${(tileAddon.installHours + tileAddon.programmingHours).toFixed(2)} add-on` : ''}</div>
+                            ${itemAddonOptions ? `<select data-addon-product-id="${item.id}" class="addon-select addon-select-row">${addonOptionsHtml(tileAddon ? tileAddon.name : '', itemAddonOptions)}</select>` : ''}
                             <div class="flex items-center bg-gray-800 rounded-xl overflow-hidden shrink-0 ml-auto">
                                 <button type="button" data-product-id="${item.id}" data-change="-1" class="quantity-button w-9 h-9 text-lg">−</button>
                                 <input type="number" inputmode="numeric" pattern="[0-9]*" min="0" step="1" value="${quantity}" data-qty-product-id="${item.id}" aria-label="Quantity" class="qty-input w-11 h-9 text-center font-mono text-sm font-bold">
@@ -1620,7 +1633,9 @@
         productGrid.addEventListener('change', event => {
             const addonSelect = event.target.closest('[data-addon-product-id]');
             if (addonSelect) {
-                const pick = addonSelect.value === '' ? null : ADDONS[Number(addonSelect.value)];
+                const productItem = catalog.find(cat => cat.id === addonSelect.dataset.addonProductId);
+                const options = (productItem && getProductAddonOptions(productItem)) || ADDONS;
+                const pick = addonSelect.value === '' ? null : options[Number(addonSelect.value)];
                 setTileAddon(addonSelect.dataset.addonProductId, pick);
                 return;
             }
