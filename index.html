@@ -242,7 +242,7 @@
                     <div class="text-sm tracking-wide text-black">Labor Estimator</div>
                 </div>
             </div>
-            <div id="repTicker" class="flex-1 min-w-0 overflow-hidden px-3 hidden sm:block print-hide" title="Top sales reps by labor estimates saved this month">
+            <div id="repTicker" class="flex-1 min-w-0 overflow-hidden px-3 hidden sm:block print-hide" title="Top reps by quotes saved or created this month">
                 <div class="asbc-ticker-wrap"><div class="asbc-ticker-inner text-[10px] sm:text-xs text-[#777777] tracking-wide"><span id="repTickerText"></span><span id="repTickerTextDup"></span></div></div>
             </div>
             <div class="flex items-center gap-2 ml-2 shrink-0">
@@ -612,7 +612,7 @@
               }
           });
 
-        const APP_VERSION = '8.9.10';
+        const APP_VERSION = '8.9.11';
         const BUILD_DATE = '2026-11-08';
         let HOURLY_RATE = 200;
 
@@ -938,22 +938,34 @@
                 const now = new Date();
                 const start = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
                 const snap = await db.collection('quotes').limit(500).get();
+                const norm = s => String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+                const FOLD = {
+                    'tim parks': 'Timothy Parks', 'timothy parks': 'Timothy Parks',
+                    'matt': 'Matthew Stachnik', 'matthew stachnik': 'Matthew Stachnik',
+                    'stephen sandberg': 'Stefn Sandberg', 'stefn sandberg': 'Stefn Sandberg',
+                    'josh silva bang & olufsen sf': 'Josh Silva', 'josh silva': 'Josh Silva',
+                    'kwame yeboah': 'Kwam\u00e9 Yeboah', 'kwam\u00e9 yeboah': 'Kwam\u00e9 Yeboah'
+                };
                 const counts = {};
                 snap.forEach(d => {
                     const data = d.data() || {};
                     if (data.isTemplate) return;
                     const u = data.updatedAt;
-                    const ms = u && u.toMillis ? u.toMillis() : (typeof u === 'number' ? u : (u ? (new Date(u).getTime() || 0) : 0));
-                    if (!ms || ms < start) return;
-                    const rep = String(data.salesManagerName || '').trim();
+                    const updMs = u && u.toMillis ? u.toMillis() : (typeof u === 'number' ? u : (u ? (new Date(u).getTime() || 0) : 0));
+                    const idm = String(d.id || '').match(/^estimate-(\d+)$/);
+                    const createdMs = idm ? parseInt(idm[1], 10) : 0;
+                    if (!((updMs && updMs >= start) || (createdMs && createdMs >= start))) return;
+                    const p = data.project || {};
+                    let rep = String(p.salesManagerName || data.salesManagerName || '').trim();
                     if (!rep) return;
+                    rep = FOLD[norm(rep)] || rep;
                     counts[rep] = (counts[rep] || 0) + 1;
                 });
-                const top = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 3);
+                const top = Object.entries(counts).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 3);
                 const month = now.toLocaleString('en-US', { month: 'long' });
                 const line = top.length
-                    ? month + " estimates: " + top.map(([r, c], i) => (i + 1) + ". " + r + " (" + c + ")").join("  \u00b7  ")
-                    : month + " estimates: none saved yet this month";
+                    ? month + " quotes: " + top.map(([r, c], i) => (i + 1) + ". " + r + " (" + c + ")").join("  \u00b7  ")
+                    : month + " quotes: none saved yet this month";
                 el.textContent = line;
                 dup.textContent = "   \u00b7   " + line;
             } catch (e) {
