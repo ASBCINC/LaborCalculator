@@ -280,10 +280,6 @@
             <select id="dtoolsOpportunity" class="h-9 w-40 sm:w-48 shrink-0 bg-white border border-[#D8D8D8] rounded-md px-2 text-sm text-black">
                 <option value="">D-Tools opportunities</option>
             </select>
-            <select id="savedEstimates" class="h-9 w-40 sm:w-48 shrink-0 bg-white border border-[#D8D8D8] rounded-md px-3 text-sm text-black">
-                <option value="">Saved quotes...</option>
-            </select>
-            
             <label class="flex items-center gap-1.5 shrink-0 bg-[#EAEAEA] border border-[#D0D0D0] rounded-md px-2.5 h-9 cursor-pointer hover:bg-[#E0E0E0] transition-colors">
                 <input type="checkbox" id="isTemplateCheckbox" class="w-3.5 h-3.5 rounded-sm border-gray-400 text-black focus:ring-black">
                 <span class="text-[11px] font-bold text-black uppercase tracking-wide mt-0.5">Template</span>
@@ -299,10 +295,7 @@
                 <span class="text-[11px] font-bold text-black uppercase tracking-wide mt-0.5">Show Hours</span>
             </label>
 
-            <button type="button" id="saveQuoteButton" onclick="saveEstimate()" class="h-9 shrink-0 bg-black text-white font-medium rounded-md px-4 text-sm">Save</button>
-            <button type="button" onclick="loadEstimate()" class="h-9 shrink-0 bg-white border border-[#CFCFCF] text-black font-medium rounded-md px-4 text-sm">Load</button>
-            <button type="button" onclick="deleteEstimate()" class="h-9 shrink-0 bg-white border border-[#DCCFCF] text-[#8C3333] font-medium rounded-md px-4 text-sm">Delete</button>
-            <a href="./log.html" target="_blank" rel="noopener" title="Browse every saved quote and labor calibration" class="h-9 shrink-0 inline-flex items-center bg-white border border-[#CFCFCF] text-black font-medium rounded-md px-4 text-sm">Log</a>
+            <a href="./log.html" target="_blank" rel="noopener" title="Browse every saved quote and labor calibration" class="h-9 shrink-0 inline-flex items-center bg-white border border-[#CFCFCF] text-black font-medium rounded-md px-4 text-sm">Saved Quotes</a>
         </div>
     </header>
 
@@ -428,7 +421,7 @@
 
                 <div class="grid grid-cols-3 gap-2 print-hide">
                     <button type="button" onclick="clearQuote()" class="bg-[#171717] border border-[#2A2A2A] font-semibold py-3 rounded-xl">Clear</button>
-                    <button type="button" onclick="prepareAndPrint()" class="bg-white text-black font-bold py-3 rounded-xl">Print SOW</button>
+                    <button type="button" onclick="saveAndPrint()" class="bg-white text-black font-bold py-3 rounded-xl">Save/Print</button>
                     <button type="button" onclick="toggleActualsModal(true)" class="bg-brandGold text-bgDark font-bold py-3 rounded-xl">Actuals</button>
                     <button type="button" onclick="shareQuote()" class="bg-brandGold text-bgDark font-bold py-3 rounded-xl">Share</button>
                 </div>
@@ -619,7 +612,7 @@
               }
           });
 
-        const APP_VERSION = '8.9.7';
+        const APP_VERSION = '8.9.8';
         const BUILD_DATE = '2026-11-08';
         let HOURLY_RATE = 200;
 
@@ -725,6 +718,7 @@
         let isListView = localStorage.getItem('asbcListView') === 'true';
         let isHoursShown = localStorage.getItem('asbcShowHours') === 'true';
         let currentLoadedIsTemplate = false;
+        let currentLoadedEstimateId = '';
 
         function slugify(value) {
             return String(value).trim().toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
@@ -968,11 +962,11 @@
             }
         }
         async function refreshSavedEstimateList(selectedId = '') {
-            savedEstimates.innerHTML = '<option value="">Syncing with cloud...</option>';
+            if (savedEstimates) savedEstimates.innerHTML = '<option value="">Syncing with cloud...</option>';
             try {
                 const cutoff = Date.now() - (60 * 24 * 60 * 60 * 1000); 
                 const querySnapshot = await db.collection("quotes").get();
-                savedEstimates.innerHTML = '<option value="">Saved quotes...</option>';
+                if (savedEstimates) savedEstimates.innerHTML = '<option value="">Saved quotes...</option>';
                 
                 const templates = [];
                 const recents = [];
@@ -1001,7 +995,7 @@
                         option.textContent = `★ ${record.label}`;
                         optGroup.appendChild(option);
                     });
-                    savedEstimates.appendChild(optGroup);
+                    if (savedEstimates) savedEstimates.appendChild(optGroup);
                 }
 
                 if (recents.length > 0) {
@@ -1013,13 +1007,13 @@
                         option.textContent = record.label;
                         optGroup.appendChild(option);
                     });
-                    savedEstimates.appendChild(optGroup);
+                    if (savedEstimates) savedEstimates.appendChild(optGroup);
                 }
 
-                savedEstimates.value = selectedId;
+                if (savedEstimates) savedEstimates.value = selectedId;
             } catch (error) {
                 console.error("Failed to fetch estimates from cloud:", error);
-                savedEstimates.innerHTML = '<option value="">Error loading quotes</option>';
+                if (savedEstimates) savedEstimates.innerHTML = '<option value="">Error loading quotes</option>';
             }
         }
 
@@ -1033,7 +1027,6 @@
 
         function applyProjectData(data = {}) {
             customerName.value = data.customerName || '';
-            showOppNameField(true);
             if (dtoolsOpportunity) dtoolsOpportunity.value = '';
             if (data.salesManagerName && Array.from(salesManagerName.options).some(o => o.value === data.salesManagerName)) salesManagerName.value = data.salesManagerName;
             else salesManagerName.value = '';
@@ -1078,31 +1071,31 @@
             return { rebuilt, missing };
         }
 
-        async function saveEstimate() {
+        async function saveEstimate(quiet = false) {
             const data = currentProjectData();
             if (!data.customerName) {
                 alert('Enter an opportunity name before saving.');
-                return;
+                return false;
             }
             if (!salesManagerName.value) {
                 alert('Select a sales rep before saving.');
                 salesManagerName.focus();
-                return;
+                return false;
             }
             
             const wantsToSaveAsTemplate = isTemplateCheckbox.checked;
-            let id = savedEstimates.value;
+            let id = currentLoadedEstimateId;
             const label = data.customerName;
 
             if (id) {
                 if (currentLoadedIsTemplate && !wantsToSaveAsTemplate) {
                     id = `estimate-${Date.now()}`;
-                    savedEstimates.value = '';
+                    currentLoadedEstimateId = '';
                 } else {
                     const overwrite = window.confirm(`Overwrite the existing ${currentLoadedIsTemplate ? 'TEMPLATE' : 'quote'} for ${label}?\n\n• Click OK to UPDATE the original.\n• Click Cancel to SAVE AS A NEW COPY.`);
                     if (!overwrite) {
-                        id = `estimate-${Date.now()}`; 
-                        savedEstimates.value = ''; 
+                        id = `estimate-${Date.now()}`;
+                        currentLoadedEstimateId = '';
                     }
                 }
             } else {
@@ -1128,19 +1121,22 @@
             try {
                 await db.collection("quotes").doc(id).set(quoteDocument);
                 hasUnsavedCloudChanges = false; updateSaveIndicator(); localStorage.removeItem('asbcActiveDraft');
-                alert(`Saved ${label} to the cloud! (Will sync when online if currently offline)`);
+                if (!quiet) alert(`Saved ${label} to the cloud! (Will sync when online if currently offline)`);
                 currentLoadedIsTemplate = wantsToSaveAsTemplate;
+                currentLoadedEstimateId = id;
                 await refreshSavedEstimateList(id);
                 loadRepLeaderboard();
             } catch (error) {
                 console.error("Cloud save failed: ", error);
                 alert("Failed to save to cloud. Check your connection.");
+                return false;
             }
+            return true;
         }
 
-        async function loadEstimate() {
-            const id = savedEstimates.value;
-            if (!id) return alert('Choose a saved quote first.');
+        async function loadQuoteById(id) {
+            if (!id) return;
+            for (let i = 0; i < 50 && !catalog.length; i++) { await new Promise(r => setTimeout(r, 200)); }
             if (!catalog.length) return alert('The labor catalog is still loading. Please try again.');
 
             try {
@@ -1166,6 +1162,7 @@
                     isTemplateCheckbox.checked = currentLoadedIsTemplate;
                     isLockedCheckbox.checked = !!record.isLocked;
                     currentActuals = record.actuals || null;
+                    currentLoadedEstimateId = id;
                     hasUnsavedCloudChanges = false; updateSaveIndicator();
                     
                     renderCatalog();
@@ -1183,22 +1180,6 @@
             }
         }
 
-        async function deleteEstimate() {
-            const id = savedEstimates.value;
-            if (!id) return alert('Choose a saved quote first.');
-            
-            const label = savedEstimates.options[savedEstimates.selectedIndex].text;
-            if (!window.confirm(`Delete ${label} from the cloud?`)) return;
-
-            try {
-                await db.collection("quotes").doc(id).delete();
-                await refreshSavedEstimateList();
-                clearQuote();
-            } catch (error) {
-                console.error("Cloud delete failed: ", error);
-                alert("Failed to delete estimate from cloud.");
-            }
-        }
 
         function escapeHtml(value) {
             return String(value).replace(/[&<>'"]/g, character => ({
@@ -1612,6 +1593,24 @@
             window.print();
         }
 
+        async function saveAndPrint() {
+            if (quoteCart.length === 0) { alert('Add some items before generating a PDF.'); return; }
+            const missingFields = [];
+            if (!customerName.value.trim()) missingFields.push('Opportunity Name');
+            if (!salesManagerName.value.trim()) missingFields.push('Sales Manager');
+            if (missingFields.length) {
+                alert(`Please fill in the ${missingFields.join(' and the ')} field${missingFields.length > 1 ? 's' : ''} before saving and printing.`);
+                if (missingFields.length === 1) {
+                    (missingFields[0] === 'Opportunity Name' ? customerName : salesManagerName).focus();
+                } else {
+                    customerName.focus();
+                }
+                return;
+            }
+            const ok = await saveEstimate(true);
+            if (ok) window.print();
+        }
+
         function toggleFavorite(itemId) {
             if (favoriteIds.has(itemId)) { favoriteIds.delete(itemId); } 
             else { favoriteIds.add(itemId); }
@@ -1969,6 +1968,8 @@
                     cart: quoteCart,
                     customerName: customerName.value,
                     salesManagerName: salesManagerName.value,
+                    dtoolsOpportunityId: currentProjectData().dtoolsOpportunityId,
+                    loadedEstimateId: currentLoadedEstimateId,
                     recyclingToggle: recyclingToggle.value,
                     customRecyclingInput: customRecyclingInput.value,
                     materialsMarkup: MATERIALS_MARKUP_PCT,
@@ -1993,8 +1994,8 @@
                 suppressDraftSave = true;
                 quoteCart = d.cart;
                 if (typeof d.customerName === 'string') customerName.value = d.customerName;
-                showOppNameField(true);
                 if (typeof d.salesManagerName === 'string') salesManagerName.value = d.salesManagerName;
+                currentLoadedEstimateId = d.loadedEstimateId || '';
                 if (d.recyclingToggle) recyclingToggle.value = d.recyclingToggle;
                 if (typeof d.customRecyclingInput === 'string') customRecyclingInput.value = d.customRecyclingInput;
                 
@@ -2115,7 +2116,7 @@
                 quoteCart = [];
                 tileAddons = {};
                 localStorage.setItem('asbcTileAddons', JSON.stringify(tileAddons));
-                savedEstimates.value = '';
+                currentLoadedEstimateId = '';
                 customerName.value = '';
                 showOppNameField(false);
                 if (dtoolsOpportunity) dtoolsOpportunity.value = '';
@@ -2261,7 +2262,7 @@
             const modal = document.getElementById('actualsModal');
             if (!show) { modal.classList.add('hidden'); modal.classList.remove('flex'); return; }
             if (quoteCart.length === 0) { alert('Add some items first.'); return; }
-            if (!savedEstimates.value) { alert('Save the quote first (the Save button), then log actuals against it.'); return; }
+            if (!currentLoadedEstimateId) { alert('Save the quote first (Save/Print), then log actuals against it.'); return; }
             const rows = actualsRowsFromCart();
             document.getElementById('actualsList').innerHTML = rows.map((row, i) => `
                 <div class="flex items-center gap-2 bg-gray-900 border border-gray-800 rounded-lg p-2">
@@ -2295,7 +2296,7 @@
         }
 
         async function saveActuals() {
-            const quoteId = savedEstimates.value;
+            const quoteId = currentLoadedEstimateId;
             if (!quoteId) { alert('Save the quote first, then log actuals.'); return; }
             const rows = actualsRowsFromCart();
             const inputs = [...document.querySelectorAll('#actualsList [data-actual-index]')];
@@ -2427,7 +2428,11 @@
         dtoolsOpportunity.addEventListener('change', () => {
             const o = dtoolsOppsCache.find(x => x.id === dtoolsOpportunity.value);
             if (o) { customerName.value = o.name; showOppNameField(false); renderQuote(); }
-            else if (dtoolsOpportunity.value === 'manual') { showOppNameField(true); customerName.focus(); }
+            else if (dtoolsOpportunity.value === 'manual') {
+                const nm = window.prompt('Opportunity name:');
+                if (nm && nm.trim()) { customerName.value = nm.trim(); renderQuote(); }
+                else { dtoolsOpportunity.value = ''; }
+            }
             else { showOppNameField(false); }
         });
         }
@@ -2490,8 +2495,7 @@
         document.title = `Labor Calculator | ASBC v${APP_VERSION}`;
 
         window.saveEstimate = saveEstimate;
-        window.loadEstimate = loadEstimate;
-        window.deleteEstimate = deleteEstimate;
+        window.saveAndPrint = saveAndPrint;
         window.toggleCustomModal = toggleCustomModal;
         window.addCustomItem = addCustomItem;
         window.clearQuote = clearQuote;
@@ -2513,6 +2517,8 @@
         applyProjectData();
         refreshSavedEstimateList();
         loadRepLeaderboard();
+        const _bootQuoteId = new URLSearchParams(location.search).get('quote');
+        if (_bootQuoteId) loadQuoteById(_bootQuoteId);
         
         restoreActiveDraft();
         loadAppSettings();

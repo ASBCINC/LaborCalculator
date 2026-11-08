@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#050505">
-<title>Quote Log | ASBC Labor Calculator</title>
+<title>Saved Quotes | ASBC Labor Calculator</title>
 <link rel="icon" href="./favicon.svg">
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
@@ -40,16 +40,21 @@ th { color:var(--muted); font-size:10px; text-transform:uppercase; letter-spacin
 .empty { text-align:center; color:var(--muted); padding:30px 0; }
 details summary { cursor:pointer; color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.08em; font-weight:700; }
 details[open] summary { margin-bottom:8px; }
+.qactions { display:flex; gap:6px; margin-top:8px; }
+.qbtn { height:28px; padding:0 12px; border-radius:7px; border:1px solid var(--line); background:#1a1d23; color:#fff; font-size:11px; font-weight:600; cursor:pointer; }
+.qbtn-load { border-color:#8a6d2f; color:#ffd479; }
+.qbtn-del { border-color:#5a2b2b; color:#ff8b8b; }
+.qbtn:hover { border-color:var(--gold); }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <h1>ASBC <span>Quote Log</span></h1>
+    <h1>ASBC <span>Saved Quotes</span></h1>
     <a class="btn" href="./index.html">Open Calculator</a>
   </header>
   <div class="controls">
-    <input id="search" type="search" placeholder="Search customer or sales manager...">
+    <input id="search" type="search" placeholder="Search opportunity or sales manager...">
     <select id="filter" style="width:auto">
       <option value="all">All</option>
       <option value="quotes">Quotes</option>
@@ -202,6 +207,11 @@ function renderList() {
         <div><div class="qname">${cust} ${badges}</div><div class="qmeta">${mgr ? mgr + ' &middot; ' : ''}${date}</div></div>
         <div class="qnums"><div class="qnum-b">${fmt(p.total)}</div><div class="qmeta">${info.hours.toFixed(2)} hrs</div></div>
       </div>
+      <div class="qactions" onclick="event.stopPropagation()">
+        <button class="qbtn qbtn-load" data-act="load" data-id="${r._id}">Load</button>
+        <button class="qbtn qbtn-save" data-act="save" data-id="${r._id}">Save</button>
+        <button class="qbtn qbtn-del" data-act="delete" data-id="${r._id}">Delete</button>
+      </div>
       ${detail}
     </div>`;
   }).join('');
@@ -209,6 +219,60 @@ function renderList() {
 
 document.getElementById('search').addEventListener('input', renderList);
 document.getElementById('filter').addEventListener('change', renderList);
+
+// Load / Save / Delete per quote. Load opens the calculator with that quote
+// loaded; Save pushes the calculator's current edits (its auto-saved draft)
+// back onto this quote; Delete removes it.
+document.getElementById('list').addEventListener('click', async (e) => {
+  const btn = e.target.closest('button[data-act]');
+  if (!btn) return;
+  e.stopPropagation();
+  const id = btn.dataset.id, act = btn.dataset.act;
+  const rec = QUOTES.find(r => r._id === id);
+  const label = rec ? (rec.label || (rec.project && rec.project.customerName) || 'Untitled') : 'this quote';
+  if (act === 'load') {
+    window.open('index.html?quote=' + encodeURIComponent(id), '_blank');
+    return;
+  }
+  if (act === 'save') {
+    let d = null;
+    try { const raw = localStorage.getItem('asbcActiveDraft'); d = raw ? JSON.parse(raw) : null; } catch (_e) {}
+    if (!d || d.loadedEstimateId !== id || !Array.isArray(d.cart) || !d.cart.length) {
+      alert('Open this quote in the calculator first (Load), make your edits, then tap Save here.');
+      return;
+    }
+    if (!confirm('Save the calculator edits to "' + label + '"?')) return;
+    try {
+      await db.collection('quotes').doc(id).set({
+        label: d.customerName || label,
+        project: { customerName: d.customerName || '', salesManagerName: d.salesManagerName || '', dtoolsOpportunityId: d.dtoolsOpportunityId || '' },
+        items: d.cart,
+        options: { recycling: d.recyclingToggle, customRecycling: d.customRecyclingInput, markup: d.materialsMarkup, crewSize: d.crewSize },
+        updatedAt: new Date()
+      }, { merge: true });
+      const r = QUOTES.find(x => x._id === id);
+      if (r) {
+        r.label = d.customerName || label;
+        r.project = Object.assign({}, r.project, { customerName: d.customerName || '', salesManagerName: d.salesManagerName || '', dtoolsOpportunityId: d.dtoolsOpportunityId || '' });
+        r.items = d.cart;
+        r.options = Object.assign({}, r.options, { recycling: d.recyclingToggle, customRecycling: d.customRecyclingInput, markup: d.materialsMarkup, crewSize: d.crewSize });
+        r._t = Date.now();
+      }
+      renderList();
+      alert('Saved. "' + label + '" now matches the calculator.');
+    } catch (err) { alert('Save failed: ' + err.message); }
+    return;
+  }
+  if (act === 'delete') {
+    if (!confirm('Delete "' + label + '" from the cloud? This cannot be undone.')) return;
+    try {
+      await db.collection('quotes').doc(id).delete();
+      QUOTES = QUOTES.filter(r => r._id !== id);
+      renderList();
+    } catch (err) { alert('Delete failed: ' + err.message); }
+  }
+});
+
 boot();
 </script>
 </body>
