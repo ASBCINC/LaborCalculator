@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- ASBC Labor Calculator v8.3.2 | Per-product opt-in add-ons | Build 2026-11-08 -->
+<!-- ASBC Labor Calculator v8.4.0 | Add-ons on items + admin add-on editor + per-line add-ons | Build 2026-11-08 -->
 <html lang="en">
 <head>
     <link rel="manifest" href="./manifest.json">
@@ -483,7 +483,7 @@
             <div class="flex justify-between items-center mb-3">
                 <div>
                     <h3 class="text-lg font-bold text-brandGold">Labor Catalog Database Editor</h3>
-                    <p class="text-[11px] text-textMuted">Add new or update labor hours in the cloud catalog</p>
+                    <p class="text-[11px] text-textMuted">Add or update items, hours and add-ons in the cloud catalog</p>
                 </div>
                 <button type="button" onclick="toggleAdminModal(false)" class="w-10 h-10 rounded-full bg-gray-800">×</button>
             </div>
@@ -520,6 +520,15 @@
                 </div>
             </div>
 
+            <div class="mt-3">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-xs text-textMuted uppercase tracking-wider">Add-ons (per item, optional)</span>
+                    <button type="button" onclick="addAdminAddonRow()" class="text-xs text-brandGold border border-brandGold/50 rounded-lg px-2 py-1">+ Add add-on</button>
+                </div>
+                <div id="adminAddonsRows" class="space-y-1.5 max-h-40 overflow-y-auto"></div>
+                <p class="text-[10px] text-textMuted mt-1">Extra hours per unit, added on top of the base hours. Leave empty for no dropdown.</p>
+            </div>
+
             <button id="adminSaveButton" type="button" onclick="saveAdminSheetItem()" class="mt-5 w-full bg-brandGold text-bgDark font-bold py-3.5 rounded-xl">Save to Google Sheet</button>
             <div id="adminStatus" class="mt-2 text-center text-xs text-textMuted min-h-[1.25rem]"></div>
         </div>
@@ -550,8 +559,8 @@
               }
           });
 
-        const APP_VERSION = '8.3.2';
-        const BUILD_DATE = '2026-10-02';
+        const APP_VERSION = '8.4.0';
+        const BUILD_DATE = '2026-11-08';
         const HOURLY_RATE = 200;
 
         // Add-on labor options for the dropdown on every product tile.
@@ -569,23 +578,61 @@
         // (category--name slug) or exact product name. Value 'all' for every
         // add-on, or an array of add-on names. Empty map = no tile shows a
         // dropdown.
-        const PRODUCT_ADDONS = {
-            // Custom per-product option lists (objects with name/installHours/programmingHours).
+        // Add-ons live on each catalog item (item.addons, loaded from the sheet's "Add-ons" column).
+        // SEED_ADDONS keeps the catalog working until that column exists in the Google Sheet;
+        // an item's own Add-ons cell always wins over the seed.
+        const SEED_ADDONS = {
+            'Beolab 28 (Pair)': [
+                { name: 'Wall mounted', installHours: 1.00, programmingHours: 0.00 }
+            ],
             'Beolab 8 (Pair)': [
                 { name: 'Bookshelf', installHours: 0.00, programmingHours: 0.00 },
                 { name: 'Floor stand', installHours: 0.25, programmingHours: 0.00 },
                 { name: 'Wall mount', installHours: 0.50, programmingHours: 0.00 }
+            ],
+            'Beosound Premiere': [
+                { name: 'Wall mounted / SMI', installHours: 0.50, programmingHours: 0.00 }
+            ],
+            'Beosound Stage': [
+                { name: 'Wall mounted / SMI', installHours: 0.50, programmingHours: 0.00 }
+            ],
+            'Beosound Theatre': [
+                { name: 'Wall mounted / SMI', installHours: 0.50, programmingHours: 0.00 },
+                { name: 'Motorized Mount w/ TV', installHours: 5.00, programmingHours: 0.00 }
+            ],
+            'Beovision Harmony 65/77/83': [
+                { name: 'Wall mounted', installHours: 2.00, programmingHours: 0.00 }
+            ],
+            'Beovision Harmony 97': [
+                { name: 'Wall mounted', installHours: 2.00, programmingHours: 0.00 }
             ]
         };
 
-        function getProductAddonOptions(item) {
-            const config = PRODUCT_ADDONS[item.id] ?? PRODUCT_ADDONS[item.name];
-            if (!config) { return null; }
-            if (config === 'all') { return ADDONS; }
-            if (Array.isArray(config) && config.length && typeof config[0] === 'object') { return config; }
-            const wanted = new Set(config);
-            return ADDONS.filter(addon => wanted.has(addon.name));
+        function parseAddonsCell(value) {
+            const raw = String(value ?? '').trim();
+            if (!raw) return null;
+            const out = raw.split(';').map(part => {
+                const segs = part.split('|').map(seg => seg.trim());
+                if (!segs[0]) return null;
+                return { name: segs[0], installHours: Number(segs[1]) || 0, programmingHours: Number(segs[2]) || 0 };
+            }).filter(Boolean);
+            return out.length ? out : null;
         }
+        function addonsToCell(addons) {
+            return (addons || []).map(addon => `${addon.name}|${(Number(addon.installHours) || 0).toFixed(2)}|${(Number(addon.programmingHours) || 0).toFixed(2)}`).join(';');
+        }
+        function applySeedAddons(list) {
+            (list || []).forEach(item => {
+                if (Array.isArray(item.addons) && item.addons.length) { item.addons = item.addons.map(normalizeAddon).filter(Boolean); return; }
+                const seed = SEED_ADDONS[item.id] || SEED_ADDONS[item.name];
+                if (seed) { item.addons = seed.map(addon => ({ ...addon })); }
+            });
+        }
+
+        function getProductAddonOptions(item) {
+            return (item && Array.isArray(item.addons) && item.addons.length) ? item.addons : null;
+        }
+
         const RECYCLING_FEE = 75;
         const ADMIN_PIN = '1925';
         const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwy_WAUk5mv1IguezH95RxSqbNlh2or5HKINXJhl9P3m-c-iVWpR7Wo0ByGgTwXP9DJGA/exec';
@@ -659,9 +706,10 @@
                     if (!category || !name) throw new Error(`Row ${index + 2} is missing a category or name.`);
                     if (!Number.isFinite(installHours) || !Number.isFinite(programmingHours)) throw new Error(`Row ${index + 2} contains invalid labor hours.`);
 
-                    return { ...item, id, category, name, installHours, programmingHours, totalHours: installHours + programmingHours };
+                    return { ...item, id, category, name, installHours, programmingHours, totalHours: installHours + programmingHours, addons: parseAddonsCell(item.addons) };
                 });
 
+                applySeedAddons(catalog);
                 localStorage.setItem('asbcCachedCatalog', JSON.stringify(catalog));
                 catalogLoadError = null;
 
@@ -677,6 +725,7 @@
                 const cached = localStorage.getItem('asbcCachedCatalog');
                 if (cached) {
                     catalog = JSON.parse(cached);
+                    applySeedAddons(catalog);
                     migrateLegacyFavoriteIds();
                     catalogLoadError = null;
                     searchInput.placeholder = `Search ${catalog.length} products...`;
@@ -723,14 +772,12 @@
             const clean = normalizeAddon(addon);
             if (clean) { tileAddons[key] = clean; } else { delete tileAddons[key]; }
             localStorage.setItem('asbcTileAddons', JSON.stringify(tileAddons));
-            const cartItem = quoteCart.find(cartItem => cartItem.id === productId && (cartItem.zone || 'General') === zone && !cartItem.isCustom);
-            if (cartItem) { cartItem.addon = clean ? { ...clean } : null; }
             renderCatalog();
             renderQuote();
         }
-        function addonOptionsHtml(selectedName, options = ADDONS) {
+        function addonOptionsHtml(selectedName, options = []) {
             return `<option value="">Add-on: none</option>` + options.map((addon, index) =>
-                `<option value="${index}" ${selectedName === addon.name ? 'selected' : ''}>${escapeHtml(addon.name)} (+${(addon.installHours + addon.programmingHours).toFixed(2)} hr)</option>`
+                `<option value="${index}" ${selectedName === addon.name ? 'selected' : ''}>${escapeHtml(addon.name)}</option>`
             ).join('');
         }
 
@@ -1061,8 +1108,7 @@
             }
 
             visibleItems.forEach(item => {
-                const quoteItem = quoteCart.find(cartItem => cartItem.id === item.id && cartItem.zone === currentZone && !cartItem.isCustom);
-                const quantity = quoteItem ? quoteItem.qty : 0;
+                const quantity = findCartEntries(item.id, currentZone).reduce((sum, cartItem) => sum + (Number(cartItem.qty) || 0), 0);
                 const tileAddon = getTileAddon(item.id);
                 const itemAddonOptions = getProductAddonOptions(item);
                 const card = document.createElement('article');
@@ -1110,16 +1156,27 @@
             });
         }
 
+        function findCartEntries(productId, zone) {
+            const z = zone || 'General';
+            return quoteCart.filter(cartItem => cartItem.id === productId && (cartItem.zone || 'General') === z && !cartItem.isCustom);
+        }
+        function cartAddonKey(addon) { return addon ? addon.name : ''; }
+        function findCartEntry(productId, zone, addon) {
+            const wanted = cartAddonKey(addon);
+            return findCartEntries(productId, zone).find(cartItem => cartAddonKey(cartItem.addon) === wanted) || null;
+        }
+
         function addToQuote(productId) {
             const item = catalog.find(catalogItem => catalogItem.id === productId);
             if (!item) return;
-            
+
             const currentZone = activeZone.value.trim() || 'General';
-            const existingItem = quoteCart.find(cartItem => cartItem.id === productId && cartItem.zone === currentZone && !cartItem.isCustom);
-            
-            if (existingItem) { existingItem.qty = (Number(existingItem.qty) || 0) + 1; } 
-            else { quoteCart.push({ ...item, qty: 1, isCustom: false, zone: currentZone, addon: normalizeAddon(getTileAddon(productId)) }); }
-            
+            const addon = normalizeAddon(getTileAddon(productId));
+            const existingItem = findCartEntry(productId, currentZone, addon);
+
+            if (existingItem) { existingItem.qty = (Number(existingItem.qty) || 0) + 1; }
+            else { quoteCart.push({ ...item, qty: 1, isCustom: false, zone: currentZone, addon }); }
+
             renderCatalog();
             renderQuote();
         }
@@ -1127,13 +1184,14 @@
         function updateProductQuantity(productId, change) {
             const currentZone = activeZone.value.trim() || 'General';
             if (change > 0) return addToQuote(productId);
-            
-            const existingIndex = quoteCart.findIndex(cartItem => cartItem.id === productId && cartItem.zone === currentZone && !cartItem.isCustom);
+
+            const addon = normalizeAddon(getTileAddon(productId));
+            const existingIndex = quoteCart.findIndex(cartItem => cartItem.id === productId && (cartItem.zone || 'General') === currentZone && !cartItem.isCustom && cartAddonKey(cartItem.addon) === cartAddonKey(addon));
             if (existingIndex === -1) return;
-            
+
             quoteCart[existingIndex].qty = (Number(quoteCart[existingIndex].qty) || 0) - 1;
             if (quoteCart[existingIndex].qty <= 0) { quoteCart.splice(existingIndex, 1); }
-            
+
             renderCatalog();
             renderQuote();
         }
@@ -1150,10 +1208,32 @@
             const item = catalog.find(catalogItem => catalogItem.id === productId);
             if (!item) return;
             const currentZone = activeZone.value.trim() || 'General';
-            const existingIndex = quoteCart.findIndex(cartItem => cartItem.id === productId && cartItem.zone === currentZone && !cartItem.isCustom);
-            if (qty === 0) { if (existingIndex !== -1) quoteCart.splice(existingIndex, 1); }
-            else if (existingIndex !== -1) { quoteCart[existingIndex].qty = qty; }
-            else { quoteCart.push({ ...item, qty, isCustom: false, zone: currentZone, addon: normalizeAddon(getTileAddon(productId)) }); }
+            const addon = normalizeAddon(getTileAddon(productId));
+            const wanted = cartAddonKey(addon);
+            const entries = findCartEntries(productId, currentZone);
+            const otherQty = entries.reduce((sum, cartItem) => sum + (cartAddonKey(cartItem.addon) === wanted ? 0 : (Number(cartItem.qty) || 0)), 0);
+
+            if (qty === 0) {
+                for (let i = quoteCart.length - 1; i >= 0; i--) {
+                    const cartItem = quoteCart[i];
+                    if (cartItem.id === productId && (cartItem.zone || 'General') === currentZone && !cartItem.isCustom) quoteCart.splice(i, 1);
+                }
+            } else {
+                const target = qty - otherQty;
+                const existingIndex = quoteCart.findIndex(cartItem => cartItem.id === productId && (cartItem.zone || 'General') === currentZone && !cartItem.isCustom && cartAddonKey(cartItem.addon) === wanted);
+                if (target > 0) {
+                    if (existingIndex !== -1) { quoteCart[existingIndex].qty = target; }
+                    else { quoteCart.push({ ...item, qty: target, isCustom: false, zone: currentZone, addon }); }
+                } else if (target === 0) {
+                    if (existingIndex !== -1) { quoteCart.splice(existingIndex, 1); }
+                } else {
+                    for (let i = quoteCart.length - 1; i >= 0; i--) {
+                        const cartItem = quoteCart[i];
+                        if (cartItem.id === productId && (cartItem.zone || 'General') === currentZone && !cartItem.isCustom) quoteCart.splice(i, 1);
+                    }
+                    quoteCart.push({ ...item, qty, isCustom: false, zone: currentZone, addon });
+                }
+            }
             renderCatalog();
             renderQuote();
         }
@@ -1240,6 +1320,11 @@
                         totalProgramming += (programmingHours + addonProg) * quantity;
                         totalQuantity += quantity;
 
+                        const cartCatalogItem = (!item.isCustom && catalog.find(ci => ci.id === item.id)) || item;
+                        const lineAddonOptions = (!item.isCustom && cartCatalogItem.addons && cartCatalogItem.addons.length) ? cartCatalogItem.addons : null;
+                        const addonCell = lineAddonOptions
+                            ? `<select data-quote-addon-index="${item.originalIndex}" class="addon-select mt-1">${addonOptionsHtml(item.addon ? item.addon.name : '', lineAddonOptions)}</select>${item.addon ? `<div class="text-[11px] text-brandGold font-mono mt-0.5">+ ${(addonHoursPerItem * quantity).toFixed(2)} hrs add-on</div>` : ''}`
+                            : (item.addon ? `<div class="text-[11px] text-brandGold font-mono mt-0.5">+ ${escapeHtml(item.addon.name)} · ${(addonHoursPerItem * quantity).toFixed(2)} hrs add-on</div>` : '');
                         const row = document.createElement('div');
                         row.className = 'print-item-row p-2.5 flex justify-between items-center hover:bg-gray-800/30 transition-colors';
                         row.innerHTML = `
@@ -1249,7 +1334,7 @@
                                     <span>${escapeHtml(item.name)}</span>
                                 </div>
                                 <div class="item-hours-display text-xs text-textMuted font-mono">${(totalHoursPerItem * quantity).toFixed(2)} hrs (${installHours.toFixed(2)} inst + ${programmingHours.toFixed(2)} prog)</div>
-                                ${item.addon ? `<div class="text-[11px] text-brandGold font-mono mt-0.5">+ ${escapeHtml(item.addon.name)} · ${(addonHoursPerItem * quantity).toFixed(2)} hrs add-on</div>` : ''}
+                                ${addonCell}
                             </div>
                             <div class="flex items-center bg-gray-800 rounded-lg print-hide shrink-0">
                                 <button type="button" data-quote-index="${item.originalIndex}" data-change="-1" class="quote-quantity-button w-9 h-9 text-lg">−</button>
@@ -1438,6 +1523,36 @@
         const adminStatus = document.getElementById('adminStatus');
         const adminSaveButton = document.getElementById('adminSaveButton');
 
+        let adminAddons = [];
+
+        function renderAdminAddons() {
+            const wrap = document.getElementById('adminAddonsRows');
+            if (!wrap) return;
+            wrap.innerHTML = adminAddons.map((addon, index) => `
+                <div class="grid grid-cols-[1fr_4.5rem_4.5rem_2rem] gap-1.5 items-center">
+                    <input type="text" value="${escapeHtml(addon.name || '')}" placeholder="Add-on name" data-admin-addon-name="${index}" class="bg-gray-900 border border-gray-700 rounded-lg p-2 text-xs w-full">
+                    <input type="number" min="0" step="0.25" value="${addon.installHours ?? ''}" placeholder="Inst" data-admin-addon-inst="${index}" class="bg-gray-900 border border-gray-700 rounded-lg p-2 text-xs w-full">
+                    <input type="number" min="0" step="0.25" value="${addon.programmingHours ?? ''}" placeholder="Prog" data-admin-addon-prog="${index}" class="bg-gray-900 border border-gray-700 rounded-lg p-2 text-xs w-full">
+                    <button type="button" onclick="removeAdminAddonRow(${index})" class="w-8 h-8 rounded-lg bg-gray-800 text-red-400 text-sm">×</button>
+                </div>
+            `).join('');
+        }
+        function addAdminAddonRow() { adminAddons.push({ name: '', installHours: '', programmingHours: '' }); renderAdminAddons(); }
+        function removeAdminAddonRow(index) { adminAddons.splice(index, 1); renderAdminAddons(); }
+        function readAdminAddons() {
+            const wrap = document.getElementById('adminAddonsRows');
+            if (!wrap) return [];
+            return [...wrap.querySelectorAll('[data-admin-addon-name]')].map(input => {
+                const name = input.value.trim();
+                if (!name) return null;
+                const row = input.closest('.grid');
+                const inst = Number(row.querySelector('[data-admin-addon-inst]').value) || 0;
+                const prog = Number(row.querySelector('[data-admin-addon-prog]').value) || 0;
+                return { name, installHours: inst, programmingHours: prog };
+            }).filter(Boolean);
+        }
+        function setAdminAddons(list) { adminAddons = (list || []).map(addon => ({ ...addon })); renderAdminAddons(); }
+
         adminItemSelect.addEventListener('change', () => {
             const selectedId = adminItemSelect.value;
             if (!selectedId) {
@@ -1447,6 +1562,7 @@
                 adminCategory.readOnly = false;
                 adminInstall.value = '';
                 adminProgramming.value = '';
+                setAdminAddons([]);
                 return;
             }
 
@@ -1458,6 +1574,7 @@
                 adminProgramming.value = item.programmingHours;
                 adminCategory.readOnly = true;
                 adminName.readOnly = true;
+                setAdminAddons(item.addons || []);
             }
         });
 
@@ -1475,6 +1592,7 @@
                 adminName.readOnly = false;
                 adminInstall.value = '';
                 adminProgramming.value = '';
+                setAdminAddons([]);
             }
         }
 
@@ -1483,6 +1601,7 @@
             const name = adminName.value.trim();
             const installHours = Number(adminInstall.value) || 0;
             const programmingHours = Number(adminProgramming.value) || 0;
+            const addons = readAdminAddons();
 
             if (!category || !name) {
                 alert("Category and Item Name are required.");
@@ -1498,7 +1617,7 @@
                     method: 'POST',
                     mode: 'no-cors',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ category, name, installHours, programmingHours })
+                    body: JSON.stringify({ category, name, installHours, programmingHours, addons: addonsToCell(addons) })
                 });
 
                 const existingIdx = catalog.findIndex(i => i.name.toLowerCase() === name.toLowerCase() && i.category.toLowerCase() === category.toLowerCase());
@@ -1506,6 +1625,7 @@
                     catalog[existingIdx].installHours = installHours;
                     catalog[existingIdx].programmingHours = programmingHours;
                     catalog[existingIdx].totalHours = installHours + programmingHours;
+                    catalog[existingIdx].addons = addons.length ? addons : null;
                 } else {
                     const newItem = {
                         id: getStableCatalogId({}, category, name),
@@ -1513,7 +1633,8 @@
                         name,
                         installHours,
                         programmingHours,
-                        totalHours: installHours + programmingHours
+                        totalHours: installHours + programmingHours,
+                        addons: addons.length ? addons : null
                     };
                     catalog.push(newItem);
                 }
@@ -1634,8 +1755,8 @@
             const addonSelect = event.target.closest('[data-addon-product-id]');
             if (addonSelect) {
                 const productItem = catalog.find(cat => cat.id === addonSelect.dataset.addonProductId);
-                const options = (productItem && getProductAddonOptions(productItem)) || ADDONS;
-                const pick = addonSelect.value === '' ? null : options[Number(addonSelect.value)];
+                const options = (productItem && getProductAddonOptions(productItem)) || [];
+                const pick = addonSelect.value === '' ? null : (options[Number(addonSelect.value)] || null);
                 setTileAddon(addonSelect.dataset.addonProductId, pick);
                 return;
             }
@@ -1644,6 +1765,19 @@
         });
 
         quoteList.addEventListener('change', event => {
+            const quoteAddonSelect = event.target.closest('[data-quote-addon-index]');
+            if (quoteAddonSelect) {
+                const entry = quoteCart[Number(quoteAddonSelect.dataset.quoteAddonIndex)];
+                if (entry) {
+                    const src = catalog.find(ci => ci.id === entry.id) || entry;
+                    const options = (src && Array.isArray(src.addons)) ? src.addons : [];
+                    const pick = quoteAddonSelect.value === '' ? null : (options[Number(quoteAddonSelect.value)] || null);
+                    entry.addon = normalizeAddon(pick);
+                    renderCatalog();
+                    renderQuote();
+                }
+                return;
+            }
             const input = event.target.closest('[data-qty-quote-index]');
             if (input) setQuoteQuantity(Number(input.dataset.qtyQuoteIndex), input.value);
         });

@@ -91,20 +91,8 @@
   },
   {
     "category": "Bang & Olufsen Audio",
-    "name": "Adopt Speaker into Bang & Olufsen App",
+    "name": "Adopt (Exsiting) Speaker into Bang & Olufsen App",
     "installHours": 0.0,
-    "programmingHours": 0.25
-  },
-  {
-    "category": "Bang & Olufsen Audio",
-    "name": "Bang & Olufsen Speaker Floor Stand",
-    "installHours": 1.0,
-    "programmingHours": 0.25
-  },
-  {
-    "category": "Bang & Olufsen Audio",
-    "name": "Bang & Olufsen Speaker Wall/Cieling Bracket",
-    "installHours": 1.5,
     "programmingHours": 0.25
   },
   {
@@ -135,7 +123,14 @@
     "category": "Bang & Olufsen Audio",
     "name": "Beolab 28 (Pair)",
     "installHours": 4.0,
-    "programmingHours": 1.0
+    "programmingHours": 1.0,
+    "addons": [
+      {
+        "name": "Wall mounted",
+        "installHours": 1.0,
+        "programmingHours": 0.0
+      }
+    ]
   },
   {
     "category": "Bang & Olufsen Audio",
@@ -147,7 +142,24 @@
     "category": "Bang & Olufsen Audio",
     "name": "Beolab 8 (Pair)",
     "installHours": 2.0,
-    "programmingHours": 0.5
+    "programmingHours": 0.5,
+    "addons": [
+      {
+        "name": "Bookshelf",
+        "installHours": 0.0,
+        "programmingHours": 0.0
+      },
+      {
+        "name": "Floor stand",
+        "installHours": 0.25,
+        "programmingHours": 0.0
+      },
+      {
+        "name": "Wall mount",
+        "installHours": 0.5,
+        "programmingHours": 0.0
+      }
+    ]
   },
   {
     "category": "Bang & Olufsen Audio",
@@ -189,7 +201,14 @@
     "category": "Bang & Olufsen Audio",
     "name": "Beosound Premiere",
     "installHours": 2.0,
-    "programmingHours": 1.0
+    "programmingHours": 1.0,
+    "addons": [
+      {
+        "name": "Wall mounted / SMI",
+        "installHours": 0.5,
+        "programmingHours": 0.0
+      }
+    ]
   },
   {
     "category": "Bang & Olufsen Audio",
@@ -213,49 +232,58 @@
     "category": "Bang & Olufsen Audio",
     "name": "Beosound Stage",
     "installHours": 1.5,
-    "programmingHours": 0.5
+    "programmingHours": 0.5,
+    "addons": [
+      {
+        "name": "Wall mounted / SMI",
+        "installHours": 0.5,
+        "programmingHours": 0.0
+      }
+    ]
   },
   {
     "category": "Bang & Olufsen Audio",
     "name": "Beosound Theatre",
     "installHours": 3.0,
-    "programmingHours": 1.0
-  },
-  {
-    "category": "Bang & Olufsen Audio",
-    "name": "Beosound Theatre Table Stand w/ SMI VESA",
-    "installHours": 3.0,
-    "programmingHours": 1.0
-  },
-  {
-    "category": "Bang & Olufsen Audio",
-    "name": "Beosound Theatre Wall Mount w/ SMI VESA",
-    "installHours": 5.0,
-    "programmingHours": 1.0
-  },
-  {
-    "category": "Bang & Olufsen Audio",
-    "name": "TV + Beosound Theatre Soundbar on Motorized Mount",
-    "installHours": 9.0,
-    "programmingHours": 1.0
+    "programmingHours": 1.0,
+    "addons": [
+      {
+        "name": "Wall mounted / SMI",
+        "installHours": 0.5,
+        "programmingHours": 0.0
+      },
+      {
+        "name": "Motorized Mount w/ TV",
+        "installHours": 5.0,
+        "programmingHours": 0.0
+      }
+    ]
   },
   {
     "category": "Bang & Olufsen Audio",
     "name": "Beovision Harmony 65/77/83",
     "installHours": 4.0,
-    "programmingHours": 1.5
+    "programmingHours": 1.5,
+    "addons": [
+      {
+        "name": "Wall mounted",
+        "installHours": 2.0,
+        "programmingHours": 0.0
+      }
+    ]
   },
   {
     "category": "Bang & Olufsen Audio",
     "name": "Beovision Harmony 97",
     "installHours": 5.0,
-    "programmingHours": 2.0
-  },
-  {
-    "category": "Bang & Olufsen Audio",
-    "name": "Beovision Harmony Wall Mount w/ TV (Add-On)",
-    "installHours": 5.0,
-    "programmingHours": 1.0
+    "programmingHours": 2.0,
+    "addons": [
+      {
+        "name": "Wall mounted",
+        "installHours": 2.0,
+        "programmingHours": 0.0
+      }
+    ]
   },
   {
     "category": "Bang & Olufsen Audio",
@@ -277,7 +305,7 @@
   },
   {
     "category": "Bang & Olufsen Audio",
-    "name": "Speaker Calibration / ARC Tuning",
+    "name": "Speaker Calibration / ARC Tuning (Exsiting Speaker)",
     "installHours": 1.0,
     "programmingHours": 1.0
   },
@@ -346,12 +374,6 @@
     "name": "Terra Prime 96TB Movie Server",
     "installHours": 2.0,
     "programmingHours": 1.5
-  },
-  {
-    "category": "Networking",
-    "name": "2-4 Pack Wireless Mesh",
-    "installHours": 1.0,
-    "programmingHours": 0.5
   },
   {
     "category": "Networking",
@@ -523,19 +545,13 @@
   },
   {
     "category": "TV & Home Theater",
-    "name": "Motorized TV Mount",
-    "installHours": 5.0,
-    "programmingHours": 0.0
-  },
-  {
-    "category": "TV & Home Theater",
     "name": "Remove TV from Wall Mount",
     "installHours": 0.25,
     "programmingHours": 0.0
   },
   {
     "category": "TV & Home Theater",
-    "name": "Soundbar Installation",
+    "name": "Soundbar Installation (non-B&O)",
     "installHours": 1.0,
     "programmingHours": 0.0
   },
@@ -547,7 +563,7 @@
   },
   {
     "category": "TV & Home Theater",
-    "name": "TV + Soundbar Package",
+    "name": "TV + Soundbar Package (non-B&O)",
     "installHours": 3.5,
     "programmingHours": 0.0
   },
