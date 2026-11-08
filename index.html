@@ -612,7 +612,7 @@
               }
           });
 
-        const APP_VERSION = '8.9.11';
+        const APP_VERSION = '8.9.12';
         const BUILD_DATE = '2026-11-08';
         let HOURLY_RATE = 200;
 
@@ -962,10 +962,9 @@
                     counts[rep] = (counts[rep] || 0) + 1;
                 });
                 const top = Object.entries(counts).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 3);
-                const month = now.toLocaleString('en-US', { month: 'long' });
                 const line = top.length
-                    ? month + " quotes: " + top.map(([r, c], i) => (i + 1) + ". " + r + " (" + c + ")").join("  \u00b7  ")
-                    : month + " quotes: none saved yet this month";
+                    ? "Monthly Submission Leaderboard: " + top.map(([r, c], i) => (i + 1) + ". " + r + " (" + c + ")").join("  \u00b7  ")
+                    : "Monthly Submission Leaderboard: none saved yet this month";
                 el.textContent = line;
                 dup.textContent = "   \u00b7   " + line;
             } catch (e) {
