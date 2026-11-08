@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- ASBC Labor Calculator v8.8.7 | Firestore-primary catalog, offline-first boot, draft auto-save, admin tools | Build 2026-11-08 -->
+<!-- ASBC Labor Calculator v8.8.8 | Firestore-primary catalog, offline-first boot, draft auto-save, admin tools | Build 2026-11-08 -->
 <html lang="en">
 <head>
     <link rel="manifest" href="./manifest.json">
@@ -8,7 +8,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="application-version" content="8.8.7">
+    <meta name="application-version" content="8.8.8">
     <meta name="build-date" content="2026-11-07">
     <meta name="theme-color" content="#050505">
     <title>Labor Calculator | ASBC</title>
@@ -612,7 +612,7 @@
               }
           });
 
-        const APP_VERSION = '8.8.7';
+        const APP_VERSION = '8.8.8';
         const BUILD_DATE = '2026-11-08';
         let HOURLY_RATE = 200;
 
@@ -866,6 +866,12 @@
 
         function tileAddonKey(productId, zone) { return `${String(productId)}||${zone || 'General'}`; }
         function currentZoneName() { return activeZone.value.trim() || 'General'; }
+        function requireRoomSelected() {
+            if (activeZone.value.trim()) return true;
+            alert('Select a room before adding or removing items.');
+            activeZone.focus();
+            return false;
+        }
         function getTileAddon(productId) { return tileAddons[tileAddonKey(productId, currentZoneName())] || null; }
         function normalizeAddon(addon) {
             if (!addon || !addon.name) return null;
@@ -1280,6 +1286,7 @@
         }
 
         function addToQuote(productId) {
+            if (!requireRoomSelected()) return;
             const item = catalog.find(catalogItem => catalogItem.id === productId);
             if (!item) return;
 
@@ -1295,6 +1302,7 @@
         }
 
         function updateProductQuantity(productId, change) {
+            if (!requireRoomSelected()) return;
             const currentZone = activeZone.value.trim() || 'General';
             if (change > 0) return addToQuote(productId);
 
@@ -1316,6 +1324,7 @@
         }
 
         function setProductQuantity(productId, value) {
+            if (!requireRoomSelected()) { renderCatalog(); return; }
             const qty = parseTypedQty(value);
             if (qty === null) { renderCatalog(); return; }
             const item = catalog.find(catalogItem => catalogItem.id === productId);
