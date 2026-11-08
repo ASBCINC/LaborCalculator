@@ -576,6 +576,24 @@
     </style>
     <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
 
+    <div id="actualsModal" class="fixed inset-0 bg-black/85 hidden items-center justify-center z-50 p-4">
+        <div class="bg-bgDark border border-gray-700 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col p-4 sm:p-6">
+            <div class="flex items-center justify-between mb-2">
+                <h2 class="text-lg font-bold text-white">Log Actual Hours</h2>
+                <button type="button" onclick="toggleActualsModal(false)" class="w-10 h-10 rounded-full bg-gray-800 text-white">&times;</button>
+            </div>
+            <div class="text-xs text-textMuted mb-3">Compare what the estimate said to what the job actually took. Saves against the loaded quote.</div>
+            <div id="actualsList" class="flex-1 overflow-y-auto space-y-2 min-h-[8rem]"></div>
+            <div id="actualsTotals" class="mt-3 pt-3 border-t border-gray-800 flex justify-between text-sm text-white font-bold"></div>
+            <textarea id="actualsNotes" rows="2" placeholder="Notes (optional): what ran over, what went faster..." class="mt-2 w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-xs text-white"></textarea>
+            <div class="grid grid-cols-2 gap-3 mt-3">
+                <button id="actualsSaveButton" type="button" onclick="saveActuals()" class="bg-brandGold text-bgDark font-bold py-3 rounded-xl">Save Actuals</button>
+                <button type="button" onclick="toggleActualsModal(false)" class="bg-transparent border border-gray-700 text-textMuted font-bold py-3 rounded-xl">Close</button>
+            </div>
+            <div id="actualsStatus" class="mt-2 text-center text-xs text-textMuted min-h-[1.25rem]"></div>
+        </div>
+    </div>
+
     <script>
         const firebaseConfig = {
             apiKey: "AIzaSyCSf560VkBf2esIH5rC-_Vcx349o7iIC-0",
@@ -2207,7 +2225,7 @@
             });
         });
 
-        document.getElementById('actualsList').addEventListener('input', updateActualsTotals);
+        const _actualsListEl = document.getElementById('actualsList'); if (_actualsListEl) _actualsListEl.addEventListener('input', updateActualsTotals);
         searchInput.addEventListener('input', renderCatalog);
         activeZone.addEventListener('input', renderCatalog);
         customerName.addEventListener('input', renderQuote);
@@ -2307,22 +2325,5 @@
             });
         }
     </script>
-    <div id="actualsModal" class="fixed inset-0 bg-black/85 hidden items-center justify-center z-50 p-4">
-        <div class="bg-bgDark border border-gray-700 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col p-4 sm:p-6">
-            <div class="flex items-center justify-between mb-2">
-                <h2 class="text-lg font-bold text-white">Log Actual Hours</h2>
-                <button type="button" onclick="toggleActualsModal(false)" class="w-10 h-10 rounded-full bg-gray-800 text-white">&times;</button>
-            </div>
-            <div class="text-xs text-textMuted mb-3">Compare what the estimate said to what the job actually took. Saves against the loaded quote.</div>
-            <div id="actualsList" class="flex-1 overflow-y-auto space-y-2 min-h-[8rem]"></div>
-            <div id="actualsTotals" class="mt-3 pt-3 border-t border-gray-800 flex justify-between text-sm text-white font-bold"></div>
-            <textarea id="actualsNotes" rows="2" placeholder="Notes (optional): what ran over, what went faster..." class="mt-2 w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-xs text-white"></textarea>
-            <div class="grid grid-cols-2 gap-3 mt-3">
-                <button id="actualsSaveButton" type="button" onclick="saveActuals()" class="bg-brandGold text-bgDark font-bold py-3 rounded-xl">Save Actuals</button>
-                <button type="button" onclick="toggleActualsModal(false)" class="bg-transparent border border-gray-700 text-textMuted font-bold py-3 rounded-xl">Close</button>
-            </div>
-            <div id="actualsStatus" class="mt-2 text-center text-xs text-textMuted min-h-[1.25rem]"></div>
-        </div>
-    </div>
 </body>
 </html>
