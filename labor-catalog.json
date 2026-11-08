@@ -3,121 +3,153 @@
     "category": "Access Control",
     "name": "Complete UniFi Single-Door Access System",
     "installHours": 10.0,
-    "programmingHours": 2.0
+    "programmingHours": 2.0,
+    "id": "access-control--complete-unifi-single-door-access-system"
   },
   {
     "category": "Access Control",
     "name": "UniFi Access Door Hub",
     "installHours": 4.0,
-    "programmingHours": 1.0
+    "programmingHours": 1.0,
+    "id": "access-control--unifi-access-door-hub"
   },
   {
     "category": "Access Control",
     "name": "UniFi Access Door Hub Mini",
     "installHours": 3.0,
-    "programmingHours": 0.5
+    "programmingHours": 0.5,
+    "id": "access-control--unifi-access-door-hub-mini"
   },
   {
     "category": "Access Control",
     "name": "UniFi Access Elevator Hub",
     "installHours": 8.0,
-    "programmingHours": 2.0
+    "programmingHours": 2.0,
+    "id": "access-control--unifi-access-elevator-hub"
   },
   {
     "category": "Access Control",
     "name": "UniFi Access G3 Intercom / Door Station",
     "installHours": 3.0,
-    "programmingHours": 1.0
+    "programmingHours": 1.0,
+    "id": "access-control--unifi-access-g3-intercom-door-station"
   },
   {
     "category": "Access Control",
     "name": "UniFi Access G3 Reader",
     "installHours": 1.5,
-    "programmingHours": 0.5
+    "programmingHours": 0.5,
+    "id": "access-control--unifi-access-g3-reader"
   },
   {
     "category": "Access Control",
     "name": "UniFi Access G3 Reader Pro",
     "installHours": 2.0,
-    "programmingHours": 1.0
+    "programmingHours": 1.0,
+    "id": "access-control--unifi-access-g3-reader-pro"
   },
   {
     "category": "Access Control",
     "name": "UniFi Access Gate Hub",
     "installHours": 6.0,
-    "programmingHours": 1.5
+    "programmingHours": 1.5,
+    "id": "access-control--unifi-access-gate-hub"
   },
   {
     "category": "Access Control",
     "name": "UniFi Access Intercom Viewer",
     "installHours": 1.0,
-    "programmingHours": 0.5
+    "programmingHours": 0.5,
+    "id": "access-control--unifi-access-intercom-viewer"
   },
   {
     "category": "Access Control",
     "name": "UniFi Access Ultra",
     "installHours": 3.0,
-    "programmingHours": 0.5
+    "programmingHours": 0.5,
+    "id": "access-control--unifi-access-ultra"
   },
   {
     "category": "Access Control",
     "name": "UniFi Electric Strike Lock",
     "installHours": 3.0,
-    "programmingHours": 0.0
+    "programmingHours": 0.0,
+    "id": "access-control--unifi-electric-strike-lock"
   },
   {
     "category": "Access Control",
     "name": "UniFi Enterprise Access Hub",
     "installHours": 8.0,
-    "programmingHours": 2.0
+    "programmingHours": 2.0,
+    "id": "access-control--unifi-enterprise-access-hub"
   },
   {
     "category": "Access Control",
     "name": "UniFi Entry Sensor",
     "installHours": 0.75,
-    "programmingHours": 0.25
+    "programmingHours": 0.25,
+    "id": "access-control--unifi-entry-sensor"
   },
   {
     "category": "Access Control",
     "name": "UniFi Magnetic Lock",
     "installHours": 3.0,
-    "programmingHours": 0.0
+    "programmingHours": 0.0,
+    "id": "access-control--unifi-magnetic-lock"
   },
   {
     "category": "Access Control",
     "name": "UniFi Push-to-Exit Button",
     "installHours": 1.0,
-    "programmingHours": 0.0
+    "programmingHours": 0.0,
+    "id": "access-control--unifi-push-to-exit-button"
   },
   {
     "category": "Bang & Olufsen Audio",
-    "name": "Adopt (Exsiting) Speaker into Bang & Olufsen App",
+    "name": "Adopt (Existing) Speaker into Bang & Olufsen App",
     "installHours": 0.0,
-    "programmingHours": 0.25
+    "programmingHours": 0.25,
+    "id": "bang-and-olufsen-audio--adopt-existing-speaker-into-bang-and-olufsen-app"
   },
   {
     "category": "Bang & Olufsen Audio",
     "name": "Beoconnect Core",
     "installHours": 1.5,
-    "programmingHours": 0.5
+    "programmingHours": 0.5,
+    "id": "bang-and-olufsen-audio--beoconnect-core"
   },
   {
     "category": "Bang & Olufsen Audio",
     "name": "Beogram Turntable",
     "installHours": 1.0,
-    "programmingHours": 0.5
+    "programmingHours": 0.5,
+    "id": "bang-and-olufsen-audio--beogram-turntable"
   },
   {
     "category": "Bang & Olufsen Audio",
     "name": "Beolab 18 (Pair)",
     "installHours": 3.0,
-    "programmingHours": 0.5
+    "programmingHours": 0.5,
+    "addons": [
+      {
+        "name": "Floor stand",
+        "installHours": 0.0,
+        "programmingHours": 0.0
+      },
+      {
+        "name": "Wall mount",
+        "installHours": 1.0,
+        "programmingHours": 0.0
+      }
+    ],
+    "id": "bang-and-olufsen-audio--beolab-18-pair"
   },
   {
     "category": "Bang & Olufsen Audio",
     "name": "Beolab 19",
     "installHours": 1.5,
-    "programmingHours": 0.5
+    "programmingHours": 0.5,
+    "id": "bang-and-olufsen-audio--beolab-19"
   },
   {
     "category": "Bang & Olufsen Audio",
@@ -130,13 +162,15 @@
         "installHours": 1.0,
         "programmingHours": 0.0
       }
-    ]
+    ],
+    "id": "bang-and-olufsen-audio--beolab-28-pair"
   },
   {
     "category": "Bang & Olufsen Audio",
     "name": "Beolab 50 (Pair)",
     "installHours": 8.0,
-    "programmingHours": 1.5
+    "programmingHours": 1.5,
+    "id": "bang-and-olufsen-audio--beolab-50-pair"
   },
   {
     "category": "Bang & Olufsen Audio",
@@ -159,43 +193,57 @@
         "installHours": 0.5,
         "programmingHours": 0.0
       }
-    ]
+    ],
+    "id": "bang-and-olufsen-audio--beolab-8-pair"
   },
   {
     "category": "Bang & Olufsen Audio",
     "name": "Beolab 90 (Pair)",
     "installHours": 12.0,
-    "programmingHours": 1.5
+    "programmingHours": 1.5,
+    "id": "bang-and-olufsen-audio--beolab-90-pair"
   },
   {
     "category": "Bang & Olufsen Audio",
     "name": "Beoremote/Halo Setup",
     "installHours": 0.5,
-    "programmingHours": 0.5
+    "programmingHours": 0.5,
+    "id": "bang-and-olufsen-audio--beoremote-halo-setup"
   },
   {
     "category": "Bang & Olufsen Audio",
     "name": "Beosound 9000 + Legacy Sources",
     "installHours": 3.0,
-    "programmingHours": 1.5
+    "programmingHours": 1.5,
+    "id": "bang-and-olufsen-audio--beosound-9000-legacy-sources"
   },
   {
     "category": "Bang & Olufsen Audio",
     "name": "Beosound A5",
     "installHours": 0.5,
-    "programmingHours": 0.0
+    "programmingHours": 0.25,
+    "id": "bang-and-olufsen-audio--beosound-a5"
   },
   {
     "category": "Bang & Olufsen Audio",
     "name": "Beosound Balance",
     "installHours": 0.75,
-    "programmingHours": 0.0
+    "programmingHours": 0.25,
+    "id": "bang-and-olufsen-audio--beosound-balance"
   },
   {
     "category": "Bang & Olufsen Audio",
     "name": "Beosound Level",
     "installHours": 0.5,
-    "programmingHours": 0.0
+    "programmingHours": 0.25,
+    "addons": [
+      {
+        "name": "Wall mount",
+        "installHours": 0.5,
+        "programmingHours": 0.0
+      }
+    ],
+    "id": "bang-and-olufsen-audio--beosound-level"
   },
   {
     "category": "Bang & Olufsen Audio",
@@ -208,25 +256,29 @@
         "installHours": 0.5,
         "programmingHours": 0.0
       }
-    ]
+    ],
+    "id": "bang-and-olufsen-audio--beosound-premiere"
   },
   {
     "category": "Bang & Olufsen Audio",
     "name": "Beosound Shape — Large (21–40 Tiles)",
     "installHours": 16.0,
-    "programmingHours": 2.5
+    "programmingHours": 2.5,
+    "id": "bang-and-olufsen-audio--beosound-shape-large-21-40-tiles"
   },
   {
     "category": "Bang & Olufsen Audio",
     "name": "Beosound Shape — Medium (11–20 Tiles)",
     "installHours": 10.0,
-    "programmingHours": 1.5
+    "programmingHours": 1.5,
+    "id": "bang-and-olufsen-audio--beosound-shape-medium-11-20-tiles"
   },
   {
     "category": "Bang & Olufsen Audio",
     "name": "Beosound Shape — Small (Up to 10 Tiles)",
     "installHours": 6.0,
-    "programmingHours": 1.0
+    "programmingHours": 1.0,
+    "id": "bang-and-olufsen-audio--beosound-shape-small-up-to-10-tiles"
   },
   {
     "category": "Bang & Olufsen Audio",
@@ -239,7 +291,8 @@
         "installHours": 0.5,
         "programmingHours": 0.0
       }
-    ]
+    ],
+    "id": "bang-and-olufsen-audio--beosound-stage"
   },
   {
     "category": "Bang & Olufsen Audio",
@@ -257,7 +310,8 @@
         "installHours": 5.0,
         "programmingHours": 0.0
       }
-    ]
+    ],
+    "id": "bang-and-olufsen-audio--beosound-theatre"
   },
   {
     "category": "Bang & Olufsen Audio",
@@ -270,7 +324,8 @@
         "installHours": 2.0,
         "programmingHours": 0.0
       }
-    ]
+    ],
+    "id": "bang-and-olufsen-audio--beovision-harmony-65-77-83"
   },
   {
     "category": "Bang & Olufsen Audio",
@@ -283,348 +338,413 @@
         "installHours": 2.0,
         "programmingHours": 0.0
       }
-    ]
+    ],
+    "id": "bang-and-olufsen-audio--beovision-harmony-97"
   },
   {
     "category": "Bang & Olufsen Audio",
     "name": "CD Player Integration",
     "installHours": 1.0,
-    "programmingHours": 0.5
+    "programmingHours": 0.5,
+    "id": "bang-and-olufsen-audio--cd-player-integration"
   },
   {
     "category": "Bang & Olufsen Audio",
     "name": "Legacy/Existing Bang & Olufsen Integration",
     "installHours": 3.0,
-    "programmingHours": 1.0
+    "programmingHours": 1.0,
+    "id": "bang-and-olufsen-audio--legacy-existing-bang-and-olufsen-integration"
   },
   {
     "category": "Bang & Olufsen Audio",
     "name": "Origin Acoustics Celestial In-Ceiling Speaker",
     "installHours": 0.5,
-    "programmingHours": 0.0
+    "programmingHours": 0.0,
+    "id": "bang-and-olufsen-audio--origin-acoustics-celestial-in-ceiling-speaker"
   },
   {
     "category": "Bang & Olufsen Audio",
-    "name": "Speaker Calibration / ARC Tuning (Exsiting Speaker)",
+    "name": "Speaker Calibration / ARC Tuning (Existing Speaker)",
     "installHours": 1.0,
-    "programmingHours": 1.0
+    "programmingHours": 1.0,
+    "id": "bang-and-olufsen-audio--speaker-calibration-arc-tuning-existing-speaker"
   },
   {
     "category": "Bang & Olufsen Audio",
     "name": "Speaker Wire Concealment (Add-On)",
     "installHours": 2.0,
-    "programmingHours": 0.0
+    "programmingHours": 0.0,
+    "id": "bang-and-olufsen-audio--speaker-wire-concealment-add-on"
   },
   {
     "category": "Kaleidescape",
     "name": "Strato C Movie Player",
     "installHours": 1.0,
-    "programmingHours": 1.0
+    "programmingHours": 1.0,
+    "id": "kaleidescape--strato-c-movie-player"
   },
   {
     "category": "Kaleidescape",
     "name": "Strato E Movie Player",
     "installHours": 0.75,
-    "programmingHours": 0.75
+    "programmingHours": 0.75,
+    "id": "kaleidescape--strato-e-movie-player"
   },
   {
     "category": "Kaleidescape",
     "name": "Strato K Movie Player",
     "installHours": 1.0,
-    "programmingHours": 1.0
+    "programmingHours": 1.0,
+    "id": "kaleidescape--strato-k-movie-player"
   },
   {
     "category": "Kaleidescape",
     "name": "Strato M Movie Player",
     "installHours": 0.75,
-    "programmingHours": 0.75
+    "programmingHours": 0.75,
+    "id": "kaleidescape--strato-m-movie-player"
   },
   {
     "category": "Kaleidescape",
     "name": "Strato V Movie Player",
     "installHours": 1.0,
-    "programmingHours": 1.0
+    "programmingHours": 1.0,
+    "id": "kaleidescape--strato-v-movie-player"
   },
   {
     "category": "Kaleidescape",
     "name": "Terra Prime 22TB Movie Server",
     "installHours": 1.5,
-    "programmingHours": 1.0
+    "programmingHours": 1.0,
+    "id": "kaleidescape--terra-prime-22tb-movie-server"
   },
   {
     "category": "Kaleidescape",
     "name": "Terra Prime 48TB Movie Server",
     "installHours": 2.0,
-    "programmingHours": 1.5
+    "programmingHours": 1.5,
+    "id": "kaleidescape--terra-prime-48tb-movie-server"
   },
   {
     "category": "Kaleidescape",
     "name": "Terra Prime 72TB Movie Server",
     "installHours": 2.0,
-    "programmingHours": 1.5
+    "programmingHours": 1.5,
+    "id": "kaleidescape--terra-prime-72tb-movie-server"
   },
   {
     "category": "Kaleidescape",
     "name": "Terra Prime 8TB Movie Server",
     "installHours": 1.5,
-    "programmingHours": 1.0
+    "programmingHours": 1.0,
+    "id": "kaleidescape--terra-prime-8tb-movie-server"
   },
   {
     "category": "Kaleidescape",
     "name": "Terra Prime 96TB Movie Server",
     "installHours": 2.0,
-    "programmingHours": 1.5
+    "programmingHours": 1.5,
+    "id": "kaleidescape--terra-prime-96tb-movie-server"
   },
   {
     "category": "Networking",
     "name": "Access Point Installation (Each)",
     "installHours": 1.5,
-    "programmingHours": 0.75
+    "programmingHours": 0.75,
+    "id": "networking--access-point-installation-each"
   },
   {
     "category": "Networking",
     "name": "Access Point with Cable Run (Each)",
     "installHours": 3.0,
-    "programmingHours": 0.75
+    "programmingHours": 0.75,
+    "id": "networking--access-point-with-cable-run-each"
   },
   {
     "category": "Networking",
-    "name": "Add Network Device  (IE. Apple tv, Roku, WIFI  Device)",
+    "name": "Add Network Device (e.g., Apple TV, Roku, Wi-Fi Device)",
     "installHours": 0.5,
-    "programmingHours": 0.3
+    "programmingHours": 0.25,
+    "id": "networking--add-network-device-e-g-apple-tv-roku-wi-fi-device"
   },
   {
     "category": "Networking",
     "name": "Basic Switch Installation",
     "installHours": 0.5,
-    "programmingHours": 0.0
+    "programmingHours": 0.0,
+    "id": "networking--basic-switch-installation"
   },
   {
     "category": "Networking",
     "name": "Large Network Rack Build",
     "installHours": 16.0,
-    "programmingHours": 0.0
+    "programmingHours": 0.0,
+    "id": "networking--large-network-rack-build"
   },
   {
     "category": "Networking",
     "name": "Managed Switch Setup",
     "installHours": 1.5,
-    "programmingHours": 1.0
+    "programmingHours": 1.0,
+    "id": "networking--managed-switch-setup"
   },
   {
     "category": "Networking",
     "name": "Medium Network Rack Build",
     "installHours": 8.0,
-    "programmingHours": 0.0
+    "programmingHours": 0.0,
+    "id": "networking--medium-network-rack-build"
   },
   {
     "category": "Networking",
     "name": "Router Replacement",
     "installHours": 1.0,
-    "programmingHours": 0.0
+    "programmingHours": 0.0,
+    "id": "networking--router-replacement"
   },
   {
     "category": "Networking",
     "name": "Small Network Rack Build",
     "installHours": 4.0,
-    "programmingHours": 0.0
+    "programmingHours": 0.0,
+    "id": "networking--small-network-rack-build"
   },
   {
     "category": "Networking",
     "name": "WattBox Installation",
     "installHours": 1.0,
-    "programmingHours": 0.5
+    "programmingHours": 0.5,
+    "id": "networking--wattbox-installation"
   },
   {
     "category": "Networking",
     "name": "WattBox Programming",
     "installHours": 0.0,
-    "programmingHours": 0.5
+    "programmingHours": 0.5,
+    "id": "networking--wattbox-programming"
   },
   {
     "category": "Project Management",
     "name": "Projects $10K-$25K",
     "installHours": 2.0,
-    "programmingHours": 0.0
+    "programmingHours": 0.0,
+    "id": "project-management--projects-10k-25k"
   },
   {
     "category": "Project Management",
     "name": "Projects $25K-$75K",
     "installHours": 4.0,
-    "programmingHours": 0.0
+    "programmingHours": 0.0,
+    "id": "project-management--projects-25k-75k"
   },
   {
     "category": "Project Management",
     "name": "Projects $75K-$150K",
     "installHours": 8.0,
-    "programmingHours": 0.0
+    "programmingHours": 0.0,
+    "id": "project-management--projects-75k-150k"
   },
   {
     "category": "Project Management",
     "name": "Projects Over $150K",
     "installHours": 16.0,
-    "programmingHours": 0.0
+    "programmingHours": 0.0,
+    "id": "project-management--projects-over-150k"
   },
   {
     "category": "Project Management",
     "name": "Projects Under $10K",
     "installHours": 1.0,
-    "programmingHours": 0.0
+    "programmingHours": 0.0,
+    "id": "project-management--projects-under-10k"
   },
   {
     "category": "Rack & Cabinet Work",
     "name": "Cable Management (Per Device)",
     "installHours": 0.2,
-    "programmingHours": 0.0
+    "programmingHours": 0.0,
+    "id": "rack-and-cabinet-work--cable-management-per-device"
   },
   {
     "category": "Rack & Cabinet Work",
     "name": "Labeling & Documentation (Per Device)",
     "installHours": 0.1,
-    "programmingHours": 0.0
+    "programmingHours": 0.0,
+    "id": "rack-and-cabinet-work--labeling-and-documentation-per-device"
   },
   {
     "category": "Rack & Cabinet Work",
     "name": "Power Conditioner Installation",
     "installHours": 0.5,
-    "programmingHours": 0.0
+    "programmingHours": 0.0,
+    "id": "rack-and-cabinet-work--power-conditioner-installation"
   },
   {
     "category": "Rack & Cabinet Work",
     "name": "Rack Cleanup",
     "installHours": 2.0,
-    "programmingHours": 0.0
+    "programmingHours": 0.0,
+    "id": "rack-and-cabinet-work--rack-cleanup"
   },
   {
     "category": "Rack & Cabinet Work",
     "name": "Rack Rebuild",
     "installHours": 8.0,
-    "programmingHours": 0.0
+    "programmingHours": 0.0,
+    "id": "rack-and-cabinet-work--rack-rebuild"
   },
   {
     "category": "Rack & Cabinet Work",
     "name": "UPS Installation (Power Back-up)",
     "installHours": 0.5,
-    "programmingHours": 0.0
+    "programmingHours": 0.0,
+    "id": "rack-and-cabinet-work--ups-installation-power-back-up"
   },
   {
     "category": "Security Cameras",
     "name": "Camera Programming (Each)",
     "installHours": 0.25,
-    "programmingHours": 0.25
+    "programmingHours": 0.25,
+    "id": "security-cameras--camera-programming-each"
   },
   {
     "category": "Security Cameras",
     "name": "Difficult Access Camera",
     "installHours": 3.0,
-    "programmingHours": 0.25
+    "programmingHours": 0.25,
+    "id": "security-cameras--difficult-access-camera"
   },
   {
     "category": "Security Cameras",
     "name": "Exterior Camera",
     "installHours": 2.0,
-    "programmingHours": 0.25
+    "programmingHours": 0.25,
+    "id": "security-cameras--exterior-camera"
   },
   {
     "category": "Security Cameras",
     "name": "Interior Camera",
     "installHours": 1.5,
-    "programmingHours": 0.25
+    "programmingHours": 0.25,
+    "id": "security-cameras--interior-camera"
   },
   {
     "category": "Security Cameras",
     "name": "NVR Setup",
     "installHours": 2.0,
-    "programmingHours": 1.5
+    "programmingHours": 1.5,
+    "id": "security-cameras--nvr-setup"
   },
   {
     "category": "Security Cameras",
     "name": "UniFi Protect Camera with Cable Run",
     "installHours": 3.0,
-    "programmingHours": 0.5
+    "programmingHours": 0.5,
+    "id": "security-cameras--unifi-protect-camera-with-cable-run"
   },
   {
     "category": "TV & Home Theater",
     "name": "Remove TV from Wall Mount",
     "installHours": 0.25,
-    "programmingHours": 0.0
+    "programmingHours": 0.0,
+    "id": "tv-and-home-theater--remove-tv-from-wall-mount"
   },
   {
     "category": "TV & Home Theater",
     "name": "Soundbar Installation (non-B&O)",
     "installHours": 1.0,
-    "programmingHours": 0.0
+    "programmingHours": 0.0,
+    "id": "tv-and-home-theater--soundbar-installation-non-b-and-o"
   },
   {
     "category": "TV & Home Theater",
     "name": "Streaming Device Setup",
     "installHours": 0.5,
-    "programmingHours": 0.0
+    "programmingHours": 0.0,
+    "id": "tv-and-home-theater--streaming-device-setup"
   },
   {
     "category": "TV & Home Theater",
     "name": "TV + Soundbar Package (non-B&O)",
     "installHours": 3.5,
-    "programmingHours": 0.0
+    "programmingHours": 0.0,
+    "id": "tv-and-home-theater--tv-soundbar-package-non-b-and-o"
   },
   {
     "category": "TV & Home Theater",
     "name": "TV Unbox & Furniture Setup",
     "installHours": 1.0,
-    "programmingHours": 0.0
+    "programmingHours": 0.0,
+    "id": "tv-and-home-theater--tv-unbox-and-furniture-setup"
   },
   {
     "category": "TV & Home Theater",
     "name": "TV Backing Behind Drywall (Excludes Patch & Paint)",
     "installHours": 1.5,
-    "programmingHours": 0.0
+    "programmingHours": 0.0,
+    "id": "tv-and-home-theater--tv-backing-behind-drywall-excludes-patch-and-paint"
   },
   {
     "category": "TV & Home Theater",
     "name": "TV Wall Mount 77\"-85\" (TV ONLY)",
     "installHours": 3.0,
-    "programmingHours": 0.0
+    "programmingHours": 0.0,
+    "id": "tv-and-home-theater--tv-wall-mount-77-85-tv-only"
   },
   {
     "category": "TV & Home Theater",
-    "name": "TV Wall Mount 98\"(TV ONLY)",
+    "name": "TV Wall Mount 98\" (TV ONLY)",
     "installHours": 4.5,
-    "programmingHours": 0.0
+    "programmingHours": 0.0,
+    "id": "tv-and-home-theater--tv-wall-mount-98-tv-only"
   },
   {
     "category": "Wire Runs",
     "name": "Conduit Pull Existing Pathway",
     "installHours": 2.0,
-    "programmingHours": 0.0
+    "programmingHours": 0.0,
+    "id": "wire-runs--conduit-pull-existing-pathway"
   },
   {
     "category": "Wire Runs",
     "name": "HDMI Run 50'-100'",
     "installHours": 2.0,
-    "programmingHours": 0.0
+    "programmingHours": 0.0,
+    "id": "wire-runs--hdmi-run-50-100"
   },
   {
     "category": "Wire Runs",
     "name": "HDMI Run up to 50'",
     "installHours": 1.0,
-    "programmingHours": 0.0
+    "programmingHours": 0.0,
+    "id": "wire-runs--hdmi-run-up-to-50"
   },
   {
     "category": "Wire Runs",
     "name": "Outdoor Wire Run",
     "installHours": 3.0,
-    "programmingHours": 0.0
+    "programmingHours": 0.0,
+    "id": "wire-runs--outdoor-wire-run"
   },
   {
     "category": "Wire Runs",
     "name": "TV Power Relocation Kit",
     "installHours": 2.0,
-    "programmingHours": 0.0
+    "programmingHours": 0.0,
+    "id": "wire-runs--tv-power-relocation-kit"
   },
   {
     "category": "Wire Runs",
     "name": "Wire Run",
     "installHours": 1.0,
-    "programmingHours": 0.0
+    "programmingHours": 0.0,
+    "id": "wire-runs--wire-run"
+  },
+  {
+    "category": "TV & Home Theater",
+    "name": "TV Wall Mount up to 65\" (TV ONLY)",
+    "installHours": 2.0,
+    "programmingHours": 0.0,
+    "id": "tv-and-home-theater--tv-wall-mount-up-to-65-tv-only"
   }
 ]
