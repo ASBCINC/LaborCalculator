@@ -17,7 +17,7 @@ BASE = 'https://dtcloudapi.d-tools.cloud/api/v1'
 # Public Basic Authorization header documented in the D-Tools Cloud API docs.
 AUTH_BASIC = 'Basic RFRDbG91ZEFQSVVzZXI6MyNRdVkrMkR1QCV3Kk15JTU8Yi1aZzlV'
 # Canonical rep names exactly as they appear in the app dropdown.
-REPS = ['Tom Virasak', 'Tim Parks', 'Brian Chan', 'Matthew Stachnik', 'Oum Sayarad',
+REPS = ['Tom Virasak', 'Timothy Parks', 'Brian Chan', 'Matthew Stachnik', 'Oum Sayarad',
         'Jonathan Model', 'Gabriel Clark', 'Josh Silva', 'Noel Salinas', 'Troy Ikeda',
         'Kwamé Yeboah', 'Miguel Sandoval', 'Nawel Girma', 'Stefn Sandberg', 'Enid Shor']
 LOWER = {r.lower(): r for r in REPS}
@@ -30,10 +30,10 @@ def _fold_name(s):
 
 
 # Fold D-Tools owner names onto the app's rep list: accent- and case-insensitive,
-# plus known spelling variants (D-Tools "Timothy Parks" is the app's "Tim Parks",
-# "Kwame Yeboah" is "Kwamé Yeboah").
+# plus known spelling variants (accent-insensitive "Kwame Yeboah" is "Kwamé Yeboah",
+# "Tim Parks" is "Timothy Parks").
 _OWNER_FOLD = {_fold_name(r): r for r in REPS}
-_OWNER_FOLD[_fold_name('timothy parks')] = 'Tim Parks'
+_OWNER_FOLD[_fold_name('tim parks')] = 'Timothy Parks'
 
 def http(url, method='GET', headers=None, data=None):
     req = urllib.request.Request(url, method=method, headers=headers or {},
