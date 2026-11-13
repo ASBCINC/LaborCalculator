@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- ASBC Labor Calculator v8.9.14 | Firestore-primary catalog, offline-first boot, draft auto-save, admin tools | Build 2026-11-13 -->
+<!-- ASBC Labor Calculator v8.9.15 | Firestore-primary catalog, offline-first boot, draft auto-save, admin tools | Build 2026-11-13 -->
 <html lang="en">
 <head>
     <link rel="manifest" href="./manifest.json">
@@ -389,13 +389,6 @@
                         <input type="number" id="customRecyclingInput" inputmode="decimal" class="hidden mt-1 w-full bg-gray-900 border border-brandGold rounded-lg p-2 text-sm sm:text-base outline-none" placeholder="$">
                     </label>
 
-                    <label class="text-[10px] sm:text-xs text-textMuted flex flex-col">
-                        <span>Materials Fee</span>
-                        <select id="materialsMarkup" class="mt-1 w-full bg-bgDark border border-gray-700 rounded-lg p-2 sm:p-2.5 text-sm sm:text-base outline-none focus:border-brandGold">
-                            <option value="5" selected>5%</option>
-                            <option value="10">10%</option>
-                        </select>
-                    </label>
 
                     <label class="text-[10px] sm:text-xs text-textMuted flex flex-col">
                         <span>Crew Size</span>
@@ -412,7 +405,7 @@
                     <div class="flex justify-between text-textMuted"><span>Install hours</span><span id="installTotal" class="text-white font-mono">0.00</span></div>
                     <div class="flex justify-between text-textMuted"><span>Programming hours</span><span id="programmingTotal" class="text-white font-mono">0.00</span></div>
                     <div class="flex justify-between text-textMuted"><span>Total labor hours</span><span id="hoursTotal" class="text-white font-mono">0.00</span></div>
-                    <div id="materialsRow" class="hidden flex justify-between text-brandGold pt-1"><span id="materialsLabel">Materials fee</span><span id="materialsAmount">$0.00</span></div>
+                    <div id="materialsRow" class="hidden flex justify-between text-brandGold pt-1"><span><span id="materialsLabel">Materials fee</span> <span class="text-[10px] text-[#888] font-normal">(automatically added to quote)</span></span><span id="materialsAmount">$0.00</span></div>
                     
                     <div class="flex justify-between text-[#888] text-[11px] pt-1 pb-1 border-t border-gray-800">
                         <span>Est. Days (<span id="crewSizeDisplay">1</span> tech)</span>
@@ -620,7 +613,7 @@
               }
           });
 
-        const APP_VERSION = '8.9.14';
+        const APP_VERSION = '8.9.15';
         const BUILD_DATE = '2026-11-13';
         let HOURLY_RATE = 200;
 
@@ -695,7 +688,7 @@
 
         let RECYCLING_FEE = 75;
 
-        const MATERIALS_MARKUP_PCT = 5; // Default materials fee (Anthony's call, Nov 8 2026). v8.9.13: dropdown is back in the summary with 5% and 10% options; anything else falls back to 5%
+        const MATERIALS_MARKUP_PCT = 5; // Materials fee locked at 5% on every quote (v8.9.15: dropdown removed again at Anthony's request; the row stays visible in the summary with the dollar value)
         let appSettings = { hourlyRate: 200, recyclingFee: 75, defaultRecyclingToggle: 'yes', defaultMarkup: 5, zonePresets: ['General', 'MEC (Equip. Closet)', 'Entry / Foyer', 'Living Room', 'Family Room', 'Great Room', 'Formal Living Room', 'Den', 'Sitting Room', 'Lounge', 'Library', 'Media Room', 'Home Theater', 'Game Room', 'Primary Bedroom', 'Patio / Outdoor'] };
         try { const _savedSettings = JSON.parse(localStorage.getItem('asbcAppSettings') || 'null'); if (_savedSettings) appSettings = Object.assign(appSettings, _savedSettings); } catch (_e) {}
         function applyAppSettings() {
@@ -916,10 +909,8 @@
         const recyclingToggle = document.getElementById('recyclingToggle');
         const customRecyclingInput = document.getElementById('customRecyclingInput');
         const crewSize = document.getElementById('crewSize');
-        const materialsMarkup = document.getElementById('materialsMarkup');
         function getMarkupPercent() {
-            const v = Number(materialsMarkup && materialsMarkup.value);
-            return (v === 5 || v === 10) ? v : MATERIALS_MARKUP_PCT;
+            return MATERIALS_MARKUP_PCT; // locked at 5% (v8.9.15)
         }
         const isTemplateCheckbox = document.getElementById('isTemplateCheckbox');
         const isLockedCheckbox = document.getElementById('isLockedCheckbox');
@@ -1180,8 +1171,6 @@
                     customRecyclingInput.value = record.options?.customRecycling || '';
                     
                     crewSize.value = record.options?.crewSize || '1';
-                    const _savedMarkup = Number(record.options && record.options.markup);
-                    materialsMarkup.value = (_savedMarkup === 5 || _savedMarkup === 10) ? String(_savedMarkup) : String(MATERIALS_MARKUP_PCT);
                     
                     currentLoadedIsTemplate = !!record.isTemplate;
                     isTemplateCheckbox.checked = currentLoadedIsTemplate;
@@ -1559,7 +1548,7 @@
             }
             customRecyclingInput.classList.toggle('hidden', recyclingToggle.value !== 'custom');
 
-            const markupPercent = getMarkupPercent(); // 5% or 10% from the summary dropdown (v8.9.13)
+            const markupPercent = getMarkupPercent(); // locked at 5% (v8.9.15)
             const materialsFee = baseLaborPrice * (markupPercent / 100);
             const finalPrice = baseLaborPrice + recyclingFee + materialsFee;
             
@@ -2024,7 +2013,6 @@
                 currentLoadedEstimateId = d.loadedEstimateId || '';
                 if (d.recyclingToggle) recyclingToggle.value = d.recyclingToggle;
                 if (typeof d.customRecyclingInput === 'string') customRecyclingInput.value = d.customRecyclingInput;
-                if (d.materialsMarkup === 5 || d.materialsMarkup === 10) materialsMarkup.value = String(d.materialsMarkup);
                 
                 if (d.crewSize) crewSize.value = d.crewSize;
                 if (typeof d.isTemplate === 'boolean') isTemplateCheckbox.checked = d.isTemplate;
@@ -2155,7 +2143,6 @@
                 customRecyclingInput.value = '';
                 
                 crewSize.value = '1';
-                materialsMarkup.value = String(appSettings.defaultMarkup === 10 ? 10 : MATERIALS_MARKUP_PCT);
                 localStorage.removeItem('asbcActiveDraft');
                 currentActuals = null;
                 hasUnsavedCloudChanges = false; updateSaveIndicator();
@@ -2473,7 +2460,7 @@
             renderCatalog();
         });
 
-        [recyclingToggle, crewSize, materialsMarkup].forEach(control => { control.addEventListener('change', renderQuote); });
+        [recyclingToggle, crewSize].forEach(control => { control.addEventListener('change', renderQuote); });
         document.addEventListener('keydown', event => {
             if (event.key === 'Escape') { toggleCustomModal(false); toggleEstimate(false); toggleAdminModal(false); }
         });
