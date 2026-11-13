@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- ASBC Labor Calculator v8.9.13 | Firestore-primary catalog, offline-first boot, draft auto-save, admin tools | Build 2026-11-13 -->
+<!-- ASBC Labor Calculator v8.9.14 | Firestore-primary catalog, offline-first boot, draft auto-save, admin tools | Build 2026-11-13 -->
 <html lang="en">
 <head>
     <link rel="manifest" href="./manifest.json">
@@ -412,6 +412,7 @@
                     <div class="flex justify-between text-textMuted"><span>Install hours</span><span id="installTotal" class="text-white font-mono">0.00</span></div>
                     <div class="flex justify-between text-textMuted"><span>Programming hours</span><span id="programmingTotal" class="text-white font-mono">0.00</span></div>
                     <div class="flex justify-between text-textMuted"><span>Total labor hours</span><span id="hoursTotal" class="text-white font-mono">0.00</span></div>
+                    <div id="materialsRow" class="hidden flex justify-between text-brandGold pt-1"><span id="materialsLabel">Materials fee</span><span id="materialsAmount">$0.00</span></div>
                     
                     <div class="flex justify-between text-[#888] text-[11px] pt-1 pb-1 border-t border-gray-800">
                         <span>Est. Days (<span id="crewSizeDisplay">1</span> tech)</span>
@@ -419,7 +420,6 @@
                     </div>
 
                     <div id="recyclingRow" class="hidden flex justify-between text-brandGold"><span id="recyclingLabel">Recycling fee</span><span id="recyclingAmount">$75.00</span></div>
-                    <div id="materialsRow" class="hidden flex justify-between text-brandGold"><span id="materialsLabel">Materials fee</span><span id="materialsAmount">$0.00</span></div>
                 </div>
 
                 <div class="flex justify-between items-end border-t border-gray-700 pt-3 mb-3">
@@ -620,7 +620,7 @@
               }
           });
 
-        const APP_VERSION = '8.9.13';
+        const APP_VERSION = '8.9.14';
         const BUILD_DATE = '2026-11-13';
         let HOURLY_RATE = 200;
 
@@ -1580,6 +1580,7 @@
             document.getElementById('mobilePrice').textContent = currencyFormatter.format(finalPrice);
 
             document.getElementById('recyclingRow').classList.toggle('hidden', recyclingFee === 0);
+            document.getElementById('materialsRow').classList.toggle('hidden', materialsFee === 0);
             
             document.getElementById('recyclingLabel').textContent = recyclingLabelText;
             document.getElementById('recyclingAmount').textContent = currencyFormatter.format(recyclingFee);
