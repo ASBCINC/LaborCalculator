@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- ASBC Labor Calculator v8.9.1 | Firestore-primary catalog, offline-first boot, draft auto-save, admin tools | Build 2026-11-08 -->
+<!-- ASBC Labor Calculator v8.9.13 | Firestore-primary catalog, offline-first boot, draft auto-save, admin tools | Build 2026-11-13 -->
 <html lang="en">
 <head>
     <link rel="manifest" href="./manifest.json">
@@ -390,6 +390,14 @@
                     </label>
 
                     <label class="text-[10px] sm:text-xs text-textMuted flex flex-col">
+                        <span>Materials Fee</span>
+                        <select id="materialsMarkup" class="mt-1 w-full bg-bgDark border border-gray-700 rounded-lg p-2 sm:p-2.5 text-sm sm:text-base outline-none focus:border-brandGold">
+                            <option value="5" selected>5%</option>
+                            <option value="10">10%</option>
+                        </select>
+                    </label>
+
+                    <label class="text-[10px] sm:text-xs text-textMuted flex flex-col">
                         <span>Crew Size</span>
                         <select id="crewSize" class="mt-1 w-full bg-bgDark border border-gray-700 rounded-lg p-2 sm:p-2.5 text-sm sm:text-base outline-none focus:border-brandGold">
                             <option value="1">1 Tech</option>
@@ -612,8 +620,8 @@
               }
           });
 
-        const APP_VERSION = '8.9.12';
-        const BUILD_DATE = '2026-11-08';
+        const APP_VERSION = '8.9.13';
+        const BUILD_DATE = '2026-11-13';
         let HOURLY_RATE = 200;
 
         // Add-on labor options for the dropdown on every product tile.
@@ -687,7 +695,7 @@
 
         let RECYCLING_FEE = 75;
 
-        const MATERIALS_MARKUP_PCT = 5; // Materials fee locked at 5% on every quote (Anthony's call, Nov 8 2026); admin cannot change it
+        const MATERIALS_MARKUP_PCT = 5; // Default materials fee (Anthony's call, Nov 8 2026). v8.9.13: dropdown is back in the summary with 5% and 10% options; anything else falls back to 5%
         let appSettings = { hourlyRate: 200, recyclingFee: 75, defaultRecyclingToggle: 'yes', defaultMarkup: 5, zonePresets: ['General', 'MEC (Equip. Closet)', 'Entry / Foyer', 'Living Room', 'Family Room', 'Great Room', 'Formal Living Room', 'Den', 'Sitting Room', 'Lounge', 'Library', 'Media Room', 'Home Theater', 'Game Room', 'Primary Bedroom', 'Patio / Outdoor'] };
         try { const _savedSettings = JSON.parse(localStorage.getItem('asbcAppSettings') || 'null'); if (_savedSettings) appSettings = Object.assign(appSettings, _savedSettings); } catch (_e) {}
         function applyAppSettings() {
@@ -908,7 +916,11 @@
         const recyclingToggle = document.getElementById('recyclingToggle');
         const customRecyclingInput = document.getElementById('customRecyclingInput');
         const crewSize = document.getElementById('crewSize');
-        const materialsMarkup = { value: '5' }; // locked constant stand-in (MATERIALS_MARKUP_PCT is authoritative)
+        const materialsMarkup = document.getElementById('materialsMarkup');
+        function getMarkupPercent() {
+            const v = Number(materialsMarkup && materialsMarkup.value);
+            return (v === 5 || v === 10) ? v : MATERIALS_MARKUP_PCT;
+        }
         const isTemplateCheckbox = document.getElementById('isTemplateCheckbox');
         const isLockedCheckbox = document.getElementById('isLockedCheckbox');
         const showHoursCheckbox = document.getElementById('showHoursCheckbox');
@@ -1121,7 +1133,7 @@
                 options: {
                     recycling: recyclingToggle.value,
                     customRecycling: customRecyclingInput.value,
-                    markup: MATERIALS_MARKUP_PCT,
+                    markup: getMarkupPercent(),
                     crewSize: crewSize.value
                 },
                 updatedAt: new Date(),
@@ -1168,6 +1180,8 @@
                     customRecyclingInput.value = record.options?.customRecycling || '';
                     
                     crewSize.value = record.options?.crewSize || '1';
+                    const _savedMarkup = Number(record.options && record.options.markup);
+                    materialsMarkup.value = (_savedMarkup === 5 || _savedMarkup === 10) ? String(_savedMarkup) : String(MATERIALS_MARKUP_PCT);
                     
                     currentLoadedIsTemplate = !!record.isTemplate;
                     isTemplateCheckbox.checked = currentLoadedIsTemplate;
@@ -1545,7 +1559,7 @@
             }
             customRecyclingInput.classList.toggle('hidden', recyclingToggle.value !== 'custom');
 
-            const markupPercent = MATERIALS_MARKUP_PCT; // locked at 5% (Anthony, Nov 8 2026)
+            const markupPercent = getMarkupPercent(); // 5% or 10% from the summary dropdown (v8.9.13)
             const materialsFee = baseLaborPrice * (markupPercent / 100);
             const finalPrice = baseLaborPrice + recyclingFee + materialsFee;
             
@@ -1983,7 +1997,7 @@
                     loadedEstimateId: currentLoadedEstimateId,
                     recyclingToggle: recyclingToggle.value,
                     customRecyclingInput: customRecyclingInput.value,
-                    materialsMarkup: MATERIALS_MARKUP_PCT,
+                    materialsMarkup: getMarkupPercent(),
                     crewSize: crewSize.value,
                     isTemplate: isTemplateCheckbox.checked,
                     isLocked: isLockedCheckbox ? isLockedCheckbox.checked : false,
@@ -2009,6 +2023,7 @@
                 currentLoadedEstimateId = d.loadedEstimateId || '';
                 if (d.recyclingToggle) recyclingToggle.value = d.recyclingToggle;
                 if (typeof d.customRecyclingInput === 'string') customRecyclingInput.value = d.customRecyclingInput;
+                if (d.materialsMarkup === 5 || d.materialsMarkup === 10) materialsMarkup.value = String(d.materialsMarkup);
                 
                 if (d.crewSize) crewSize.value = d.crewSize;
                 if (typeof d.isTemplate === 'boolean') isTemplateCheckbox.checked = d.isTemplate;
@@ -2139,6 +2154,7 @@
                 customRecyclingInput.value = '';
                 
                 crewSize.value = '1';
+                materialsMarkup.value = String(appSettings.defaultMarkup === 10 ? 10 : MATERIALS_MARKUP_PCT);
                 localStorage.removeItem('asbcActiveDraft');
                 currentActuals = null;
                 hasUnsavedCloudChanges = false; updateSaveIndicator();
@@ -2456,7 +2472,7 @@
             renderCatalog();
         });
 
-        [recyclingToggle, crewSize].forEach(control => { control.addEventListener('change', renderQuote); });
+        [recyclingToggle, crewSize, materialsMarkup].forEach(control => { control.addEventListener('change', renderQuote); });
         document.addEventListener('keydown', event => {
             if (event.key === 'Escape') { toggleCustomModal(false); toggleEstimate(false); toggleAdminModal(false); }
         });
