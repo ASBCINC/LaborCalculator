@@ -126,6 +126,19 @@ def main():
         'changed': fs.typed(changed), 'deleted': fs.typed(deleted)}})
     print(f'::notice::D-Tools sync: {len(keep)} open opportunities, {changed} changed, {deleted} removed')
 
+    # v8.14.0: quotes whose D-Tools opportunity is Won move to status "won" (only from draft / no status).
+    won_ids = {o['id'] for o in opps if str(o.get('systemState', '')).lower() == 'won' or 'won' in str(o.get('stage', '')).lower()}
+    marked = 0
+    if won_ids:
+        for d in fs.list_docs('quotes'):
+            f = fs.fields(d)
+            opp = (f.get('project') or {}).get('dtoolsOpportunityId')
+            if opp in won_ids and (f.get('status') in (None, '', 'draft')) and not f.get('isTemplate'):
+                fs.call('quotes/' + urllib.parse.quote(fs.doc_id(d)), method='PATCH', body={'fields': {'status': fs.typed('won')}},
+                        params={'updateMask.fieldPaths': 'status'})
+                marked += 1
+    print(f'::notice::Quotes marked Won from D-Tools: {marked} (won opportunities seen: {len(won_ids)})')
+
     owners = sorted({f['owner'] for f in keep.values() if f['owner']})
     unmatched = sorted({f['owner'] for f in keep.values() if f['owner'] not in REPS})
     print('owners:', ', '.join(owners) if owners else '(none)')

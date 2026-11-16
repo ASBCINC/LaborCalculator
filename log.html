@@ -217,7 +217,8 @@ function renderList() {
     const badges =
       (r.isTemplate ? '<span class="badge b-t">TEMPLATE</span> ' : '') +
       (r.isLocked ? '<span class="badge b-l">LOCKED</span> ' : '') +
-      (r.actuals ? '<span class="badge b-a">ACTUALS</span>' : '');
+      (r.actuals ? '<span class="badge b-a">ACTUALS</span> ' : '') +
+      (r.status && r.status !== 'draft' ? '<span class="badge b-l">' + esc(String(r.status).toUpperCase()) + '</span>' : '');
     const a = r.actuals;
     const detail = `
       <div class="qdetail">
@@ -237,6 +238,7 @@ function renderList() {
         <button class="qbtn qbtn-load" data-act="load" data-id="${r._id}">Load</button>
         <button class="qbtn qbtn-save" data-act="save" data-id="${r._id}">Save</button>
         <button class="qbtn qbtn-del" data-act="delete" data-id="${r._id}">Delete</button>
+        ${ME && ME.role === 'admin' && !r.isTemplate ? `<a class="qbtn" style="display:inline-flex;align-items:center;text-decoration:none" href="./jobs.html?quote=${encodeURIComponent(r._id)}">Job</a>` : ''}
       </div>
       ${detail}
     </div>`;

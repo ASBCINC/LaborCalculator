@@ -63,6 +63,12 @@ Data restore: each day is a commit in LaborCalculator-backups (data/*.json); res
 Stores: config/users store column, else STORE_DEFAULTS in leaderboard-core.js; store "none" = not ranked (Tom Virasak, president).
 Reps see counts/coverage; only admin sees $. Admin "Rebuild tallies" backfills this + last month from saved quotes.
 
+## Jobs / actuals (v8.14.0)
+`jobs.html`. quote.status: draft > won (sync marks it when the D-Tools opp is Won, or admin) > scheduled (admin sets
+quote.schedule {dates, techs[emails]}) > submitted (tech: quote.job {lines[{i,id,zone,actualHours,note}], log[{date,who,hours}], recap{work,issues,followups,client}})
+> closed (admin approves; writes quote.actuals in the Labor Calibration format). Techs (role "tech": Eugene Fujimoto, Joseph Upperman,
+Ivan Alecio, Mina Sedhom) never see prices or estimated hours; only Anthony assigns. Report prints to PDF via the browser.
+
 ## Data layer (Firebase Firestore only; the Google Sheet is a frozen archive)
 - `config/catalog` and `config/settings` are SINGLE documents (read `d.fields.items`; not a collection).
 - Catalog add-ons use `name|installHours|progHours;...`. Don't restructure without asking.

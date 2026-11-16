@@ -254,6 +254,7 @@
                     <div class="text-xs sm:text-sm text-[#666666] whitespace-nowrap" data-rate-display>$200/hr</div>
                     <div id="versionNumber" class="text-[9px] sm:text-[10px] text-[#999999] whitespace-nowrap cursor-pointer select-none"></div>
                     <a href="./leaderboard.html" class="block text-[9px] sm:text-[10px] text-[#C7A66A] whitespace-nowrap underline print-hide">Leaderboard</a>
+                    <a id="jobsLink" href="./jobs.html" class="hidden text-[9px] sm:text-[10px] text-[#C7A66A] whitespace-nowrap underline print-hide">Jobs</a>
                     <button id="userBadge" type="button" onclick="signOutUser(true)" class="hidden text-[9px] sm:text-[10px] text-[#999999] whitespace-nowrap underline" title="Sign out"></button>
                 </div>
             </div>
@@ -586,7 +587,7 @@
                 </details>
                 <details class="mt-3">
                     <summary class="text-xs text-brandGold cursor-pointer">Approved users</summary>
-                    <p class="text-[11px] text-textMuted mt-2">One per line: <b>email, Name, role, store</b> (role = rep or admin; store = San Francisco, Palo Alto, West Hollywood, or none to leave someone off the leaderboard). Name must match the sales rep dropdown. Only these people can create a PIN and use the calculator.</p>
+                    <p class="text-[11px] text-textMuted mt-2">One per line: <b>email, Name, role, store</b> (role = rep, tech or admin; store = San Francisco, Palo Alto, West Hollywood, or none to leave someone off the leaderboard). Name must match the sales rep dropdown. Only these people can create a PIN and use the calculator.</p>
                     <textarea id="approvedUsersText" rows="8" class="mt-2 w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-[11px] text-white font-mono"></textarea>
                     <button type="button" onclick="saveApprovedUsers()" class="mt-2 w-full text-xs bg-brandGold text-bgDark font-bold py-2 rounded-lg">Save Approved Users</button>
                 </details>
@@ -672,7 +673,7 @@
               }
           });
 
-        const APP_VERSION = '8.13.1';
+        const APP_VERSION = '8.14.0';
         const BUILD_DATE = '2026-11-16';
         let HOURLY_RATE = 200;
 
@@ -1880,7 +1881,12 @@
                 const p = users[email];
                 if (!p) { showAuthGate(true, email + ' is not on the approved list yet. Ask Anthony to add you, then reload.'); return; }
                 currentUserProfile = { email, name: p.name, role: p.role || 'rep' };
+                if (currentUserProfile.role === 'tech') { location.href = './jobs.html'; return; } // techs work from the Jobs page
                 showAuthGate(false);
+                if (isAdminUser()) {
+                    const jl = document.getElementById('jobsLink'); jl.classList.remove('hidden'); jl.classList.add('block');
+                    db.collection('quotes').where('status', '==', 'submitted').get().then(sn => { if (sn.size) jl.textContent = 'Jobs (' + sn.size + ' to review)'; }).catch(() => {});
+                }
                 applySignedInUser();
                 refreshSavedEstimateList();
                 loadRepLeaderboard();
@@ -1901,7 +1907,7 @@
             const users = {}; const bad = [];
             document.getElementById('approvedUsersText').value.split('\n').map(l => l.trim()).filter(Boolean).forEach(l => {
                 const [e, n, r, st] = l.split(',').map(x => (x || '').trim());
-                if (!/@/.test(e || '') || !n) bad.push(l); else users[e.toLowerCase()] = { name: n, role: r === 'admin' ? 'admin' : 'rep', store: st || '' };
+                if (!/@/.test(e || '') || !n) bad.push(l); else users[e.toLowerCase()] = { name: n, role: ['admin', 'tech'].includes(r) ? r : 'rep', store: st || '' };
             });
             if (bad.length) { adminStatus.innerHTML = '<span class="text-red-400">Fix these lines: ' + escapeHtml(bad.join(' | ')) + '</span>'; return; }
             ADMIN_EMAILS.forEach(e => users[e] = users[e] || { name: 'Anthony Ward', role: 'admin' });
