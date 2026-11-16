@@ -6,6 +6,9 @@
 <meta name="theme-color" content="#050505">
 <title>Jobs | ASBC Labor Calculator</title>
 <link rel="icon" href="./favicon.svg">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
@@ -74,7 +77,7 @@ textarea { background:#101216; border:1px solid var(--line); color:#fff; border-
 <div class="wrap">
   <header>
     <h1>ASBC <span id="pageTitle">Jobs</span></h1>
-    <div style="display:flex;gap:6px" class="no-print"><a class="btn" href="./jobs.html">All jobs</a><a class="btn" id="calcLink" href="./index.html">Calculator</a><button class="btn" id="signOutBtn" style="display:none" onclick="if(confirm('Sign out on this device?'))firebase.auth().signOut().then(()=>location.href='./index.html')">Sign out</button></div>
+    <div style="display:flex;gap:6px" class="no-print"><a class="btn" href="./jobs.html">All jobs</a><a class="btn" id="calcLink" href="./index.html">Calculator</a><button class="btn" id="installBtn" style="display:none;border-color:#C7A66A;color:#C7A66A">Install app</button><button class="btn" id="signOutBtn" style="display:none" onclick="if(confirm('Sign out on this device?'))firebase.auth().signOut().then(()=>location.href='./index.html')">Sign out</button></div>
   </header>
   <div id="app"><div class="empty">Loading…</div></div>
 </div>
@@ -168,7 +171,7 @@ function logForm() {
     <table id="logT"><tr><th>Date</th><th>Tech</th><th>Hours</th></tr>${log.map(r => `<tr><td><input type="date" class="ld" value="${esc(r.date || '')}"></td><td><select class="lw"><option value="">—</option>${tOpts(r.who)}</select></td><td><input type="number" class="lh" min="0" step="0.25" value="${esc(r.hours)}"></td></tr>`).join('')}</table>
     <button type="button" class="qbtn" id="addLog" style="margin-top:6px">+ Add day / tech</button></div>
     <div class="card"><div class="sect" style="margin-top:0">Job recap</div>
-    ${[['work', 'Work completed'], ['issues', 'Problems / what took longer'], ['followups', 'Open items / return visit needed'], ['client', 'Client feedback']].map(([k, t]) => `<div class="qmeta" style="margin-top:8px">${t}</div><textarea class="rc" data-k="${k}" rows="3">${esc((j.recap || {})[k] || '')}</textarea>`).join('')}
+    ${[['work', 'Work completed'], ['issues', 'Problems / what took longer'], ['followups', 'Open items / return visit needed'], ['client', 'Client feedback']].map(([k, t]) => `<div class="qmeta" style="margin-top:8px;display:flex;justify-content:space-between;align-items:center">${t}<button type="button" class="qbtn bl" data-k="${k}" style="height:24px;padding:0 8px">• Bullet</button></div><textarea class="rc" data-k="${k}" rows="3">${esc((j.recap || {})[k] || '')}</textarea>`).join('')}
     <div class="qactions"><button class="qbtn" id="saveJob">Save progress</button><button class="qbtn gold" id="submitJob">Submit to Anthony</button></div><div id="jobMsg" class="qmeta"></div></div>`;
 }
 function collectJob() {
@@ -256,7 +259,7 @@ function showNew() {
     <table id="logT"><tr><th>Date</th><th>Tech</th><th>Hours</th></tr><tr><td><input type="date" class="ld" value="${today}"></td><td><select class="lw"><option value="">—</option>${techs().map(t => `<option value="${esc(t.email)}" ${t.email === ME.email ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select></td><td><input type="number" class="lh" min="0" step="0.25"></td></tr></table>
     <button type="button" class="qbtn" id="addLog" style="margin-top:6px">+ Add day / tech</button></div>
     <div class="card"><div class="sect" style="margin-top:0">Job recap</div>
-    ${[['work', 'Work completed'], ['issues', 'Problems / what took longer'], ['followups', 'Open items / return visit needed'], ['client', 'Client feedback']].map(([k, t]) => `<div class="qmeta" style="margin-top:8px">${t}</div><textarea class="rc" data-k="${k}" rows="3"></textarea>`).join('')}
+    ${[['work', 'Work completed'], ['issues', 'Problems / what took longer'], ['followups', 'Open items / return visit needed'], ['client', 'Client feedback']].map(([k, t]) => `<div class="qmeta" style="margin-top:8px;display:flex;justify-content:space-between;align-items:center">${t}<button type="button" class="qbtn bl" data-k="${k}" style="height:24px;padding:0 8px">• Bullet</button></div><textarea class="rc" data-k="${k}" rows="3"></textarea>`).join('')}
     <div class="qactions"><button class="qbtn gold" id="nSubmit">Submit to Anthony</button></div><div id="nMsg" class="qmeta"></div></div>`;
   document.getElementById('addLog').onclick = () => { const tr = document.querySelector('#logT tr:last-child').cloneNode(true); tr.querySelector('.lh').value = ''; document.getElementById('logT').appendChild(tr); };
   document.getElementById('nRep').onchange = async (e) => {
@@ -308,6 +311,49 @@ async function submitNew() {
   });
   location.href = '?quote=' + encodeURIComponent(id);
 }
+
+// ---------- bullet points in recap boxes (v8.15.3) ----------
+// "• Bullet" starts a bullet on the current line; Enter on a bullet line starts the next bullet;
+// Enter on an empty bullet ends the list.
+const BUL = '\u2022 ';
+document.addEventListener('click', e => {
+  const b = e.target.closest('.bl'); if (!b) return;
+  const ta = document.querySelector(`.rc[data-k="${b.dataset.k}"]`); if (!ta) return;
+  const v = ta.value, pos = ta.selectionStart ?? v.length;
+  const lineStart = v.lastIndexOf('\n', pos - 1) + 1;
+  if (v.slice(lineStart, lineStart + BUL.length) === BUL) { ta.focus(); return; }
+  const lineEmpty = v.slice(lineStart, pos).trim() === '' && (v.indexOf('\n', pos) === -1 ? v.slice(pos) : v.slice(pos, v.indexOf('\n', pos))).trim() === '';
+  const insertAt = lineEmpty ? lineStart : lineStart;
+  ta.value = v.slice(0, insertAt) + BUL + v.slice(insertAt);
+  ta.focus(); const c = pos + BUL.length; ta.setSelectionRange(c, c);
+});
+document.addEventListener('keydown', e => {
+  const ta = e.target; if (!ta.classList || !ta.classList.contains('rc') || e.key !== 'Enter' || e.shiftKey) return;
+  const v = ta.value, pos = ta.selectionStart, lineStart = v.lastIndexOf('\n', pos - 1) + 1, line = v.slice(lineStart, pos);
+  if (!line.startsWith(BUL)) return;
+  e.preventDefault();
+  if (line.trim() === BUL.trim()) { ta.value = v.slice(0, lineStart) + v.slice(pos); ta.setSelectionRange(lineStart, lineStart); return; }
+  ta.value = v.slice(0, pos) + '\n' + BUL + v.slice(pos); const c = pos + 1 + BUL.length; ta.setSelectionRange(c, c);
+});
+
+// ---------- install as an app (v8.15.2) ----------
+// Same installable app as the calculator; when a tech opens it, sign-in sends them straight to Jobs.
+(function () {
+  const btn = document.getElementById('installBtn');
+  const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+  if (standalone) return;
+  let deferred = null;
+  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferred = e; btn.style.display = ''; });
+  window.addEventListener('appinstalled', () => { btn.style.display = 'none'; });
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  btn.style.display = ''; // always offered in the browser; hidden once running as the installed app
+  btn.addEventListener('click', async () => {
+    if (deferred) { deferred.prompt(); await deferred.userChoice; deferred = null; btn.style.display = 'none'; return; }
+    alert(ios ? 'To install: tap the Share button (square with an arrow) at the bottom of Safari, then "Add to Home Screen".'
+              : 'To install: open the browser menu (⋮) and choose "Install app" or "Add to Home screen".');
+  });
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
+})();
 
 firebase.auth().onAuthStateChanged(async (u) => {
   if (!u) { app().innerHTML = '<div class="empty">Sign in on the <a href="./" style="text-decoration:underline">calculator</a> first, then reopen Jobs.</div>'; return; }
