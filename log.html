@@ -104,6 +104,7 @@ firebase.auth().onAuthStateChanged(async (u) => {
   const p = map[email] || (email === 'a.ward@asbc.us' ? { name: 'Anthony Ward', role: 'admin' } : null);
   if (!p) { document.getElementById('list').innerHTML = '<div class="empty">' + esc(email) + ' is not approved yet. Ask Anthony.</div>'; return; }
   ME = { email, name: p.name, role: p.role || 'rep' };
+  if (ME.role === 'tech') { location.replace('./jobs.html'); return; } // techs only use the Jobs page
   boot();
 });
 
