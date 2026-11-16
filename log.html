@@ -8,6 +8,7 @@
 <link rel="icon" href="./favicon.svg">
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
 <style>
 :root { --gold:#C7A66A; --bg:#050505; --card:#111318; --line:#26292f; --muted:#8b8f98; }
 * { box-sizing:border-box; }
@@ -85,12 +86,32 @@ const SETTINGS = { hourlyRate: 200, recyclingFee: 75 };
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt = v => '$' + Number(v || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+// v8.11.1: same sign-in as the calculator. Admins see every quote; reps only their own.
+let ME = null;
+async function quotesForUser() {
+  if (ME.role === 'admin') return db.collection('quotes').get();
+  return db.collection('quotes').where('project.salesManagerName', '==', ME.name).get();
+}
+firebase.auth().onAuthStateChanged(async (u) => {
+  if (!u) {
+    document.getElementById('list').innerHTML = '<div class="empty">Sign in on the <a href="./" style="text-decoration:underline">calculator</a> first, then reopen the Quote Log.</div>';
+    return;
+  }
+  const us = await db.collection('config').doc('users').get().catch(() => null);
+  const map = (us && us.exists && us.data().users) || {};
+  const email = (u.email || '').toLowerCase();
+  const p = map[email] || (email === 'a.ward@asbc.us' ? { name: 'Anthony Ward', role: 'admin' } : null);
+  if (!p) { document.getElementById('list').innerHTML = '<div class="empty">' + esc(email) + ' is not approved yet. Ask Anthony.</div>'; return; }
+  ME = { email, name: p.name, role: p.role || 'rep' };
+  boot();
+});
+
 async function boot() {
   try {
     const [catSnap, setSnap, quotesSnap] = await Promise.all([
       db.collection('config').doc('catalog').get(),
       db.collection('config').doc('settings').get(),
-      db.collection('quotes').get()
+      quotesForUser()
     ]);
     if (catSnap.exists) (catSnap.data().items || []).forEach(i => CATALOG.set(i.id, i));
     if (setSnap.exists) {
@@ -273,7 +294,7 @@ document.getElementById('list').addEventListener('click', async (e) => {
   }
 });
 
-boot();
+// boot() runs after sign-in (onAuthStateChanged above)
 </script>
 </body>
 </html>
