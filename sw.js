@@ -1,5 +1,5 @@
-// ASBC Labor Calculator service worker (v8.14.0): offline-ready, network-first.
-const CACHE_NAME = 'asbc-calc-v8.14.0';
+// ASBC Labor Calculator service worker (v8.15.0): offline-ready, network-first.
+const CACHE_NAME = 'asbc-calc-v8.15.0';
 const CORE_ASSETS = [
   './',
   './index.html',
