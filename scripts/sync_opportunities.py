@@ -55,16 +55,34 @@ def fs_doc_id(name):
 
 def main():
     headers = {'X-API-Key': API_KEY, 'Authorization': AUTH_BASIC, 'Accept': 'application/json'}
-    opps, page = [], 1
-    while True:
-        q = urllib.parse.urlencode({'page': page, 'pageSize': 200})
-        res = http(f'{BASE}/Opportunities/GetOpportunities?{q}', headers=headers)
-        batch = res.get('opportunities', [])
-        opps.extend(batch)
-        total = res.get('totalOpportunities', 0)
-        if not batch or len(opps) >= total or page > 50:
-            break
-        page += 1
+    # Paging: the first sync only ever saw the first 200 (page 2 came back identical), so
+    # page 2+ tries the common parameter names and keeps whichever one returns NEW records.
+    def fetch(params):
+        res = http(f'{BASE}/Opportunities/GetOpportunities?' + urllib.parse.urlencode(params), headers=headers)
+        return res.get('opportunities', []), res.get('totalOpportunities', 0)
+    SIZE = 200
+    first, total = fetch({'page': 1, 'pageSize': SIZE})
+    byid = {o['id']: o for o in first}
+    style = None
+    for page in range(2, 60):
+        if len(byid) >= total: break
+        tries = [style] if style else ['page', 'pageNumber', 'pageIndex', 'skip']
+        got_new = False
+        for st in tries:
+            p = {'pageSize': SIZE, 'take': SIZE}
+            if st == 'pageIndex': p['pageIndex'] = page - 1
+            elif st == 'skip': p['skip'] = (page - 1) * SIZE
+            else: p[st] = page
+            batch, _ = fetch(p)
+            new_ids = [o for o in batch if o['id'] not in byid]
+            if new_ids:
+                for o in batch: byid[o['id']] = o
+                style, got_new = st, True
+                break
+        if not got_new: break
+    opps = list(byid.values())
+    msg = f'D-Tools returned {len(opps)} of {total} opportunities (paging: {style or "single page"})'
+    print(('::warning::' if len(opps) < total else '::notice::') + msg)
 
     keep = {}
     for o in opps:
