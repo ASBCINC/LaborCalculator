@@ -57,6 +57,12 @@ Data restore: each day is a commit in LaborCalculator-backups (data/*.json); res
 - Printed SOW has no signature lines; disclaimer stays.
 - Quotes started from a D-Tools opportunity save `dtoolsOpportunityId`.
 
+## Leaderboard (v8.13.0)
+`leaderboard-core.js` (shared) + `leaderboard.html`. Tally docs: `stats/<YYYY-MM>` {reps:{name:{quotes,total}}} and
+`stats/quotedOpps` {opps:{oppId:{rep,at}}}. A quote counts once: first save, >=1 item, not a template, one per D-Tools opp (quote gets `counted`).
+Stores: config/users store column, else STORE_DEFAULTS in leaderboard-core.js; store "none" = not ranked (Tom Virasak, president).
+Reps see counts/coverage; only admin sees $. Admin "Rebuild tallies" backfills this + last month from saved quotes.
+
 ## Data layer (Firebase Firestore only; the Google Sheet is a frozen archive)
 - `config/catalog` and `config/settings` are SINGLE documents (read `d.fields.items`; not a collection).
 - Catalog add-ons use `name|installHours|progHours;...`. Don't restructure without asking.

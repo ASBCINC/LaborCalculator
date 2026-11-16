@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#050505">
+<title>Leaderboard | ASBC Labor Calculator</title>
+<link rel="icon" href="./favicon.svg">
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+<script src="./pricing.js"></script>
+<script src="./leaderboard-core.js"></script>
+<style>
+:root { --gold:#C7A66A; --bg:#050505; --card:#111318; --line:#26292f; --muted:#8b8f98; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:#fff; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; }
+.wrap { max-width:860px; margin:0 auto; padding:16px 14px 60px; }
+header { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px; }
+h1 { font-size:20px; margin:0; letter-spacing:.02em; }
+h1 span { color:var(--gold); }
+.btn { display:inline-flex; align-items:center; height:34px; padding:0 12px; border-radius:8px; border:1px solid var(--line); color:#fff; text-decoration:none; font-size:12px; font-weight:600; background:#1a1d23; }
+input, select { background:#101216; border:1px solid var(--line); color:#fff; border-radius:10px; padding:10px 12px; font-size:14px; width:100%; }
+.controls { display:flex; gap:8px; margin-bottom:12px; }
+.badge { display:inline-block; font-size:9px; font-weight:700; letter-spacing:.06em; padding:2px 7px; border-radius:999px; border:1px solid; vertical-align:middle; }
+.b-t { color:#8fb3ff; border-color:#33518f; }
+.b-l { color:#ffd479; border-color:#8a6d2f; }
+.b-a { color:#7ee2a0; border-color:#2f7a4c; }
+.qrow { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin-bottom:8px; cursor:pointer; }
+.qrow:hover { border-color:var(--gold); }
+.qtop { display:flex; justify-content:space-between; gap:10px; align-items:baseline; }
+.qname { font-weight:700; font-size:15px; }
+.qmeta { color:var(--muted); font-size:11px; margin-top:2px; }
+.qnums { text-align:right; font-variant-numeric:tabular-nums; font-size:13px; white-space:nowrap; }
+.qnum-b { color:var(--gold); font-weight:700; }
+.qdetail { display:none; border-top:1px solid var(--line); margin-top:10px; padding-top:10px; font-size:12px; color:#d7d9de; overflow-x:auto; }
+.qrow.open .qdetail { display:block; }
+table { width:100%; border-collapse:collapse; }
+th, td { text-align:left; padding:4px 6px; border-bottom:1px solid #1d2026; font-variant-numeric:tabular-nums; }
+th { color:var(--muted); font-size:10px; text-transform:uppercase; letter-spacing:.05em; }
+.pos { color:#7ee2a0; } .neg { color:#ff8b8b; }
+.sect { margin:18px 0 8px; font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); font-weight:700; }
+.empty { text-align:center; color:var(--muted); padding:30px 0; }
+details summary { cursor:pointer; color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.08em; font-weight:700; }
+details[open] summary { margin-bottom:8px; }
+.qactions { display:flex; gap:6px; margin-top:8px; }
+.qbtn { height:28px; padding:0 12px; border-radius:7px; border:1px solid var(--line); background:#1a1d23; color:#fff; font-size:11px; font-weight:600; cursor:pointer; }
+.qbtn-load { border-color:#8a6d2f; color:#ffd479; }
+.qbtn-del { border-color:#5a2b2b; color:#ff8b8b; }
+.qbtn:hover { border-color:var(--gold); }
+</style>
+<style>
+.tabs { display:flex; gap:6px; margin-bottom:14px; }
+.tab { flex:1; height:36px; border-radius:9px; border:1px solid var(--line); background:#101216; color:var(--muted); font-weight:700; font-size:12px; cursor:pointer; }
+.tab.on { border-color:var(--gold); color:var(--gold); }
+.stores { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+.card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px; }
+.card.lead { border-color:var(--gold); }
+.big { font-size:24px; font-weight:800; color:var(--gold); font-variant-numeric:tabular-nums; }
+.small { font-size:11px; color:var(--muted); }
+.me { border-color:#8a6d2f; }
+.rank1 { color:var(--gold); font-weight:800; }
+.bar { height:6px; background:#1d2026; border-radius:4px; overflow:hidden; margin-top:4px; }
+.bar > i { display:block; height:100%; background:var(--gold); }
+@media (max-width:560px) { .stores { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>ASBC <span>Leaderboard</span></h1>
+    <div style="display:flex;gap:6px"><a class="btn" href="./log.html">Quote Log</a><a class="btn" href="./index.html">Calculator</a></div>
+  </header>
+  <div class="tabs"><button class="tab on" data-p="month">This month</button><button class="tab" data-p="last">Last month</button><button class="tab" data-p="quarter">Quarter</button></div>
+  <div id="me"></div>
+  <div class="sect">Store vs store</div>
+  <div id="stores" class="stores"><div class="empty">Loading…</div></div>
+  <div id="reps"></div>
+  <div id="admin"></div>
+  <p class="small" style="margin-top:18px">Counts each real quote once: first save, at least one item, one quote per D-Tools opportunity; templates and re-saves don't count. Coverage = share of a rep's open D-Tools opportunities that have a labor quote.</p>
+</div>
+<script>
+firebase.initializeApp({ apiKey: "AIzaSyCSf560VkBf2esIH5rC-_Vcx349o7iIC-0", authDomain: "asbc-calculator.firebaseapp.com", projectId: "asbc-calculator" });
+const db = firebase.firestore(), B = ASBCBoard;
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money = v => '$' + Math.round(v || 0).toLocaleString('en-US');
+let ME = null, USERS = {}, OPPS = [], QUOTED = {}, period = 'month';
+const MK = B.monthKey();
+function keysFor(p) { if (p === 'month') return [MK]; if (p === 'last') return [B.shiftMonth(MK, -1)];
+  const [y, m] = MK.split('-').map(Number); const q0 = Math.floor((m - 1) / 3) * 3 + 1; return [0,1,2].map(i => y + '-' + String(q0 + i).padStart(2,'0')).filter(k => k <= MK); }
+async function totalsFor(p) {
+  const sum = {};
+  for (const k of keysFor(p)) { const r = await B.readMonth(db, k); for (const [n, v] of Object.entries(r)) { sum[n] = sum[n] || { quotes: 0, total: 0 }; sum[n].quotes += v.quotes || 0; sum[n].total += v.total || 0; } }
+  return sum;
+}
+function coverage(name) {
+  const open = OPPS.filter(o => o.owner === name && B.isOpenOpp(o));
+  const done = open.filter(o => QUOTED[o.id]);
+  return { open: open.length, done: done.length, pct: open.length ? Math.round(100 * done.length / open.length) : null, missing: open.filter(o => !QUOTED[o.id]) };
+}
+async function render() {
+  const admin = ME.role === 'admin';
+  const reps = B.ranked(await totalsFor(period), USERS);
+  // everyone on the approved list shows up, even with 0
+  Object.values(USERS).forEach(u => { if (u.role !== 'admin' && B.storeOf(u.name, USERS) !== 'none' && !reps.find(r => r.name === u.name)) reps.push({ name: u.name, quotes: 0, total: 0, store: B.storeOf(u.name, USERS) }); });
+  reps.forEach(r => r.cov = coverage(r.name));
+  // personal card
+  const meRow = reps.find(r => r.name === ME.name); const meIdx = reps.findIndex(r => r.name === ME.name);
+  document.getElementById('me').innerHTML = meRow ? `<div class="card me" style="margin-bottom:12px"><div class="small">You</div>
+    <div style="display:flex;gap:18px;align-items:baseline;flex-wrap:wrap"><div class="big">#${meIdx + 1}</div><div><b>${meRow.quotes}</b> quotes</div>
+    <div><b>${meRow.cov.pct === null ? '—' : meRow.cov.pct + '%'}</b> coverage</div>${admin ? '' : ''}</div>
+    ${meRow.cov.missing.length ? '<div class="small" style="margin-top:6px">Open opportunities still needing a labor quote: ' + meRow.cov.missing.slice(0, 8).map(o => esc(o.name)).join(' · ') + (meRow.cov.missing.length > 8 ? ' …' : '') + '</div>' : ''}</div>` : '';
+  // stores
+  const st = B.STORES.map(s => { const rs = reps.filter(r => r.store === s); const cov = rs.reduce((a, r) => ({ o: a.o + r.cov.open, d: a.d + r.cov.done }), { o: 0, d: 0 });
+    return { s, quotes: rs.reduce((a, r) => a + r.quotes, 0), total: rs.reduce((a, r) => a + r.total, 0), cov: cov.o ? Math.round(100 * cov.d / cov.o) : null }; });
+  const best = Math.max(...st.map(x => x.quotes));
+  document.getElementById('stores').innerHTML = st.map(x => `<div class="card ${x.quotes && x.quotes === best ? 'lead' : ''}"><div class="small">${esc(x.s)}</div><div class="big">${x.quotes}</div>
+    <div class="small">quotes${admin ? ' · ' + money(x.total) : ''} · ${x.cov === null ? '—' : x.cov + '%'} coverage</div><div class="bar"><i style="width:${x.cov || 0}%"></i></div></div>`).join('');
+  // reps by store
+  const groups = [...B.STORES, ''].map(s => [s, reps.filter(r => (r.store || '') === s)]).filter(g => g[1].length);
+  document.getElementById('reps').innerHTML = groups.map(([s, rs]) => `<div class="sect">${esc(s || 'Store not set')}</div><div class="card"><table>
+    <tr><th>#</th><th>Rep</th><th>Quotes</th>${admin ? '<th>Quoted $</th>' : ''}<th>Coverage</th></tr>
+    ${rs.map(r => { const i = reps.indexOf(r); return `<tr${r.name === ME.name ? ' style="color:var(--gold)"' : ''}><td class="${i === 0 && r.quotes ? 'rank1' : ''}">${i + 1}</td><td>${esc(r.name)}</td><td>${r.quotes}</td>${admin ? '<td>' + money(r.total) + '</td>' : ''}
+      <td>${r.cov.pct === null ? '—' : r.cov.pct + '% <span class="small">(' + r.cov.done + '/' + r.cov.open + ')</span>'}</td></tr>`; }).join('')}</table></div>`).join('');
+}
+// admin: rebuild tallies from existing quotes (one-time backfill / repair)
+async function rebuild() {
+  if (!confirm('Rebuild this month and last month from saved quotes? This replaces those two tallies.')) return;
+  const btn = document.getElementById('rebuildBtn'); btn.disabled = true; btn.textContent = 'Rebuilding…';
+  const cat = new Map(); const cs = await db.collection('config').doc('catalog').get(); if (cs.exists) (cs.data().items || []).forEach(i => cat.set(i.id, i));
+  const ss = await db.collection('config').doc('settings').get(); const S = ss.exists ? ss.data() : {};
+  const qs = await db.collection('quotes').get(); const months = [MK, B.shiftMonth(MK, -1)]; const tally = {}; months.forEach(m => tally[m] = {}); const opps = {};
+  const docs = qs.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (parseInt((a.id.match(/\d+/) || [0])[0]) - parseInt((b.id.match(/\d+/) || [0])[0])));
+  for (const q of docs) {
+    if (q.isTemplate || !(q.items || []).length) continue;
+    const created = parseInt((q.id.match(/^estimate-(\d+)$/) || [0, 0])[1]); if (!created) continue;
+    const mk = B.monthKey(new Date(created)); const rep = (q.project || {}).salesManagerName; if (!rep) continue;
+    const opp = (q.project || {}).dtoolsOpportunityId; if (opp) { if (opps[opp]) continue; opps[opp] = { rep, at: new Date(created) }; }
+    if (!tally[mk]) continue;
+    let ins = 0, prg = 0, units = 0;
+    (q.items || []).forEach(it => { const c = it.isCustom ? it : (cat.get(it.id) || {}); const n = Number(it.qty) || 0; units += n;
+      ins += ((Number(c.installHours) || 0) + (it.addon ? Number(it.addon.installHours) || 0 : 0)) * n;
+      prg += ((Number(c.programmingHours) || 0) + (it.addon ? Number(it.addon.programmingHours) || 0 : 0)) * n; });
+    const o = q.options || {};
+    const pr = ASBCPricing.price(ins, prg, units, { pricingV: o.pricingV, site: o.site, trip: o.trip, recycling: o.recycling, customRecycling: o.customRecycling, crew: o.crewSize }, S);
+    tally[mk][rep] = tally[mk][rep] || { quotes: 0, total: 0 }; tally[mk][rep].quotes++; tally[mk][rep].total += Math.round(pr.total * 100) / 100;
+  }
+  for (const m of months) await db.collection('stats').doc(m).set({ reps: tally[m], updatedAt: new Date(), rebuiltBy: ME.email });
+  await db.collection('stats').doc('quotedOpps').set({ opps });
+  btn.textContent = 'Rebuilt'; await load();
+}
+async function load() {
+  const [u, o, q] = await Promise.all([db.collection('config').doc('users').get(), db.collection('opportunities').get(), db.collection('stats').doc('quotedOpps').get()]);
+  USERS = (u.exists && u.data().users) || {}; OPPS = o.docs.map(d => ({ id: d.id, ...d.data() })); QUOTED = (q.exists && q.data().opps) || {};
+  await render();
+}
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => { document.querySelectorAll('.tab').forEach(x => x.classList.remove('on')); t.classList.add('on'); period = t.dataset.p; render(); }));
+firebase.auth().onAuthStateChanged(async (user) => {
+  if (!user) { document.getElementById('stores').innerHTML = '<div class="empty">Sign in on the <a href="./" style="text-decoration:underline">calculator</a> first, then reopen the leaderboard.</div>'; return; }
+  const us = await db.collection('config').doc('users').get().catch(() => null);
+  const map = (us && us.exists && us.data().users) || {}; const email = (user.email || '').toLowerCase();
+  const p = map[email] || (email === 'a.ward@asbc.us' ? { name: 'Anthony Ward', role: 'admin' } : null);
+  if (!p) { document.getElementById('stores').innerHTML = '<div class="empty">' + esc(email) + ' is not approved yet.</div>'; return; }
+  ME = { email, name: p.name, role: p.role || 'rep' };
+  if (ME.role === 'admin') document.getElementById('admin').innerHTML = '<div class="sect">Admin</div><button id="rebuildBtn" class="btn" onclick="rebuild()">Rebuild tallies from saved quotes</button> <span class="small">Use once to backfill quotes saved before the leaderboard update.</span>';
+  try { await load(); } catch (e) { document.getElementById('stores').innerHTML = '<div class="empty">Could not load: ' + esc(e.message) + '</div>'; }
+});
+</script>
+</body>
+</html>
