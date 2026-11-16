@@ -59,13 +59,16 @@ def main():
     # page 2+ tries the common parameter names and keeps whichever one returns NEW records.
     def fetch(params):
         res = http(f'{BASE}/Opportunities/GetOpportunities?' + urllib.parse.urlencode(params), headers=headers)
-        return res.get('opportunities', []), res.get('totalOpportunities', 0)
+        if isinstance(res, list): return res, 0, 'list'
+        tot = next((res[k] for k in ('totalOpportunities', 'totalCount', 'total', 'totalRecords', 'count') if isinstance(res.get(k), int)), 0)
+        return res.get('opportunities') or res.get('items') or res.get('data') or [], tot, ','.join(sorted(res.keys()))
     SIZE = 200
-    first, total = fetch({'page': 1, 'pageSize': SIZE})
+    first, total, keys = fetch({'page': 1, 'pageSize': SIZE})
     byid = {o['id']: o for o in first}
     style = None
     for page in range(2, 60):
-        if len(byid) >= total: break
+        if total and len(byid) >= total: break
+        if len(first) < SIZE and not style: break  # everything fit on one page
         tries = [style] if style else ['page', 'pageNumber', 'pageIndex', 'skip']
         got_new = False
         for st in tries:
@@ -73,7 +76,7 @@ def main():
             if st == 'pageIndex': p['pageIndex'] = page - 1
             elif st == 'skip': p['skip'] = (page - 1) * SIZE
             else: p[st] = page
-            batch, _ = fetch(p)
+            batch, _, _ = fetch(p)
             new_ids = [o for o in batch if o['id'] not in byid]
             if new_ids:
                 for o in batch: byid[o['id']] = o
@@ -81,8 +84,8 @@ def main():
                 break
         if not got_new: break
     opps = list(byid.values())
-    msg = f'D-Tools returned {len(opps)} of {total} opportunities (paging: {style or "single page"})'
-    print(('::warning::' if len(opps) < total else '::notice::') + msg)
+    msg = f'D-Tools returned {len(opps)} opportunities (reported total {total or "n/a"}; paging: {style or "none worked"}; response fields: {keys})'
+    print(('::warning::' if (total and len(opps) < total) or (len(opps) % SIZE == 0 and not style) else '::notice::') + msg)
 
     keep = {}
     for o in opps:
