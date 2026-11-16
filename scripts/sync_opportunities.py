@@ -139,6 +139,64 @@ def main():
                 marked += 1
     print(f'::notice::Quotes marked Won from D-Tools: {marked} (won opportunities seen: {len(won_ids)})')
 
+    # v8.15.0: D-Tools project -> Jobs. For quotes that are Won/Scheduled and linked to an opportunity, read the
+    # D-Tools project (same id). Techs listed as project resources are ADDED to the job (never removed); project
+    # start/end dates fill the job dates only if none are set; D-Tools stage Scheduled/In Progress + techs => "scheduled".
+    try:
+        users = fs.fields(fs.call('config/users')).get('users') or {}
+    except Exception:
+        users = {}
+    tech_by_name = {_fold_name(u.get('name', '')): e for e, u in users.items() if (u or {}).get('role') == 'tech'}
+    linked = 0
+    def get_project(pid):
+        for key in ('id', 'projectId'):
+            try:
+                r = http(f'{BASE}/Projects/GetProject?' + urllib.parse.urlencode({key: pid}), headers=headers)
+                if isinstance(r, dict) and (r.get('id') or r.get('resources') is not None or r.get('project')):
+                    return r.get('project') if isinstance(r.get('project'), dict) else r
+            except Exception:
+                continue
+        return None
+    def day(v):
+        return str(v)[:10] if v else None
+    if tech_by_name:
+        for d in fs.list_docs('quotes'):
+            f = fs.fields(d)
+            st = f.get('status') or 'draft'
+            pid = (f.get('project') or {}).get('dtoolsOpportunityId')
+            if not pid or f.get('isTemplate') or st not in ('won', 'scheduled'):
+                continue
+            proj = get_project(pid)
+            if not proj:
+                continue
+            res = [_fold_name((r or {}).get('name') or ((r or {}).get('firstName', '') + ' ' + (r or {}).get('lastName', ''))) for r in (proj.get('resources') or [])]
+            found = [tech_by_name[n] for n in res if n in tech_by_name]
+            sched = f.get('schedule') or {}
+            techs = list(sched.get('techs') or [])
+            new_techs = [t for t in found if t not in techs]
+            dates = list(sched.get('dates') or [])
+            new_dates = []
+            if not dates:
+                a_, b_ = day(proj.get('startDate')), day(proj.get('endDate'))
+                if a_:
+                    d0 = datetime.date.fromisoformat(a_); d1 = datetime.date.fromisoformat(b_) if b_ else d0
+                    while d0 <= d1 and len(new_dates) < 14:
+                        new_dates.append(d0.isoformat()); d0 += datetime.timedelta(days=1)
+            stage = str(proj.get('stage') or '').lower()
+            new_status = 'scheduled' if (st == 'won' and (techs or new_techs) and ('scheduled' in stage or 'progress' in stage)) else st
+            if not new_techs and not new_dates and new_status == st:
+                continue
+            body = {'status': fs.typed(new_status), 'schedule': {'mapValue': {'fields': {
+                'techs': {'arrayValue': {'values': [fs.typed(t) for t in techs + new_techs]}},
+                'dates': {'arrayValue': {'values': [fs.typed(x) for x in (dates or new_dates)]}},
+                'fromDtools': fs.typed(True), 'dtoolsStage': fs.typed(proj.get('stage') or ''),
+                'updatedAt': fs.typed(datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')),
+                'updatedBy': fs.typed('D-Tools sync')}}}}
+            fs.call('quotes/' + urllib.parse.quote(fs.doc_id(d)), method='PATCH', body={'fields': body},
+                    params={'updateMask.fieldPaths': ['status', 'schedule']})
+            linked += 1
+    print(f'::notice::Jobs updated from D-Tools projects: {linked}')
+
     owners = sorted({f['owner'] for f in keep.values() if f['owner']})
     unmatched = sorted({f['owner'] for f in keep.values() if f['owner'] not in REPS})
     print('owners:', ', '.join(owners) if owners else '(none)')
