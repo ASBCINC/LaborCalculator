@@ -253,6 +253,7 @@
                 <div class="text-right leading-tight">
                     <div class="text-xs sm:text-sm text-[#666666] whitespace-nowrap" data-rate-display>$200/hr</div>
                     <div id="versionNumber" class="text-[9px] sm:text-[10px] text-[#999999] whitespace-nowrap cursor-pointer select-none"></div>
+                    <button id="userBadge" type="button" onclick="signOutUser(true)" class="hidden text-[9px] sm:text-[10px] text-[#999999] whitespace-nowrap underline" title="Sign out"></button>
                 </div>
             </div>
         </div>
@@ -484,7 +485,6 @@
                 <div>
                     <h3 class="text-lg font-bold text-brandGold">Labor Catalog Database Editor</h3>
                     <p class="text-[11px] text-textMuted">Add or update items, hours and add-ons in the cloud catalog</p>
-                    <p id="adminSignedInAs" class="text-[11px] text-textMuted mt-0.5"></p>
                 </div>
                 <button type="button" onclick="toggleAdminModal(false)" class="w-10 h-10 rounded-full bg-gray-800">×</button>
             </div>
@@ -555,6 +555,12 @@
                         <button id="saveSettingsButton" type="button" onclick="saveGlobalSettings()" class="w-full text-xs bg-brandGold text-bgDark font-bold py-2 rounded-lg">Save Global Settings</button>
                     </div>
                 </details>
+                <details class="mt-3">
+                    <summary class="text-xs text-brandGold cursor-pointer">Approved users</summary>
+                    <p class="text-[11px] text-textMuted mt-2">One per line: <b>email, Name, role</b> (role = rep or admin). Name must match the sales rep dropdown. Only these people can create a PIN and use the calculator.</p>
+                    <textarea id="approvedUsersText" rows="8" class="mt-2 w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-[11px] text-white font-mono"></textarea>
+                    <button type="button" onclick="saveApprovedUsers()" class="mt-2 w-full text-xs bg-brandGold text-bgDark font-bold py-2 rounded-lg">Save Approved Users</button>
+                </details>
             </div>
             <div class="mt-5 grid grid-cols-2 gap-2.5">
                 <button id="adminSaveButton" type="button" onclick="saveAdminSheetItem()" class="bg-brandGold text-bgDark font-bold py-3.5 rounded-xl">Save Item</button>
@@ -575,6 +581,25 @@
     </style>
     <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+
+    <div id="authGate" class="fixed inset-0 bg-bgDark z-[60] flex items-center justify-center p-4">
+        <form id="authForm" class="bg-bgPanel border border-brandGold/40 p-6 rounded-2xl shadow-2xl w-full max-w-sm space-y-3" autocomplete="on">
+            <div class="text-center">
+                <h2 class="text-xl font-bold text-brandGold">ASBC Labor Calculator</h2>
+                <p id="authTitle" class="text-sm text-textMuted mt-1">Sign in</p>
+            </div>
+            <input id="authEmail" type="email" autocomplete="username" placeholder="Work email (you@asbc.us)" class="w-full h-12 bg-gray-900 border border-gray-700 rounded-lg px-3 text-white text-base">
+            <input id="authPin" type="password" inputmode="numeric" autocomplete="current-password" placeholder="PIN (6+ digits)" class="w-full h-12 bg-gray-900 border border-gray-700 rounded-lg px-3 text-white text-base tracking-widest">
+            <input id="authPin2" type="password" inputmode="numeric" autocomplete="new-password" placeholder="Re-enter new PIN" class="hidden w-full h-12 bg-gray-900 border border-gray-700 rounded-lg px-3 text-white text-base tracking-widest">
+            <button id="authSubmit" type="submit" class="w-full bg-brandGold text-bgDark font-bold py-3 rounded-xl">Sign in</button>
+            <div class="flex justify-between text-xs text-textMuted">
+                <button id="authModeToggle" type="button" class="underline">First time? Create your PIN</button>
+                <button type="button" onclick="sendPinReset()" class="underline">Forgot PIN</button>
+            </div>
+            <div id="authStatus" class="text-center text-xs text-textMuted min-h-[1rem]"></div>
+            <button id="authSignOutBtn" type="button" onclick="signOutUser()" class="hidden w-full border border-gray-700 text-textMuted py-2 rounded-xl text-xs">Sign out</button>
+        </form>
+    </div>
 
     <div id="actualsModal" class="fixed inset-0 bg-black/85 hidden items-center justify-center z-50 p-4">
         <div class="bg-bgDark border border-gray-700 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col p-4 sm:p-6">
@@ -616,7 +641,7 @@
               }
           });
 
-        const APP_VERSION = '8.10.0';
+        const APP_VERSION = '8.11.0';
         const BUILD_DATE = '2026-11-16';
         let HOURLY_RATE = 200;
 
@@ -714,7 +739,6 @@
             } catch (_err) { /* offline: cached settings stand in */ }
             applyAppSettings();
         }
-        const ADMIN_PIN = '1925';
 
 
         let catalog = [];
@@ -1700,55 +1724,141 @@
             }
         });
 
-        // v8.10.0: admin access by email sign-in link (Firebase Auth). The PIN still works as a
-        // temporary fallback while sign-in is being tested; it goes away when the database is locked.
+        // v8.11.0: everyone signs in (work email + PIN, Firebase Auth). Only people on the approved
+        // list (config/users, editable in Admin > Approved users) get past the sign-in screen.
         const ADMIN_EMAILS = ['a.ward@asbc.us'];
         const fbAuth = (window.firebase && firebase.auth) ? firebase.auth() : null;
-        function isAdminUser(u) { return !!(u && u.email && ADMIN_EMAILS.includes(u.email.toLowerCase())); }
-        function updateAdminSignedInLine() {
-            const el = document.getElementById('adminSignedInAs'); if (!el) return;
-            const u = fbAuth && fbAuth.currentUser;
-            el.innerHTML = u ? 'Signed in as ' + escapeHtml(u.email || '') + ' · <button type="button" onclick="adminSignOut()" class="underline">Sign out</button>' : 'Opened with PIN (not signed in)';
+        let currentUserProfile = null; // { email, name, role }
+        let approvedUsers = {};        // email -> { name, role }
+        let authMode = 'signin';
+        function repEmailFromName(name) {
+            const clean = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().split(/\s+/);
+            return clean[0][0] + '.' + clean[clean.length - 1] + '@asbc.us';
         }
-        async function adminSignOut() {
+        function defaultApprovedUsers() {
+            const out = {};
+            ADMIN_EMAILS.forEach(e => out[e] = { name: 'Anthony Ward', role: 'admin' });
+            Array.from(salesManagerName.options).filter(o => o.value).forEach(o => { out[repEmailFromName(o.value)] = { name: o.value, role: 'rep' }; });
+            return out;
+        }
+        function isAdminUser() { return !!(currentUserProfile && currentUserProfile.role === 'admin'); }
+        function authMsg(t) { document.getElementById('authStatus').textContent = t || ''; }
+        function setAuthMode(m) {
+            authMode = m;
+            document.getElementById('authPin2').classList.toggle('hidden', m !== 'create');
+            document.getElementById('authTitle').textContent = m === 'create' ? 'Create your PIN (first time)' : 'Sign in';
+            document.getElementById('authSubmit').textContent = m === 'create' ? 'Create PIN & sign in' : 'Sign in';
+            document.getElementById('authModeToggle').textContent = m === 'create' ? 'Already have a PIN? Sign in' : 'First time? Create your PIN';
+            document.getElementById('authPin').autocomplete = m === 'create' ? 'new-password' : 'current-password';
+            authMsg('');
+        }
+        document.getElementById('authModeToggle').addEventListener('click', () => setAuthMode(authMode === 'create' ? 'signin' : 'create'));
+        function showAuthGate(show, msg) {
+            const g = document.getElementById('authGate');
+            g.classList.toggle('hidden', !show); g.classList.toggle('flex', show);
+            document.getElementById('authSignOutBtn').classList.toggle('hidden', !(fbAuth && fbAuth.currentUser));
+            if (msg !== undefined) authMsg(msg);
+        }
+        document.getElementById('authForm').addEventListener('submit', async (ev) => {
+            ev.preventDefault();
+            const email = document.getElementById('authEmail').value.trim().toLowerCase();
+            const pin = document.getElementById('authPin').value.trim();
+            if (!/@asbc\.us$/.test(email)) return authMsg('Use your @asbc.us work email.');
+            if (!/^\d{6,}$/.test(pin)) return authMsg('PIN must be at least 6 digits (numbers only).');
+            if (!fbAuth) return authMsg('Sign-in unavailable. Check the connection and reload.');
+            try {
+                if (authMode === 'create') {
+                    if (pin !== document.getElementById('authPin2').value.trim()) return authMsg('The two PINs do not match.');
+                    authMsg('Creating your PIN…');
+                    await fbAuth.createUserWithEmailAndPassword(email, pin);
+                } else {
+                    authMsg('Signing in…');
+                    await fbAuth.signInWithEmailAndPassword(email, pin);
+                }
+                localStorage.setItem('asbcLastEmail', email);
+            } catch (e) {
+                const c = e.code || '';
+                if (c.includes('email-already-in-use')) { setAuthMode('signin'); authMsg('You already have a PIN. Sign in with it (or tap Forgot PIN).'); }
+                else if (/wrong-password|invalid-credential|invalid-login|user-not-found/.test(c)) authMsg(authMode === 'signin' ? 'Wrong email or PIN. First time here? Tap "Create your PIN".' : 'Could not create the PIN.');
+                else if (c.includes('too-many-requests')) authMsg('Too many tries. Wait a few minutes or tap Forgot PIN.');
+                else if (c.includes('network')) authMsg('No connection. Check Wi-Fi and try again.');
+                else authMsg('Sign-in failed: ' + (c || e.message));
+            }
+        });
+        async function sendPinReset() {
+            const email = document.getElementById('authEmail').value.trim();
+            if (!email) return authMsg('Type your email first.');
+            try { await fbAuth.sendPasswordResetEmail(email); authMsg('Reset email sent. It can take a few minutes (check Junk). Choose a new 6+ digit PIN there.'); }
+            catch (e) { authMsg('Could not send reset: ' + (e.code || e.message)); }
+        }
+        async function signOutUser(ask) {
+            if (ask && !window.confirm('Sign out ' + (currentUserProfile ? currentUserProfile.name : '') + ' on this device?')) return;
             if (fbAuth) await fbAuth.signOut();
-            toggleAdminModal(false);
-            alert('Signed out.');
         }
-        async function sendAdminSignInLink() {
-            const email = (window.prompt('Admin sign-in: enter your work email. We\'ll email you a one-time sign-in link.\n\n(Or type the old PIN to open without signing in.)', ADMIN_EMAILS[0]) || '').trim();
-            if (!email) return;
-            if (email === ADMIN_PIN) { toggleAdminModal(true); return; }
-            if (!ADMIN_EMAILS.includes(email.toLowerCase())) { alert('That email is not an admin.'); return; }
-            if (!fbAuth) { alert('Sign-in is unavailable (offline?).'); return; }
+        async function loadApprovedUsers() {
             try {
-                await fbAuth.sendSignInLinkToEmail(email, { url: location.origin + location.pathname, handleCodeInApp: true });
-                localStorage.setItem('asbcSignInEmail', email);
-                alert('Sign-in link sent to ' + email + '.\n\nOpen it on THIS device. It signs you in and opens the app; then triple-tap the version number again.');
-            } catch (e) {
-                alert('Could not send the sign-in link: ' + (e && e.message ? e.message : e));
+                const snap = await db.collection('config').doc('users').get();
+                approvedUsers = (snap.exists && snap.data().users) || {};
+            } catch (e) { approvedUsers = approvedUsers || {}; }
+            ADMIN_EMAILS.forEach(e => { if (!approvedUsers[e]) approvedUsers[e] = { name: 'Anthony Ward', role: 'admin' }; });
+            return approvedUsers;
+        }
+        function applySignedInUser() {
+            const badge = document.getElementById('userBadge');
+            badge.textContent = currentUserProfile.name + ' · Sign out';
+            badge.classList.remove('hidden');
+            const opt = Array.from(salesManagerName.options).some(o => o.value === currentUserProfile.name);
+            if (!isAdminUser() && opt) {
+                if (salesManagerName.value !== currentUserProfile.name) { salesManagerName.value = currentUserProfile.name; salesManagerName.dispatchEvent(new Event('change')); }
+                salesManagerName.disabled = true;
+            } else {
+                salesManagerName.disabled = false;
             }
         }
-        async function completeEmailLinkSignIn() {
-            if (!fbAuth || !fbAuth.isSignInWithEmailLink(location.href)) return;
-            let email = localStorage.getItem('asbcSignInEmail');
-            if (!email) email = (window.prompt('Confirm your email to finish signing in:') || '').trim();
-            if (!email) return;
-            try {
-                await fbAuth.signInWithEmailLink(email, location.href);
-                localStorage.removeItem('asbcSignInEmail');
-                alert('Signed in as ' + email + '.' + (isAdminUser(fbAuth.currentUser) ? ' Admin tools are unlocked on this device.' : ''));
-            } catch (e) {
-                alert('Sign-in link failed (it may be expired or already used): ' + (e && e.message ? e.message : e));
-            } finally {
-                history.replaceState(null, '', location.origin + location.pathname);
-            }
+        if (fbAuth) {
+            document.getElementById('authEmail').value = localStorage.getItem('asbcLastEmail') || '';
+            fbAuth.onAuthStateChanged(async (u) => {
+                if (!u) {
+                    currentUserProfile = null; salesManagerName.disabled = false;
+                    document.getElementById('userBadge').classList.add('hidden');
+                    setAuthMode('signin'); showAuthGate(true, ''); return;
+                }
+                const email = (u.email || '').toLowerCase();
+                const users = await loadApprovedUsers();
+                const p = users[email];
+                if (!p) { showAuthGate(true, email + ' is not on the approved list yet. Ask Anthony to add you, then reload.'); return; }
+                currentUserProfile = { email, name: p.name, role: p.role || 'rep' };
+                showAuthGate(false);
+                applySignedInUser();
+                if (isAdminUser()) {
+                    try { const snap = await db.collection('config').doc('users').get(); if (!snap.exists) await db.collection('config').doc('users').set({ users: defaultApprovedUsers(), updatedAt: new Date(), updatedBy: email }); approvedUsers = (await loadApprovedUsers()); } catch (e) { console.warn('approved users seed', e); }
+                }
+            });
+        } else {
+            showAuthGate(true, 'Sign-in could not load. Check the connection and reload.');
         }
-        completeEmailLinkSignIn();
+        function fillApprovedUsersEditor() {
+            const ta = document.getElementById('approvedUsersText'); if (!ta) return;
+            ta.value = Object.entries(approvedUsers).sort((a, b) => (a[1].role === 'admin' ? -1 : 0) - (b[1].role === 'admin' ? -1 : 0) || a[1].name.localeCompare(b[1].name)).map(([e, p]) => e + ', ' + p.name + ', ' + (p.role || 'rep')).join('\n');
+        }
+        async function saveApprovedUsers() {
+            if (!isAdminUser()) return;
+            const users = {}; const bad = [];
+            document.getElementById('approvedUsersText').value.split('\n').map(l => l.trim()).filter(Boolean).forEach(l => {
+                const [e, n, r] = l.split(',').map(x => (x || '').trim());
+                if (!/@/.test(e || '') || !n) bad.push(l); else users[e.toLowerCase()] = { name: n, role: r === 'admin' ? 'admin' : 'rep' };
+            });
+            if (bad.length) { adminStatus.innerHTML = '<span class="text-red-400">Fix these lines: ' + escapeHtml(bad.join(' | ')) + '</span>'; return; }
+            ADMIN_EMAILS.forEach(e => users[e] = users[e] || { name: 'Anthony Ward', role: 'admin' });
+            try {
+                await db.collection('config').doc('users').set({ users, updatedAt: new Date(), updatedBy: currentUserProfile.email });
+                approvedUsers = users;
+                adminStatus.innerHTML = '<span class="text-green-400">Approved users saved (' + Object.keys(users).length + ').</span>';
+            } catch (e) { adminStatus.innerHTML = '<span class="text-red-400">Save failed: ' + escapeHtml(e.message) + '</span>'; }
+        }
         function promptAdminAccess() {
-            const u = fbAuth && fbAuth.currentUser;
-            if (isAdminUser(u)) { toggleAdminModal(true); return; }
-            sendAdminSignInLink();
+            if (isAdminUser()) { toggleAdminModal(true); return; }
+            alert('Admin tools are only available to admins.');
         }
 
         function populateAdminItemList() {
@@ -1939,7 +2049,7 @@
 
         function toggleAdminModal(show) {
             const modal = document.getElementById('adminItemModal');
-            if (show) updateAdminSignedInLine();
+            if (show) fillApprovedUsersEditor();
             modal.classList.toggle('hidden', !show);
             modal.classList.toggle('flex', show);
             adminStatus.textContent = '';
