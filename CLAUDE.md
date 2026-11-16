@@ -1,0 +1,68 @@
+# ASBC Labor Calculator: operating guide for Claude
+
+Owner: Anthony Ward. Live app: https://asbcinc.github.io/LaborCalculator/ (GitHub Pages, auto-deploys from `main`).
+Adapted from Fo's Nov 16, 2026 handoff, with the release routine changed to use less usage.
+
+## How changes ship (current setup)
+Claude edits the local clone on Anthony's Work PC (`OneDrive - ASBISC ENTERPRISES PLC\Documents\GitHub\LaborCalculator`).
+Cowork cannot push to GitHub, so **Anthony pushes with GitHub Desktop**. If Claude Code on the web gets GitHub
+access later, the same routine applies, except Claude commits and pushes itself.
+
+## Release routine (every change)
+1. `python3 scripts/release.py check`: confirms local = GitHub `main` and shows live version. If not in sync,
+   Anthony clicks **Fetch origin → Pull** first. Never edit a stale copy.
+2. Locate code with `grep -n`, then read only the needed line ranges. **Never read the whole index.html** (~2,550 lines).
+3. Edit in place with a short python read-modify-write (bytes in/out; files use CRLF line endings).
+4. `python3 scripts/release.py bump X.Y.Z`: bumps APP_VERSION, BUILD_DATE and the sw.js cache name together.
+   Skipping the cache name means devices keep the old app.
+5. `python3 scripts/release.py lint`: syntax-checks inline JS and the modal-before-script rule. Must say `ok`.
+6. Give Anthony a one-line commit message `vX.Y.Z: short description` and show what changed in a few lines.
+   He commits to main and clicks **Push origin** in GitHub Desktop.
+7. `python3 scripts/release.py verify X.Y.Z`: waits for the Pages deploy of that commit. Only then report it as live.
+8. Remind him: tablet = triple-tap the ASBC logo; phone/laptop = hard refresh.
+
+Usage rules: no full-file reads, no screenshots unless the change is purely visual (then one, at reduced scale);
+check behavior in the browser pane only when a change can't be verified from the code, using page text not images.
+When Anthony sends several changes in a row, offer to ship them as one version.
+Note: github.io itself is blocked from Claude's shells; verify uses the GitHub API + raw.githubusercontent.com.
+
+## Files
+`index.html` (whole app: HTML/CSS/JS), `log.html` (Quote Log), `sw.js` (service worker), `manifest.json` + icons,
+`labor-catalog.json` (offline catalog fallback, STALE: 95 items vs ~92 live), `scripts/sync_opportunities.py` +
+`.github/workflows/sync-opportunities.yml` (D-Tools sync), `scripts/release.py` (this routine), `demo/` (demo copy).
+
+## Settled business rules
+- Materials fee fixed at 5% of base labor (`MATERIALS_MARKUP_PCT`), no dropdown/admin input; row under the hours lines,
+  shows $ and "(automatically added to quote)", hidden at $0. He has changed this several times; just do what he asks.
+- Total Estimate shows in the sticky summary and printed SOW. Recycling: changeable, default Yes, +$75.
+- Labor rate $200/hr (config/settings, admin-editable), shown in the print disclaimer.
+- Sales rep is a required dropdown (15 reps, fixed order in code); saving blocked until chosen.
+- Spaces dropdown fed by 16 zonePresets in config/settings; first option "Select room for items"; room required
+  before adding/changing items; no custom-room button (old custom lines still restore). "General" = legacy display only.
+- Field labeled "Opportunity name" but Firestore key stays `customerName`.
+- Printed SOW has no signature lines; disclaimer stays.
+- Quotes started from a D-Tools opportunity save `dtoolsOpportunityId`.
+
+## Data layer (Firebase Firestore only; the Google Sheet is a frozen archive)
+- `config/catalog` and `config/settings` are SINGLE documents (read `d.fields.items`; not a collection).
+- Catalog add-ons use `name|installHours|progHours;...`. Don't restructure without asking.
+- Numbers: whole numbers come back as `integerValue`, decimals as `doubleValue`; always read both.
+- `quotes`: one doc per quote, actuals merged in. `opportunities`: one doc per D-Tools GUID.
+- Admin catalog editor writes straight to Firestore; Anthony edits it himself.
+- Catalog load: localStorage cache → live Firestore → labor-catalog.json → frozen Sheet.
+- Draft auto-save `asbcActiveDraft`; 60-day purge spares Locked and Template quotes.
+
+## D-Tools sync
+Workflow every 15 min + manual run; secret `DTS_API_KEY` (created Nov 8, 2026). Needs BOTH X-API-Key and the public
+Basic Authorization header; a bare 401 = header/secret problem. Upserts opportunities, deletes ones gone from D-Tools.
+Quotes are read-only in the D-Tools API (can't push quotes). Check the sync only when asked or something looks wrong:
+secret exists → recent runs (public API) → one manual call.
+
+## Lessons already paid for
+- Modal HTML must come BEFORE the main script (v8.7.0 blanked the app). Guard listeners.
+- Recycling adds $75 even with 0 items (not gated; flag only if he reports an odd empty-quote total).
+- New device install issues: delete the old shortcut, reinstall via the header Install button or Chrome menu.
+
+## Bench (not committed)
+Per-rep accuracy scoreboard on log.html; sync labor-catalog.json to the live catalog; gate recycling at 0 items;
+D-Tools handoff panel (paste-ready labor block); Quote Log search wording.
