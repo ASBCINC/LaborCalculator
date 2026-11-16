@@ -380,7 +380,22 @@
 
             <!-- Cost & Schedule Summary Block -->
             <div id="summaryPrintBlock" class="sticky bottom-0 z-20 p-3 sm:p-4 bg-gray-900 border-t border-gray-800 shrink-0 safe-bottom shadow-[0_-10px_20px_rgba(0,0,0,0.45)]">
-                <div class="grid grid-cols-3 gap-1.5 sm:gap-2 mb-3 print-hide">
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2 mb-3 print-hide">
+                    <label class="text-[10px] sm:text-xs text-textMuted flex flex-col">
+                        <span>Site conditions</span>
+                        <select id="siteConditions" class="mt-1 w-full bg-bgDark border border-gray-700 rounded-lg p-2 sm:p-2.5 text-sm sm:text-base outline-none focus:border-brandGold">
+                            <option value="standard" selected>Standard</option>
+                            <option value="moderate">Moderate</option>
+                            <option value="difficult">Difficult</option>
+                        </select>
+                    </label>
+                    <label class="text-[10px] sm:text-xs text-textMuted flex flex-col">
+                        <span>Trip charge</span>
+                        <select id="tripToggle" class="mt-1 w-full bg-bgDark border border-gray-700 rounded-lg p-2 sm:p-2.5 text-sm sm:text-base outline-none focus:border-brandGold">
+                            <option value="yes" selected>Yes</option>
+                            <option value="no">No</option>
+                        </select>
+                    </label>
                     <label class="text-[10px] sm:text-xs text-textMuted flex flex-col">
                         <span>Recycling</span>
                         <select id="recyclingToggle" class="mt-1 w-full bg-bgDark border border-gray-700 rounded-lg p-2 sm:p-2.5 text-sm sm:text-base outline-none focus:border-brandGold">
@@ -406,7 +421,11 @@
                 <div class="space-y-1.5 text-sm mb-3">
                     <div class="flex justify-between text-textMuted"><span>Install hours</span><span id="installTotal" class="text-white font-mono">0.00</span></div>
                     <div class="flex justify-between text-textMuted"><span>Programming hours</span><span id="programmingTotal" class="text-white font-mono">0.00</span></div>
-                    <div class="flex justify-between text-textMuted"><span>Total labor hours</span><span id="hoursTotal" class="text-white font-mono">0.00</span></div>
+                    <div id="siteRow" class="hidden flex justify-between text-textMuted"><span id="siteLabel">Site conditions</span><span id="siteHours" class="text-white font-mono">0.00</span></div>
+                    <div id="pmRow" class="hidden flex justify-between text-textMuted"><span id="pmLabel">Project management</span><span id="pmHours" class="text-white font-mono">0.00</span></div>
+                    <div id="commRow" class="hidden flex justify-between text-textMuted"><span>Testing, commissioning &amp; handoff</span><span id="commHours" class="text-white font-mono">0.00</span></div>
+                    <div class="flex justify-between text-textMuted"><span>Total labor hours <span id="minNote" class="hidden text-[10px] text-[#888]"></span></span><span id="hoursTotal" class="text-white font-mono">0.00</span></div>
+                    <div id="legacyPricingRow" class="hidden text-[11px] text-[#C7A66A] print-hide">Saved before v8.12 (old pricing: no site, PM, commissioning or trip). <button type="button" onclick="pricingV2 = true; renderQuote(); scheduleDraftSave();" class="underline">Use current pricing</button></div>
                     <div id="materialsRow" class="hidden flex justify-between text-brandGold pt-1"><span><span id="materialsLabel">Materials fee</span> <span class="text-[10px] text-[#888] font-normal">(automatically added to quote)</span></span><span id="materialsAmount">$0.00</span></div>
                     
                     <div class="flex justify-between text-[#888] text-[11px] pt-1 pb-1 border-t border-gray-800">
@@ -414,6 +433,7 @@
                         <span id="daysTotal" class="font-mono">0.0 days</span>
                     </div>
 
+                    <div id="tripRow" class="hidden flex justify-between text-brandGold"><span>Trip / mobilization</span><span id="tripAmount">$0.00</span></div>
                     <div id="recyclingRow" class="hidden flex justify-between text-brandGold"><span id="recyclingLabel">Recycling fee</span><span id="recyclingAmount">$75.00</span></div>
                 </div>
 
@@ -546,6 +566,14 @@
                     <div class="px-3 pb-3 pt-2 grid grid-cols-3 gap-2">
                         <label class="text-[10px] text-textMuted block">Hourly rate ($)<input id="settingsHourly" type="number" min="1" step="1" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 mt-1 text-sm text-white"></label>
                         <label class="text-[10px] text-textMuted block">Recycling fee ($)<input id="settingsRecycling" type="number" min="0" step="1" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 mt-1 text-sm text-white"></label>
+                        <label class="text-[10px] text-textMuted block">Trip charge ($)<input data-pset="tripFee" type="number" min="0" step="1" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 mt-1 text-sm text-white"></label>
+                        <label class="text-[10px] text-textMuted block">Minimum hours<input data-pset="minHours" type="number" min="0" step="0.5" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 mt-1 text-sm text-white"></label>
+                        <label class="text-[10px] text-textMuted block">Project mgmt (%)<input data-pset="pmPct" type="number" min="0" step="0.5" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 mt-1 text-sm text-white"></label>
+                        <label class="text-[10px] text-textMuted block">Commissioning (%)<input data-pset="commissioningPct" type="number" min="0" step="0.5" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 mt-1 text-sm text-white"></label>
+                        <label class="text-[10px] text-textMuted block">Commissioning min (hrs)<input data-pset="commissioningMin" type="number" min="0" step="0.25" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 mt-1 text-sm text-white"></label>
+                        <label class="text-[10px] text-textMuted block">Moderate site (+% install)<input data-pset="moderatePct" type="number" min="0" step="1" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 mt-1 text-sm text-white"></label>
+                        <label class="text-[10px] text-textMuted block">Difficult site (+% install)<input data-pset="difficultPct" type="number" min="0" step="1" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 mt-1 text-sm text-white"></label>
+                        <label class="text-[10px] text-textMuted block">Productive hrs / day<input data-pset="productiveHoursPerDay" type="number" min="1" step="0.5" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 mt-1 text-sm text-white"></label>
                         
                     </div>
                     <div class="px-3 pb-2">
@@ -581,6 +609,7 @@
     </style>
     <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+    <script src="./pricing.js"></script>
 
     <div id="authGate" class="fixed inset-0 bg-bgDark z-[60] flex items-center justify-center p-4">
         <form id="authForm" class="bg-bgPanel border border-brandGold/40 p-6 rounded-2xl shadow-2xl w-full max-w-sm space-y-3" autocomplete="on">
@@ -641,7 +670,7 @@
               }
           });
 
-        const APP_VERSION = '8.11.1';
+        const APP_VERSION = '8.12.0';
         const BUILD_DATE = '2026-11-16';
         let HOURLY_RATE = 200;
 
@@ -747,6 +776,7 @@
         let isHoursShown = localStorage.getItem('asbcShowHours') === 'true';
         let currentLoadedIsTemplate = false;
         let currentLoadedEstimateId = '';
+        let pricingV2 = true; // v8.12 pricing (site, PM, commissioning, trip, minimum); false for quotes saved earlier
         let currentOppMeta = { id: '', number: '', clientName: '' }; // D-Tools opportunity kept with the quote (survives load/re-save)
 
         function slugify(value) {
@@ -1168,7 +1198,10 @@
                     recycling: recyclingToggle.value,
                     customRecycling: customRecyclingInput.value,
                     markup: getMarkupPercent(),
-                    crewSize: crewSize.value
+                    crewSize: crewSize.value,
+                    pricingV: pricingV2 ? 2 : 1,
+                    site: document.getElementById('siteConditions').value,
+                    trip: document.getElementById('tripToggle').value
                 },
                 updatedAt: new Date(),
                 isTemplate: wantsToSaveAsTemplate,
@@ -1217,6 +1250,9 @@
                     customRecyclingInput.value = record.options?.customRecycling || '';
                     
                     crewSize.value = record.options?.crewSize || '1';
+                    pricingV2 = record.options?.pricingV === 2;
+                    document.getElementById('siteConditions').value = record.options?.site || 'standard';
+                    document.getElementById('tripToggle').value = record.options?.trip || 'yes';
                     
                     currentLoadedIsTemplate = !!record.isTemplate;
                     isTemplateCheckbox.checked = currentLoadedIsTemplate;
@@ -1248,7 +1284,7 @@
         }
 
         function buildCategoryButtons() {
-            const categories = ['All', ...new Set(catalog.map(item => item.category))];
+            const categories = ['All', ...new Set(catalog.map(item => item.category).filter(c => c !== 'Project Management'))]; // PM is automatic since v8.12
             categoryButtons.innerHTML = '';
             categories.forEach(category => {
                 const button = document.createElement('button');
@@ -1275,6 +1311,7 @@
         function getVisibleCatalogItems() {
             const searchText = searchInput.value.trim().toLowerCase();
             return catalog.filter(item => {
+                if (item.category === 'Project Management') return false; // automatic since v8.12
                 const matchesCategory = selectedCategory === 'All' || item.category === selectedCategory;
                 const matchesSearch = !searchText || `${item.name} ${item.category}`.toLowerCase().includes(searchText);
                 const matchesFavorite = !favoritesOnly || favoriteIds.has(item.id);
@@ -1581,25 +1618,34 @@
                 `;
             }).join('');
 
-            const totalHours = totalInstall + totalProgramming;
-            const baseLaborPrice = totalHours * HOURLY_RATE;
-            
-            let recyclingFee = 0;
-            let recyclingLabelText = 'Recycling fee';
-            if (recyclingToggle.value === 'yes') {
-                recyclingFee = RECYCLING_FEE;
-            } else if (recyclingToggle.value === 'custom') {
-                recyclingFee = Number(customRecyclingInput.value) || 0;
-                recyclingLabelText = 'Recycling (Custom)';
-            }
+            // v8.12.0: all pricing comes from pricing.js (shared with the Quote Log).
+            const siteConditions = document.getElementById('siteConditions');
+            const tripToggle = document.getElementById('tripToggle');
             customRecyclingInput.classList.toggle('hidden', recyclingToggle.value !== 'custom');
-
+            const priced = ASBCPricing.price(totalInstall, totalProgramming, totalQuantity, {
+                pricingV: pricingV2 ? 2 : 1, site: siteConditions.value, trip: tripToggle.value,
+                recycling: recyclingToggle.value, customRecycling: customRecyclingInput.value, crew: crewSize.value
+            }, Object.assign({}, appSettings, { hourlyRate: HOURLY_RATE, recyclingFee: RECYCLING_FEE, materialsPct: getMarkupPercent() }));
+            const totalHours = priced.billedHours;
+            const recyclingFee = priced.recycling;
+            const recyclingLabelText = recyclingToggle.value === 'custom' ? 'Recycling (Custom)' : 'Recycling fee';
             const markupPercent = getMarkupPercent(); // locked at 5% (v8.9.15)
-            const materialsFee = baseLaborPrice * (markupPercent / 100);
-            const finalPrice = baseLaborPrice + recyclingFee + materialsFee;
-            
+            const materialsFee = priced.materials;
+            const finalPrice = priced.total;
             const selectedCrewSize = Number(crewSize.value) || 1;
-            const daysOnSite = totalHours / (selectedCrewSize * 8);
+            const daysOnSite = priced.days;
+            const setRow = (row, valEl, val, show) => { document.getElementById(row).classList.toggle('hidden', !show); if (valEl) document.getElementById(valEl).textContent = val; };
+            setRow('siteRow', 'siteHours', '+' + priced.siteHours.toFixed(2), priced.siteHours > 0);
+            document.getElementById('siteLabel').textContent = `Site conditions (+${priced.sitePct}% install)`;
+            setRow('pmRow', 'pmHours', priced.pmHours.toFixed(2), priced.pmHours > 0);
+            document.getElementById('pmLabel').textContent = `Project management (${priced.settings.pmPct}%)`;
+            setRow('commRow', 'commHours', priced.commHours.toFixed(2), priced.commHours > 0);
+            const minNote = document.getElementById('minNote');
+            minNote.textContent = priced.minApplied ? `(${priced.settings.minHours}-hr minimum)` : '';
+            minNote.classList.toggle('hidden', !priced.minApplied);
+            setRow('tripRow', 'tripAmount', currencyFormatter.format(priced.trip), priced.trip > 0);
+            document.getElementById('legacyPricingRow').classList.toggle('hidden', pricingV2);
+            siteConditions.disabled = !pricingV2; tripToggle.disabled = !pricingV2;
 
             document.getElementById('installTotal').textContent = totalInstall.toFixed(2);
             document.getElementById('programmingTotal').textContent = totalProgramming.toFixed(2);
@@ -2110,6 +2156,8 @@
             const r = document.getElementById('settingsRecycling'); if (r) r.value = appSettings.recyclingFee;
             const m = document.getElementById('settingsMarkup'); if (m) m.value = appSettings.defaultMarkup;
             const z = document.getElementById('settingsZones'); if (z) z.value = (appSettings.zonePresets || []).join('\n');
+            const ps = ASBCPricing.settings(appSettings);
+            document.querySelectorAll('[data-pset]').forEach(el => { el.value = ps[el.dataset.pset]; });
         }
 
         async function saveGlobalSettings() {
@@ -2122,6 +2170,7 @@
             appSettings.defaultMarkup = 5; // locked
             appSettings.defaultRecyclingToggle = appSettings.defaultRecyclingToggle || 'yes';
             appSettings.zonePresets = (z && z.value ? z.value.split('\n') : []).map(s => s.trim()).filter(Boolean);
+            document.querySelectorAll('[data-pset]').forEach(el => { const v = Number(el.value); if (el.value !== '' && Number.isFinite(v)) appSettings[el.dataset.pset] = v; });
             localStorage.setItem('asbcAppSettings', JSON.stringify(appSettings));
             applyAppSettings();
             try {
@@ -2171,6 +2220,7 @@
                     salesManagerName: salesManagerName.value,
                     dtoolsOpportunityId: currentProjectData().dtoolsOpportunityId,
                     oppMeta: currentOppMeta,
+                    pricingV2, site: document.getElementById('siteConditions').value, trip: document.getElementById('tripToggle').value,
                     loadedEstimateId: currentLoadedEstimateId,
                     recyclingToggle: recyclingToggle.value,
                     customRecyclingInput: customRecyclingInput.value,
@@ -2203,6 +2253,9 @@
                 if (typeof d.customRecyclingInput === 'string') customRecyclingInput.value = d.customRecyclingInput;
                 
                 if (d.crewSize) crewSize.value = d.crewSize;
+                if (typeof d.pricingV2 === 'boolean') pricingV2 = d.pricingV2;
+                if (d.site) document.getElementById('siteConditions').value = d.site;
+                if (d.trip) document.getElementById('tripToggle').value = d.trip;
                 if (typeof d.isTemplate === 'boolean') isTemplateCheckbox.checked = d.isTemplate;
                 if (isLockedCheckbox && typeof d.isLocked === 'boolean') isLockedCheckbox.checked = d.isLocked;
                 renderQuote();
@@ -2332,6 +2385,9 @@
                 customRecyclingInput.value = '';
                 
                 crewSize.value = '1';
+                pricingV2 = true;
+                document.getElementById('siteConditions').value = 'standard';
+                document.getElementById('tripToggle').value = 'yes';
                 localStorage.removeItem('asbcActiveDraft');
                 currentActuals = null;
                 hasUnsavedCloudChanges = false; updateSaveIndicator();
@@ -2654,7 +2710,7 @@
             renderCatalog();
         });
 
-        [recyclingToggle, crewSize].forEach(control => { control.addEventListener('change', renderQuote); });
+        [recyclingToggle, crewSize, document.getElementById('siteConditions'), document.getElementById('tripToggle')].forEach(control => { control.addEventListener('change', () => { renderQuote(); scheduleDraftSave(); }); });
         document.addEventListener('keydown', event => {
             if (event.key === 'Escape') { toggleCustomModal(false); toggleEstimate(false); toggleAdminModal(false); }
         });

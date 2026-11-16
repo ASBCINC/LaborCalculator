@@ -9,6 +9,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+<script src="./pricing.js"></script>
 <style>
 :root { --gold:#C7A66A; --bg:#050505; --card:#111318; --line:#26292f; --muted:#8b8f98; }
 * { box-sizing:border-box; }
@@ -118,6 +119,7 @@ async function boot() {
       const s = setSnap.data();
       SETTINGS.hourlyRate = Number(s.hourlyRate) || 200;
       SETTINGS.recyclingFee = Number(s.recyclingFee) || 75;
+      Object.assign(SETTINGS, ASBCPricing.settings(Object.assign({}, s, { hourlyRate: SETTINGS.hourlyRate, recyclingFee: SETTINGS.recyclingFee })));
     }
     quotesSnap.forEach(d => {
       const r = d.data();
@@ -138,7 +140,7 @@ async function boot() {
 }
 
 function quoteHours(q) {
-  let hours = 0;
+  let hours = 0, totInst = 0, totProg = 0, units = 0;
   const lines = [];
   (q.items || []).forEach(it => {
     let inst = 0, prog = 0, name = it.name || it.id, missing = false;
@@ -152,20 +154,23 @@ function quoteHours(q) {
     }
     const addonH = it.addon ? (Number(it.addon.installHours) || 0) + (Number(it.addon.programmingHours) || 0) : 0;
     const per = inst + prog + addonH;
-    hours += per * (Number(it.qty) || 0);
+    const qn = Number(it.qty) || 0;
+    hours += per * qn; units += qn;
+    totInst += (inst + (it.addon ? Number(it.addon.installHours) || 0 : 0)) * qn;
+    totProg += (prog + (it.addon ? Number(it.addon.programmingHours) || 0 : 0)) * qn;
     lines.push({ name, zone: it.zone || 'General', qty: it.qty || 0, per, addon: it.addon ? it.addon.name : '', missing });
   });
-  return { hours, lines };
+  return { hours, lines, install: totInst, prog: totProg, units };
 }
 
 function quotePrice(q, hours) {
+  // v8.12.0: same rules as the calculator (pricing.js); legacy quotes keep their old math.
   const o = q.options || {};
-  const labor = hours * SETTINGS.hourlyRate;
-  const markup = Number(o.markup) || 0;
-  const materials = labor * markup / 100;
-  const rec = (o.recycling === 'yes' || o.recycling === 'custom');
-  const recycling = rec ? (Number(o.customRecycling) || SETTINGS.recyclingFee) : 0;
-  return { labor, materials, recycling, total: labor + materials + recycling };
+  const h = quoteHours(q);
+  const r = ASBCPricing.price(h.install, h.prog, h.units, {
+    pricingV: o.pricingV, site: o.site, trip: o.trip, recycling: o.recycling, customRecycling: o.customRecycling, crew: o.crewSize
+  }, Object.assign({}, SETTINGS, { materialsPct: Number(o.markup) || 5 }));
+  return { labor: r.labor, materials: r.materials, trip: r.trip, recycling: r.recycling, total: r.total, billedHours: r.billedHours };
 }
 
 function renderCalib() {
@@ -219,14 +224,14 @@ function renderList() {
         <table><tr><th>Item</th><th>Space</th><th>Qty</th><th>Hrs ea</th></tr>
         ${info.lines.map(l => `<tr><td>${esc(l.name)}${l.addon ? ` <span style="color:#C7A66A">+ ${esc(l.addon)}</span>` : ''}${l.missing ? ' <span class="neg">(no longer in catalog)</span>' : ''}</td><td>${esc(l.zone)}</td><td>${l.qty}</td><td>${l.per.toFixed(2)}</td></tr>`).join('')}
         </table>
-        <div style="margin-top:8px;color:#8b8f98">Labor ${fmt(p.labor)} &middot; Materials ${fmt(p.materials)} (${Number((r.options || {}).markup) || 0}%) &middot; Recycling ${fmt(p.recycling)} &middot; Crew ${Number((r.options || {}).crewSize) || 1}</div>
+        <div style="margin-top:8px;color:#8b8f98">Labor ${fmt(p.labor)} &middot; Materials ${fmt(p.materials)} (${Number((r.options || {}).markup) || 0}%)${p.trip ? ' &middot; Trip ' + fmt(p.trip) : ''} &middot; Recycling ${fmt(p.recycling)} &middot; Crew ${Number((r.options || {}).crewSize) || 1}</div>
         <div style="margin-top:4px"><b>Total: ${fmt(p.total)}</b></div>
         ${a ? `<div style="margin-top:8px"><span class="badge b-a">ACTUALS</span> est ${Number(a.totalEstHours).toFixed(2)} hrs vs actual ${Number(a.totalActualHours).toFixed(2)} hrs${a.notes ? ` &middot; notes: ${esc(a.notes)}` : ''}</div>` : ''}
       </div>`;
     return `<div class="qrow" onclick="if(event.target.closest('.qactions'))return;this.classList.toggle('open')">
       <div class="qtop">
         <div><div class="qname">${cust} ${badges}</div><div class="qmeta">${mgr ? mgr + ' &middot; ' : ''}${date}</div></div>
-        <div class="qnums"><div class="qnum-b">${fmt(p.total)}</div><div class="qmeta">${info.hours.toFixed(2)} hrs</div></div>
+        <div class="qnums"><div class="qnum-b">${fmt(p.total)}</div><div class="qmeta">${p.billedHours.toFixed(2)} hrs</div></div>
       </div>
       <div class="qactions">
         <button class="qbtn qbtn-load" data-act="load" data-id="${r._id}">Load</button>

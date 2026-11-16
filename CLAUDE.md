@@ -41,6 +41,11 @@ ASBCINC/LaborCalculator-backups via secret BACKUP_TOKEN; also refreshes labor-ca
 Data restore: each day is a commit in LaborCalculator-backups (data/*.json); restore by writing docs back with scripts/fs.py.
 
 ## Settled business rules
+- PRICING (v8.12.0) lives in `pricing.js`, shared by index.html and log.html (keep them in agreement): labor = billed hours x rate;
+  billed = catalog hours + site conditions (Moderate/Difficult % on INSTALL hours) + project management % + commissioning %
+  (min hrs), floored at the minimum hours; + 5% materials (on labor) + trip charge + recycling (none on an empty quote).
+  All values admin-editable in Global Pricing (config/settings). Quotes saved before v8.12 (options.pricingV != 2) keep old math
+  until someone taps "Use current pricing". The "Project Management" catalog category is hidden (PM is automatic).
 - Materials fee fixed at 5% of base labor (`MATERIALS_MARKUP_PCT`), no dropdown/admin input; row under the hours lines,
   shows $ and "(automatically added to quote)", hidden at $0. He has changed this several times; just do what he asks.
 - Total Estimate shows in the sticky summary and printed SOW. Recycling: changeable, default Yes, +$75.
