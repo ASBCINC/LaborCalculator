@@ -672,7 +672,7 @@
               }
           });
 
-        const APP_VERSION = '8.13.0';
+        const APP_VERSION = '8.13.1';
         const BUILD_DATE = '2026-11-16';
         let HOURLY_RATE = 200;
 
@@ -1859,7 +1859,8 @@
             badge.classList.remove('hidden');
             const opt = Array.from(salesManagerName.options).some(o => o.value === currentUserProfile.name);
             if (!isAdminUser() && opt) {
-                if (salesManagerName.value !== currentUserProfile.name) { salesManagerName.value = currentUserProfile.name; salesManagerName.dispatchEvent(new Event('change')); }
+                salesManagerName.value = currentUserProfile.name;
+                salesManagerName.dispatchEvent(new Event('change')); // v8.13.1: always load the rep's D-Tools opportunities, even when the name was already filled in
                 salesManagerName.disabled = true;
             } else {
                 salesManagerName.disabled = false;
