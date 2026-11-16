@@ -10,6 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - run: pip install --quiet google-auth requests
       - run: python3 scripts/sync_opportunities.py
         env:
           DTS_API_KEY: ${{ secrets.DTS_API_KEY }}
+          FIREBASE_SA: ${{ secrets.FIREBASE_SA }}

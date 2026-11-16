@@ -1,0 +1,36 @@
+name: Nightly backup
+
+on:
+  schedule:
+    - cron: '17 11 * * *'   # ~3:17 AM Pacific (GitHub may run it a bit late)
+  workflow_dispatch: {}
+
+permissions:
+  contents: write   # lets it commit the refreshed labor-catalog.json to this repo
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: ASBCINC/LaborCalculator-backups
+          token: ${{ secrets.BACKUP_TOKEN }}
+          path: backup
+      - run: pip install --quiet google-auth requests
+      - run: python3 scripts/backup_firestore.py backup/data
+        env:
+          FIREBASE_SA: ${{ secrets.FIREBASE_SA }}
+      - name: Save backup (private repo)
+        working-directory: backup
+        run: |
+          git config user.name "calculator-backup"; git config user.email "backup@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet || git commit -q -m "Backup $(date -u +%Y-%m-%d)"
+          git push -q
+      - name: Refresh offline catalog (this repo)
+        run: |
+          git config user.name "calculator-backup"; git config user.email "backup@users.noreply.github.com"
+          git add labor-catalog.json
+          git diff --cached --quiet || { git commit -q -m "Nightly: labor-catalog.json synced to live catalog"; git push -q; }

@@ -614,7 +614,7 @@
               }
           });
 
-        const APP_VERSION = '8.9.16';
+        const APP_VERSION = '8.9.17';
         const BUILD_DATE = '2026-11-16';
         let HOURLY_RATE = 200;
 
@@ -2441,6 +2441,7 @@
                 const list = open.length ? open : dtoolsOppsCache;
                 let newestSync = 0;
                 dtoolsOppsCache.forEach(o => { const t = o.updatedAt && o.updatedAt.toMillis ? o.updatedAt.toMillis() : Date.parse(o.updatedAt || '') || 0; if (t > newestSync) newestSync = t; });
+                try { const sy = await db.collection('config').doc('sync').get(); const lr = sy.exists && sy.data().lastRun; if (lr) newestSync = lr.toMillis ? lr.toMillis() : (Date.parse(lr) || newestSync); } catch (e) { /* stamp is optional */ }
                 const syncAgo = newestSync ? (() => { const m = Math.round((Date.now() - newestSync) / 60000); return m < 60 ? m + ' min ago' : Math.round(m / 60) + ' h ago'; })() : '';
                 dtoolsOpportunity.innerHTML = '<option value="">' + (list.length ? list.length + ' opportunity(ies): pick one' : 'No D-Tools opportunities') + (syncAgo ? ' (D-Tools synced ' + syncAgo + ')' : '') + '</option>';
                 const manualOpt = document.createElement('option');

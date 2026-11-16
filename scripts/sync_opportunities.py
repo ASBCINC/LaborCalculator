@@ -2,17 +2,18 @@
 """Sync D-Tools Cloud opportunities into the LaborCalculator Firestore.
 
 Runs on a GitHub Actions cron. Needs one secret: DTS_API_KEY.
-Firestore reads/writes use the public web API key already shipped in index.html.
+Firestore access goes through scripts/fs.py (service account from FIREBASE_SA, else the web API key).
+Only opportunities that changed are rewritten; config/sync records each run.
 Docs: one Firestore doc per opportunity, id = D-Tools opportunity id,
 fields: name, clientName, owner (normalized to rep name when it matches),
 stage, stageGroup, total, price, modifiedDate, isArchived, updatedAt.
 Docs that no longer exist in D-Tools (or are archived) are removed.
 """
-import json, os, urllib.request, urllib.parse, unicodedata
+import json, os, sys, datetime, urllib.request, urllib.parse, unicodedata
+sys.path.insert(0, os.path.dirname(__file__))
+import fs  # Firestore helper (service-account auth when FIREBASE_SA is set)
 
 API_KEY = os.environ['DTS_API_KEY']
-FIREBASE_API_KEY = os.environ.get('FIREBASE_API_KEY', 'AIzaSyCSf560VkBf2esIH5rC-_Vcx349o7iIC-0')
-PROJECT = 'asbc-calculator'
 BASE = 'https://dtcloudapi.d-tools.cloud/api/v1'
 # Public Basic Authorization header documented in the D-Tools Cloud API docs.
 AUTH_BASIC = 'Basic RFRDbG91ZEFQSVVzZXI6MyNRdVkrMkR1QCV3Kk15JTU8Yi1aZzlV'
@@ -79,38 +80,33 @@ def main():
             'modifiedDate': o.get('modifiedDate'), 'createdDate': o.get('createdDate'),
         }
 
-    # current Firestore docs in the collection
-    existing = []
-    q = urllib.parse.urlencode({'pageSize': 500, 'key': FIREBASE_API_KEY})
-    url = f'https://firestore.googleapis.com/v1/projects/{PROJECT}/databases/(default)/documents/opportunities?{q}'
-    res = http(url)
-    existing = [fs_doc_id(d['name']) for d in res.get('documents', [])]
-    page_tok = res.get('nextPageToken')
-    while page_tok:
-        q = urllib.parse.urlencode({'pageSize': 500, 'key': FIREBASE_API_KEY, 'pageToken': page_tok})
-        res = http(url + '&' + q)
-        existing += [fs_doc_id(d['name']) for d in res.get('documents', [])]
-        page_tok = res.get('nextPageToken')
-
-    fs_url = f'https://firestore.googleapis.com/v1/projects/{PROJECT}/databases/(default)/documents/opportunities'
-    deleted = 0
-    import datetime
-    for oid, fields in keep.items():
-        body = {'fields': {k: firestore_value(v) for k, v in fields.items()}}
-        body['fields']['updatedAt'] = {'timestampValue': datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')}
-        http(f"{fs_url}/{urllib.parse.quote(oid)}?key={FIREBASE_API_KEY}", method='PATCH',
-             headers={'Content-Type': 'application/json'}, data=json.dumps(body))
+    # Current Firestore docs: write only the ones that changed (fewer writes, same result).
+    existing = {fs.doc_id(d): fs.fields(d) for d in fs.list_docs('opportunities')}
+    now = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
+    norm = lambda v: None if v == '' else v
+    changed = deleted = 0
+    for oid, f in keep.items():
+        cur = existing.get(oid)
+        if cur is not None and all(norm(cur.get(k)) == norm(v) for k, v in f.items()):
+            continue
+        body = {'fields': {k: fs.typed(v) for k, v in f.items()}}
+        body['fields']['updatedAt'] = {'timestampValue': now}
+        fs.call('opportunities/' + urllib.parse.quote(oid), method='PATCH', body=body)
+        changed += 1
     for oid in existing:
         if oid not in keep:
             try:
-                http(f"{fs_url}/{urllib.parse.quote(oid)}?key={FIREBASE_API_KEY}", method='DELETE')
-                deleted += 1
+                fs.call('opportunities/' + urllib.parse.quote(oid), method='DELETE'); deleted += 1
             except Exception:
                 pass
+    # One small status doc the app reads for its "D-Tools synced X min ago" stamp.
+    fs.call('config/sync', method='PATCH', body={'fields': {
+        'lastRun': {'timestampValue': now}, 'total': fs.typed(len(keep)),
+        'changed': fs.typed(changed), 'deleted': fs.typed(deleted)}})
+    print(f'::notice::D-Tools sync: {len(keep)} open opportunities, {changed} changed, {deleted} removed')
 
     owners = sorted({f['owner'] for f in keep.values() if f['owner']})
     unmatched = sorted({f['owner'] for f in keep.values() if f['owner'] not in REPS})
-    print(f'D-Tools opportunities: {len(opps)}, synced: {len(keep)}, deleted: {deleted}')
     print('owners:', ', '.join(owners) if owners else '(none)')
     if unmatched:
         print('UNMATCHED owners (not in rep list):', ', '.join(unmatched))
