@@ -484,6 +484,7 @@
                 <div>
                     <h3 class="text-lg font-bold text-brandGold">Labor Catalog Database Editor</h3>
                     <p class="text-[11px] text-textMuted">Add or update items, hours and add-ons in the cloud catalog</p>
+                    <p id="adminSignedInAs" class="text-[11px] text-textMuted mt-0.5"></p>
                 </div>
                 <button type="button" onclick="toggleAdminModal(false)" class="w-10 h-10 rounded-full bg-gray-800">×</button>
             </div>
@@ -573,6 +574,7 @@
         @media print { .admin-edit-btn, .admin-edit-banner, .zone-rename-btn, .print-hide { display: none !important; } }
     </style>
     <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
 
     <div id="actualsModal" class="fixed inset-0 bg-black/85 hidden items-center justify-center z-50 p-4">
         <div class="bg-bgDark border border-gray-700 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col p-4 sm:p-6">
@@ -614,7 +616,7 @@
               }
           });
 
-        const APP_VERSION = '8.9.17';
+        const APP_VERSION = '8.10.0';
         const BUILD_DATE = '2026-11-16';
         let HOURLY_RATE = 200;
 
@@ -1698,13 +1700,55 @@
             }
         });
 
-        function promptAdminAccess() {
-            const pin = window.prompt("Enter Admin PIN:");
-            if (pin === ADMIN_PIN) {
-                toggleAdminModal(true);
-            } else if (pin !== null) {
-                alert("Incorrect PIN.");
+        // v8.10.0: admin access by email sign-in link (Firebase Auth). The PIN still works as a
+        // temporary fallback while sign-in is being tested; it goes away when the database is locked.
+        const ADMIN_EMAILS = ['a.ward@asbc.us'];
+        const fbAuth = (window.firebase && firebase.auth) ? firebase.auth() : null;
+        function isAdminUser(u) { return !!(u && u.email && ADMIN_EMAILS.includes(u.email.toLowerCase())); }
+        function updateAdminSignedInLine() {
+            const el = document.getElementById('adminSignedInAs'); if (!el) return;
+            const u = fbAuth && fbAuth.currentUser;
+            el.innerHTML = u ? 'Signed in as ' + escapeHtml(u.email || '') + ' · <button type="button" onclick="adminSignOut()" class="underline">Sign out</button>' : 'Opened with PIN (not signed in)';
+        }
+        async function adminSignOut() {
+            if (fbAuth) await fbAuth.signOut();
+            toggleAdminModal(false);
+            alert('Signed out.');
+        }
+        async function sendAdminSignInLink() {
+            const email = (window.prompt('Admin sign-in: enter your work email. We\'ll email you a one-time sign-in link.\n\n(Or type the old PIN to open without signing in.)', ADMIN_EMAILS[0]) || '').trim();
+            if (!email) return;
+            if (email === ADMIN_PIN) { toggleAdminModal(true); return; }
+            if (!ADMIN_EMAILS.includes(email.toLowerCase())) { alert('That email is not an admin.'); return; }
+            if (!fbAuth) { alert('Sign-in is unavailable (offline?).'); return; }
+            try {
+                await fbAuth.sendSignInLinkToEmail(email, { url: location.origin + location.pathname, handleCodeInApp: true });
+                localStorage.setItem('asbcSignInEmail', email);
+                alert('Sign-in link sent to ' + email + '.\n\nOpen it on THIS device. It signs you in and opens the app; then triple-tap the version number again.');
+            } catch (e) {
+                alert('Could not send the sign-in link: ' + (e && e.message ? e.message : e));
             }
+        }
+        async function completeEmailLinkSignIn() {
+            if (!fbAuth || !fbAuth.isSignInWithEmailLink(location.href)) return;
+            let email = localStorage.getItem('asbcSignInEmail');
+            if (!email) email = (window.prompt('Confirm your email to finish signing in:') || '').trim();
+            if (!email) return;
+            try {
+                await fbAuth.signInWithEmailLink(email, location.href);
+                localStorage.removeItem('asbcSignInEmail');
+                alert('Signed in as ' + email + '.' + (isAdminUser(fbAuth.currentUser) ? ' Admin tools are unlocked on this device.' : ''));
+            } catch (e) {
+                alert('Sign-in link failed (it may be expired or already used): ' + (e && e.message ? e.message : e));
+            } finally {
+                history.replaceState(null, '', location.origin + location.pathname);
+            }
+        }
+        completeEmailLinkSignIn();
+        function promptAdminAccess() {
+            const u = fbAuth && fbAuth.currentUser;
+            if (isAdminUser(u)) { toggleAdminModal(true); return; }
+            sendAdminSignInLink();
         }
 
         function populateAdminItemList() {
@@ -1895,6 +1939,7 @@
 
         function toggleAdminModal(show) {
             const modal = document.getElementById('adminItemModal');
+            if (show) updateAdminSignedInLine();
             modal.classList.toggle('hidden', !show);
             modal.classList.toggle('flex', show);
             adminStatus.textContent = '';
