@@ -21,6 +21,11 @@ access later, the same routine applies, except Claude commits and pushes itself.
 7. `python3 scripts/release.py verify X.Y.Z`: waits for the Pages deploy of that commit. Only then report it as live.
 8. Remind him: tablet = triple-tap the ASBC logo; phone/laptop = hard refresh.
 
+## Rollback (if a release breaks something)
+Fast: `python3 scripts/release.py rollback <good> <new>` restores app files from the good version as a NEW version
+(so tablets refresh), then Anthony commits `v<new>: rollback to v<good>` and pushes. Alternative: GitHub Desktop >
+History > right-click the bad release > Revert changes in commit > Push. Then bump the version so devices pick it up.
+
 Usage rules: no full-file reads, no screenshots unless the change is purely visual (then one, at reduced scale);
 check behavior in the browser pane only when a change can't be verified from the code, using page text not images.
 When Anthony sends several changes in a row, offer to ship them as one version.
@@ -50,7 +55,7 @@ Note: github.io itself is blocked from Claude's shells; verify uses the GitHub A
 - `quotes`: one doc per quote, actuals merged in. `opportunities`: one doc per D-Tools GUID.
 - Admin catalog editor writes straight to Firestore; Anthony edits it himself.
 - Catalog load: localStorage cache → live Firestore → labor-catalog.json → frozen Sheet.
-- Draft auto-save `asbcActiveDraft`; 60-day purge spares Locked and Template quotes.
+- Draft auto-save `asbcActiveDraft`; quotes older than 60 days are hidden from the Saved list but NOT deleted (since v8.9.16).
 
 ## D-Tools sync
 Workflow every 15 min + manual run; secret `DTS_API_KEY` (created Nov 8, 2026). Needs BOTH X-API-Key and the public

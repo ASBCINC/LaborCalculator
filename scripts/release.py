@@ -5,6 +5,9 @@
   python3 scripts/release.py bump 8.9.16      # bump APP_VERSION, BUILD_DATE, sw.js cache name
   python3 scripts/release.py lint             # syntax-check inline JS + modal-before-script rule
   python3 scripts/release.py verify 8.9.16    # wait for the GitHub Pages deploy of that version
+  python3 scripts/release.py rollback 8.9.15 8.9.17
+        # emergency undo: restore app files exactly as they were in v8.9.15, published as new v8.9.17
+        # (a new number so installed tablets pick it up); then commit + push in GitHub Desktop
 
 Reads and writes files byte-for-byte so Windows CRLF line endings are preserved.
 """
@@ -76,10 +79,24 @@ def verify(v, timeout=420):
         time.sleep(30)
     sys.exit("timed out: not live yet (has it been pushed?)")
 
+APP_FILES = ("index.html", "log.html", "sw.js", "manifest.json", "labor-catalog.json")
+
+def rollback(good, new):
+    sha = git("log", "--format=%H", "-1", f"--grep=^v{re.escape(good)}:")
+    if not sha: sys.exit(f"no commit found for v{good}")
+    for f in APP_FILES:
+        r = subprocess.run(["git", "--no-optional-locks", "show", f"{sha}:{f}"], cwd=ROOT, capture_output=True)
+        if r.returncode == 0:
+            data = r.stdout.replace(b"\r\n", b"\n").replace(b"\n", b"\r\n")  # keep Windows line endings
+            open(P(f), "wb").write(data)
+    print(f"restored app files from v{good} ({sha[:7]})"); bump(new)
+    print(f"commit message: v{new}: rollback to v{good}")
+
 if __name__ == "__main__":
     a = sys.argv[1:]
     if a == ["check"]: check()
     elif a == ["lint"]: lint()
     elif len(a) == 2 and a[0] == "bump": bump(a[1])
     elif len(a) == 2 and a[0] == "verify": verify(a[1])
+    elif len(a) == 3 and a[0] == "rollback": rollback(a[1], a[2])
     else: print(__doc__)

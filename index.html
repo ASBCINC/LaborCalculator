@@ -354,6 +354,7 @@
                     <div>
                         <span class="text-gray-500 uppercase tracking-wide font-semibold block text-[10px]">Client / Project</span>
                         <span id="printCustomerName" class="font-bold text-sm text-black">General Project</span>
+                        <span id="printOppLine" class="hidden block text-[11px] text-gray-700 mt-0.5"></span>
                     </div>
                     <div>
                         <span class="text-gray-500 uppercase tracking-wide font-semibold block text-[10px]">Sales &amp; Project Manager</span>
@@ -613,8 +614,8 @@
               }
           });
 
-        const APP_VERSION = '8.9.15';
-        const BUILD_DATE = '2026-11-13';
+        const APP_VERSION = '8.9.16';
+        const BUILD_DATE = '2026-11-16';
         let HOURLY_RATE = 200;
 
         // Add-on labor options for the dropdown on every product tile.
@@ -720,6 +721,7 @@
         let isHoursShown = localStorage.getItem('asbcShowHours') === 'true';
         let currentLoadedIsTemplate = false;
         let currentLoadedEstimateId = '';
+        let currentOppMeta = { id: '', number: '', clientName: '' }; // D-Tools opportunity kept with the quote (survives load/re-save)
 
         function slugify(value) {
             return String(value).trim().toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
@@ -992,9 +994,8 @@
                     if (data.isTemplate || data.isLocked) {
                         templates.push(data);
                     } else if (quoteDate > 0 && quoteDate < cutoff) {
-                        db.collection("quotes").doc(doc.id).delete().catch(err => {
-                            console.error("Auto-cleanup error:", err);
-                        });
+                        // v8.9.16: quotes older than 60 days are hidden from this list but no longer deleted
+                        // (deleting erased Labor Calibration history; they stay in the Quote Log).
                     } else {
                         recents.push(data);
                     }
@@ -1035,13 +1036,16 @@
             return { 
                 customerName: customerName.value.trim(),
                 salesManagerName: salesManagerName.value.trim(),
-                dtoolsOpportunityId: dtoolsOpportunity ? (dtoolsOpportunity.value === 'manual' ? '' : dtoolsOpportunity.value) : ''
+                dtoolsOpportunityId: (dtoolsOpportunity && dtoolsOpportunity.value && dtoolsOpportunity.value !== 'manual') ? dtoolsOpportunity.value : (currentOppMeta.id || ''),
+                dtoolsOppNumber: currentOppMeta.number || '',
+                dtoolsClientName: currentOppMeta.clientName || ''
             };
         }
 
         function applyProjectData(data = {}) {
             customerName.value = data.customerName || '';
             if (dtoolsOpportunity) dtoolsOpportunity.value = '';
+            currentOppMeta = { id: data.dtoolsOpportunityId || '', number: data.dtoolsOppNumber || '', clientName: data.dtoolsClientName || '' };
             if (data.salesManagerName && Array.from(salesManagerName.options).some(o => o.value === data.salesManagerName)) salesManagerName.value = data.salesManagerName;
             else salesManagerName.value = '';
         }
@@ -1133,7 +1137,7 @@
             };
 
             try {
-                await db.collection("quotes").doc(id).set(quoteDocument);
+                await db.collection("quotes").doc(id).set(quoteDocument, { merge: true }); // merge keeps logged actuals on re-save
                 hasUnsavedCloudChanges = false; updateSaveIndicator(); localStorage.removeItem('asbcActiveDraft');
                 if (!quiet) alert(`Saved ${label} to the cloud! (Will sync when online if currently offline)`);
                 currentLoadedIsTemplate = wantsToSaveAsTemplate;
@@ -1584,6 +1588,14 @@
             // Update Print Header Details
             const data = currentProjectData();
             document.getElementById('printCustomerName').textContent = data.customerName || 'Standard Estimate';
+            const printOppLine = document.getElementById('printOppLine');
+            if (printOppLine) {
+                const bits = [];
+                if (data.dtoolsClientName) bits.push('Client: ' + data.dtoolsClientName);
+                if (data.dtoolsOppNumber) bits.push('D-Tools #' + data.dtoolsOppNumber);
+                printOppLine.textContent = bits.join(' · ');
+                printOppLine.classList.toggle('hidden', !bits.length);
+            }
             document.getElementById('printSalesManager').textContent = data.salesManagerName || 'ASBC Operations';
             document.getElementById('printDate').textContent = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
         }
@@ -1984,6 +1996,7 @@
                     customerName: customerName.value,
                     salesManagerName: salesManagerName.value,
                     dtoolsOpportunityId: currentProjectData().dtoolsOpportunityId,
+                    oppMeta: currentOppMeta,
                     loadedEstimateId: currentLoadedEstimateId,
                     recyclingToggle: recyclingToggle.value,
                     customRecyclingInput: customRecyclingInput.value,
@@ -2010,6 +2023,7 @@
                 quoteCart = d.cart;
                 if (typeof d.customerName === 'string') customerName.value = d.customerName;
                 if (typeof d.salesManagerName === 'string') salesManagerName.value = d.salesManagerName;
+                if (d.oppMeta && typeof d.oppMeta === 'object') currentOppMeta = { id: d.oppMeta.id || '', number: d.oppMeta.number || '', clientName: d.oppMeta.clientName || '' };
                 currentLoadedEstimateId = d.loadedEstimateId || '';
                 if (d.recyclingToggle) recyclingToggle.value = d.recyclingToggle;
                 if (typeof d.customRecyclingInput === 'string') customRecyclingInput.value = d.customRecyclingInput;
@@ -2135,6 +2149,7 @@
                 customerName.value = '';
                 showOppNameField(false);
                 if (dtoolsOpportunity) dtoolsOpportunity.value = '';
+                currentOppMeta = { id: '', number: '', clientName: '' };
                 salesManagerName.value = '';
                 currentLoadedIsTemplate = false;
                 isTemplateCheckbox.checked = false;
@@ -2260,7 +2275,7 @@
         let currentActuals = null;
 
         function actualsRowsFromCart() {
-            return currentProjectData().map(entry => {
+            return serializeQuoteCart().map(entry => {
                 const catItem = catalog.find(i => i.id === entry.id);
                 const name = entry.isCustom ? entry.name : (catItem ? catItem.name : entry.id);
                 const base = entry.isCustom
@@ -2424,7 +2439,10 @@
                 dtoolsOppsCache.sort((a, b) => String(b.modifiedDate || '').localeCompare(String(a.modifiedDate || '')));
                 const open = dtoolsOppsCache.filter(o => !o.isArchived && o.stage && !/lost|won|closed/i.test(o.stage));
                 const list = open.length ? open : dtoolsOppsCache;
-                dtoolsOpportunity.innerHTML = '<option value="">' + (list.length ? list.length + ' opportunity(ies): pick one' : 'No D-Tools opportunities') + '</option>';
+                let newestSync = 0;
+                dtoolsOppsCache.forEach(o => { const t = o.updatedAt && o.updatedAt.toMillis ? o.updatedAt.toMillis() : Date.parse(o.updatedAt || '') || 0; if (t > newestSync) newestSync = t; });
+                const syncAgo = newestSync ? (() => { const m = Math.round((Date.now() - newestSync) / 60000); return m < 60 ? m + ' min ago' : Math.round(m / 60) + ' h ago'; })() : '';
+                dtoolsOpportunity.innerHTML = '<option value="">' + (list.length ? list.length + ' opportunity(ies): pick one' : 'No D-Tools opportunities') + (syncAgo ? ' (D-Tools synced ' + syncAgo + ')' : '') + '</option>';
                 const manualOpt = document.createElement('option');
                 manualOpt.value = 'manual';
                 manualOpt.textContent = 'Manual (not in D-Tools)';
@@ -2442,8 +2460,9 @@
         salesManagerName.addEventListener('change', loadOppsForRep);
         dtoolsOpportunity.addEventListener('change', () => {
             const o = dtoolsOppsCache.find(x => x.id === dtoolsOpportunity.value);
-            if (o) { customerName.value = o.name; showOppNameField(false); renderQuote(); }
+            if (o) { customerName.value = o.name; currentOppMeta = { id: o.id, number: o.number || '', clientName: o.clientName || '' }; showOppNameField(false); renderQuote(); scheduleDraftSave(); }
             else if (dtoolsOpportunity.value === 'manual') {
+                currentOppMeta = { id: '', number: '', clientName: '' };
                 const nm = window.prompt('Opportunity name:');
                 if (nm && nm.trim()) { customerName.value = nm.trim(); renderQuote(); }
                 else { dtoolsOpportunity.value = ''; }
