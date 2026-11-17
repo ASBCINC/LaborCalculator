@@ -100,6 +100,11 @@ window.addEventListener('offline', () => flash('You are offline. Keep working; y
 window.addEventListener('online', () => flash('Back online: syncing your saved entries.'));
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const hrs = v => (Math.round((Number(v) || 0) * 100) / 100).toFixed(2);
+// v8.19.0: the installer's job status, picked on the recap
+const JOB_STATUSES = ['In Progress', 'Complete', 'Sales Follow up', 'PM Follow up', 'Cancelled'];
+const jsColor = s => ({ 'Complete': 'st-closed', 'In Progress': 'st-scheduled', 'Sales Follow up': 'st-submitted', 'PM Follow up': 'st-submitted', 'Cancelled': '' })[s] || '';
+const jsBadge = s => s ? `<span class="st ${jsColor(s)}">${esc(String(s).toUpperCase())}</span>` : '';
+const jsSelect = cur => `<div class="qmeta" style="margin-top:4px">Job status (required)</div><select id="jobStatus"><option value="">Select status…</option>${JOB_STATUSES.map(x => `<option ${x === cur ? 'selected' : ''}>${x}</option>`).join('')}</select>`;
 const STATUS = { draft: 'Draft', won: 'Won', scheduled: 'Scheduled', submitted: 'Submitted', closed: 'Closed' };
 const stBadge = s => `<span class="st st-${esc(s || 'draft')}">${esc((STATUS[s] || 'Draft').toUpperCase())}</span>`;
 let ME = null, USERS = {}, CATALOG = new Map();
@@ -129,7 +134,7 @@ async function showList() {
     : [['To review', jobs.filter(q => q.status === 'submitted')], ['Won: needs scheduling', jobs.filter(q => q.status === 'won')], ['Scheduled', jobs.filter(q => q.status === 'scheduled')], ['Closed', jobs.filter(q => q.status === 'closed')]];
   app().innerHTML = `<div class="qactions" style="margin:0 0 6px"><button class="qbtn gold" onclick="showNew()">+ Job report without a quote</button></div>` + groups.filter(g => g[1].length || g[0] !== 'Closed').map(([t, list]) => `<div class="sect">${esc(t)} (${list.length})</div>` +
     (list.length ? list.sort((a, b) => first(a).localeCompare(first(b))).map(q => `<a href="?quote=${encodeURIComponent(q._id)}" style="text-decoration:none;color:inherit"><div class="qrow">
-      <div class="qtop"><div><div class="qname">${esc(label(q))} ${stBadge(q.status)}</div>
+      <div class="qtop"><div><div class="qname">${esc(label(q))} ${stBadge(q.status)} ${jsBadge((q.job || {}).jobStatus)}</div>
       <div class="qmeta">${esc((q.project || {}).dtoolsClientName || '')}${(q.project || {}).dtoolsOppNumber ? ' · #' + esc(q.project.dtoolsOppNumber) : ''} · Rep: ${esc((q.project || {}).salesManagerName || '—')}</div></div>
       <div class="qnums"><div class="qnum-b">${esc(((q.schedule || {}).dates || []).map(fmtDate).join(', ') || 'Not scheduled')}</div>
       <div class="qmeta">${esc(((q.schedule || {}).techs || []).map(nameOf).join(', '))}</div></div></div></div></a>`).join('') : '<div class="empty" style="padding:10px 0">None</div>')).join('')
@@ -148,7 +153,7 @@ async function showJob(id) {
   if (ME.role === 'rep') { app().innerHTML = '<div class="empty">Jobs are for technicians and admins.</div>'; return; }
   document.getElementById('pageTitle').textContent = label(Q);
   const st = Q.status || 'draft';
-  let html = `<div class="card"><div class="qtop"><div><div class="qname">${esc(label(Q))} ${stBadge(st)}</div>
+  let html = `<div class="card"><div class="qtop"><div><div class="qname">${esc(label(Q))} ${stBadge(st)} ${jsBadge((Q.job || {}).jobStatus)}</div>
     <div class="qmeta">${esc((Q.project || {}).dtoolsClientName || '')}${(Q.project || {}).dtoolsOppNumber ? ' · D-Tools #' + esc(Q.project.dtoolsOppNumber) : ''} · Rep: ${esc((Q.project || {}).salesManagerName || '—')}</div>
     ${Q.noQuote ? '<div class="qmeta" style="color:#ff9f6b">Job report without a labor quote</div>' : ''}<div class="qmeta">Dates: ${esc(((Q.schedule || {}).dates || []).map(fmtDate).join(', ') || '—')} · Techs: ${esc(((Q.schedule || {}).techs || []).map(nameOf).join(', ') || '—')}</div></div></div>
     ${Q.job && Q.job.reviewNote && st === 'scheduled' ? `<div class="qmeta" style="color:#ff9f6b;margin-top:6px">Sent back by ${esc(nameOf(Q.job.reviewedBy))}: ${esc(Q.job.reviewNote)}</div>` : ''}</div>`;
@@ -194,7 +199,7 @@ function logForm() {
     <div class="card"><div class="sect" style="margin-top:0">Daily time log</div>
     <table id="logT"><tr><th>Date</th><th>Tech</th><th>Hours</th></tr>${log.map(r => `<tr><td><input type="date" class="ld" value="${esc(r.date || '')}"></td><td><select class="lw"><option value="">—</option>${tOpts(r.who)}</select></td><td><input type="number" class="lh" min="0" step="0.25" value="${esc(r.hours)}"></td></tr>`).join('')}</table>
     <button type="button" class="qbtn" id="addLog" style="margin-top:6px">+ Add day / tech</button></div>
-    <div class="card"><div class="sect" style="margin-top:0">Job recap</div>
+    <div class="card"><div class="sect" style="margin-top:0">Job recap</div>${jsSelect(((typeof Q !== 'undefined' && Q && Q.job) || {}).jobStatus || '')}
     ${[['work', 'Work completed'], ['issues', 'Problems / what took longer'], ['followups', 'Open items / return visit needed'], ['client', 'Client feedback']].map(([k, t]) => `<div class="qmeta" style="margin-top:8px;display:flex;justify-content:space-between;align-items:center">${t}<button type="button" class="qbtn bl" data-k="${k}" style="height:24px;padding:0 8px">• Bullet</button></div><textarea class="rc" data-k="${k}" rows="3">${esc((j.recap || {})[k] || '')}</textarea>`).join('')}
     <div class="qactions"><button class="qbtn" id="saveJob">Save progress</button><button class="qbtn gold" id="submitJob">Submit to Anthony</button></div><div id="jobMsg" class="qmeta"></div></div>`;
 }
@@ -205,7 +210,8 @@ function collectJob() {
   const log = [...document.querySelectorAll('#logT tr')].slice(1).map(tr => ({ date: tr.querySelector('.ld').value, who: tr.querySelector('.lw').value, hours: Number(tr.querySelector('.lh').value) || 0 })).filter(r => r.date && r.hours);
   const recap = {}; document.querySelectorAll('.rc').forEach(t => recap[t.dataset.k] = t.value.trim());
   const extras = [...document.querySelectorAll('#exT tr')].slice(1).map(tr => ({ desc: tr.querySelector('.exd').value.trim(), hours: Number(tr.querySelector('.exh').value) || 0 })).filter(x => x.desc || x.hours);
-  return Object.assign({}, Q.job || {}, { lines, log, recap, extras, extrasHours: Math.round(extras.reduce((a, x) => a + x.hours, 0) * 100) / 100, savedAt: new Date().toISOString(), savedBy: ME.email });
+  const jsEl = document.getElementById('jobStatus');
+  return Object.assign({}, Q.job || {}, { jobStatus: jsEl ? jsEl.value : ((Q.job || {}).jobStatus || ''), lines, log, recap, extras, extrasHours: Math.round(extras.reduce((a, x) => a + x.hours, 0) * 100) / 100, savedAt: new Date().toISOString(), savedBy: ME.email });
 }
 function report(admin) {
   const j = Q.job || {}; const lines = j.lines || [];
@@ -216,7 +222,7 @@ function report(admin) {
   const daily = () => `    <div class="card"><div class="sect" style="margin-top:0">Daily time log (${hrs(tLog)} hrs)</div><table><tr><th>Date</th><th>Tech</th><th class="right">Hours</th></tr>
     ${(j.log || []).map(r => `<tr><td>${esc(fmtDate(r.date))}</td><td>${esc(nameOf(r.who))}</td><td class="right">${hrs(r.hours)}</td></tr>`).join('') || '<tr><td colspan=3>—</td></tr>'}</table>
     ${(Q.items || []).length && Math.abs(tLog - tAct) > 0.5 && tLog ? `<div class="qmeta" style="color:#ff9f6b">Time log (${hrs(tLog)}) and item hours (${hrs(tAct)}) differ.</div>` : ''}</div>`;
-  const recapCard = () => `    <div class="card"><div class="sect" style="margin-top:0">Recap</div>${[['work', 'Work completed'], ['issues', 'Problems / what took longer'], ['followups', 'Open items / return visit'], ['client', 'Client feedback']].map(([k, t]) => `<div class="qmeta" style="margin-top:6px">${t}</div><div style="white-space:pre-wrap">${esc((j.recap || {})[k] || '—')}</div>`).join('')}
+  const recapCard = () => `    <div class="card"><div class="sect" style="margin-top:0">Recap ${jsBadge(j.jobStatus)}</div>${[['work', 'Work completed'], ['issues', 'Problems / what took longer'], ['followups', 'Open items / return visit'], ['client', 'Client feedback']].map(([k, t]) => `<div class="qmeta" style="margin-top:6px">${t}</div><div style="white-space:pre-wrap">${esc((j.recap || {})[k] || '—')}</div>`).join('')}
     <div class="qmeta" style="margin-top:10px">Submitted by ${esc(nameOf(j.submittedBy))}${j.submittedAt ? ' · ' + esc(new Date(j.submittedAt).toLocaleString('en-US')) : ''}${j.reviewedAt && (Q.status === 'closed') ? ' · Approved by ' + esc(nameOf(j.reviewedBy)) + ' ' + esc(new Date(j.reviewedAt).toLocaleDateString('en-US')) : ''}</div></div>`;
   const actions = `<div class="qactions no-print"><button class="qbtn" onclick="window.print()">Print / Save PDF</button>
     ${admin && (j.recap || {}).followups && !j.returnVisitId ? '<button class="qbtn" id="makeReturn" style="border-color:#8a6d2f;color:#ffd479">Create return visit</button>' : ''}${admin && j.returnVisitId ? '<a class="qbtn" style="display:inline-flex;align-items:center;text-decoration:none" href="?quote=' + encodeURIComponent(j.returnVisitId) + '">Open return visit</a>' : ''}
@@ -288,6 +294,7 @@ function wire() {
     if (missing && !confirm(missing + ' item(s) have no hours. Submit anyway?')) return;
     if (!(Q.items || []).length && !job.log.length) { document.getElementById('jobMsg').textContent = 'Enter your time on site first.'; return; }
     if (!job.log.length && !confirm('No daily time log entered. Submit anyway?')) return;
+    if (!job.jobStatus) { document.getElementById('jobMsg').textContent = 'Pick a job status in the recap first.'; return; }
     job.submittedAt = new Date().toISOString(); job.submittedBy = ME.email; job.reviewNote = '';
     await save(REF, { job, status: 'submitted' });
     showJob(qid);
@@ -321,7 +328,7 @@ function showNew() {
     <div class="card"><div class="sect" style="margin-top:0">Time on site</div><div class="qmeta">One row per tech per day. Total time on site is added up for you.</div>
     <table id="logT"><tr><th>Date</th><th>Tech</th><th>Hours</th></tr><tr><td><input type="date" class="ld" value="${today}"></td><td><select class="lw"><option value="">—</option>${techs().map(t => `<option value="${esc(t.email)}" ${t.email === ME.email ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select></td><td><input type="number" class="lh" min="0" step="0.25"></td></tr></table>
     <button type="button" class="qbtn" id="addLog" style="margin-top:6px">+ Add day / tech</button></div>
-    <div class="card"><div class="sect" style="margin-top:0">Job recap</div>
+    <div class="card"><div class="sect" style="margin-top:0">Job recap</div>${jsSelect(((typeof Q !== 'undefined' && Q && Q.job) || {}).jobStatus || '')}
     ${[['work', 'Work completed'], ['issues', 'Problems / what took longer'], ['followups', 'Open items / return visit needed'], ['client', 'Client feedback']].map(([k, t]) => `<div class="qmeta" style="margin-top:8px;display:flex;justify-content:space-between;align-items:center">${t}<button type="button" class="qbtn bl" data-k="${k}" style="height:24px;padding:0 8px">• Bullet</button></div><textarea class="rc" data-k="${k}" rows="3"></textarea>`).join('')}
     <div class="qactions"><button class="qbtn gold" id="nSubmit">Submit to Anthony</button></div><div id="nMsg" class="qmeta"></div></div>`;
   document.getElementById('addLog').onclick = () => { const tr = document.querySelector('#logT tr:last-child').cloneNode(true); tr.querySelector('.lh').value = ''; document.getElementById('logT').appendChild(tr); };
@@ -359,8 +366,10 @@ async function submitNew() {
   if (!log.length) return msg('Enter time on site (date, tech and hours).');
   const recap = {}; document.querySelectorAll('.rc').forEach(t => recap[t.dataset.k] = t.value.trim());
   if (!recap.work) return msg('Fill in "Work completed" in the recap.');
+  const jobStatus = (document.getElementById('jobStatus') || {}).value || '';
+  if (!jobStatus) return msg('Pick a job status in the recap.');
   const items = [], lines = [];
-  const job = { lines, log, totalHours: Math.round(log.reduce((a, r) => a + r.hours, 0) * 100) / 100, recap, savedAt: new Date().toISOString(), savedBy: ME.email, submittedAt: new Date().toISOString(), submittedBy: ME.email, reviewNote: '' };
+  const job = { jobStatus, lines, log, totalHours: Math.round(log.reduce((a, r) => a + r.hours, 0) * 100) / 100, recap, savedAt: new Date().toISOString(), savedBy: ME.email, submittedAt: new Date().toISOString(), submittedBy: ME.email, reviewNote: '' };
   const dates = [...new Set(log.map(r => r.date))].sort();
   const techList = [...new Set(log.map(r => r.who).filter(Boolean).concat(ME.role === 'tech' ? [ME.email] : []))];
   if (NEW.open) return msg('This opportunity already has a labor quote. Tap "Log hours on that quote instead" above.');

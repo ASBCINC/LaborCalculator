@@ -45,7 +45,7 @@ for q in quotes:
     jobs.append({
         'job': q.get('label') or proj.get('customerName'), 'client': proj.get('dtoolsClientName'), 'dtools': proj.get('dtoolsOppNumber'),
         'rep': proj.get('salesManagerName'), 'store': store_of.get(proj.get('salesManagerName')) or '',
-        'status': q.get('status'), 'noQuote': bool(q.get('noQuote')),
+        'status': q.get('status'), 'jobStatus': j.get('jobStatus') or '', 'noQuote': bool(q.get('noQuote')),
         'techs': [name_of(t) for t in ((q.get('schedule') or {}).get('techs') or [])],
         'dates': (q.get('schedule') or {}).get('dates') or [],
         'timeOnSiteHours': round(sum(float(r.get('hours') or 0) for r in (j.get('log') or [])), 2),
