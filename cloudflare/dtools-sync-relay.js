@@ -3,7 +3,7 @@
 //   1) instantly, whenever D-Tools calls the webhook URL  https://<worker>.workers.dev/hook/<HOOK_SECRET>
 //   2) every 10 minutes from a Cloudflare cron trigger (GitHub's own 15-minute schedule often runs hours late)
 // Secrets (Worker > Settings > Variables and Secrets, type "Secret"):
-//   GITHUB_TOKEN  fine-grained token, only ASBCINC/LaborCalculator, "Actions: Read and write"
+//   GH_TOKEN      fine-grained token, only ASBCINC/LaborCalculator, "Actions: Read and write"
 //   HOOK_SECRET   the random string in the webhook URL (keeps strangers from triggering it)
 // No D-Tools or Firebase keys live here; the sync itself still runs in GitHub with the repo secrets.
 const WORKFLOW = 'https://api.github.com/repos/ASBCINC/LaborCalculator/actions/workflows/sync-opportunities.yml/dispatches';
@@ -11,7 +11,7 @@ const WORKFLOW = 'https://api.github.com/repos/ASBCINC/LaborCalculator/actions/w
 async function startSync(env, why) {
   const r = await fetch(WORKFLOW, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${env.GITHUB_TOKEN}`, Accept: 'application/vnd.github+json', 'User-Agent': 'asbc-dtools-relay', 'Content-Type': 'application/json' },
+    headers: { Authorization: `Bearer ${env.GH_TOKEN}`, Accept: 'application/vnd.github+json', 'User-Agent': 'asbc-dtools-relay', 'Content-Type': 'application/json' },
     body: JSON.stringify({ ref: 'main' })
   });
   console.log('dispatch', why, r.status);
