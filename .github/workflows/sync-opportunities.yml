@@ -10,6 +10,10 @@ concurrency:
   group: dtools-sync
   cancel-in-progress: false
 
+permissions:
+  contents: read
+  actions: write   # lets this run start the backup / weekly report when GitHub skipped their schedule
+
 jobs:
   sync:
     runs-on: ubuntu-latest
@@ -21,3 +25,14 @@ jobs:
           DTS_API_KEY: ${{ secrets.DTS_API_KEY }}
           FIREBASE_SA: ${{ secrets.FIREBASE_SA }}
           REPORT_ID: ${{ secrets.REPORT_ID }}
+      - name: Catch up skipped schedules (backup daily, weekly report Fridays)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          last() { gh run list -R "$GITHUB_REPOSITORY" -w "$1" -s success -L 1 --json createdAt -q '.[0].createdAt' 2>/dev/null; }
+          age_h() { [ -z "$1" ] && echo 9999 || echo $(( ( $(date -u +%s) - $(date -u -d "$1" +%s) ) / 3600 )); }
+          b=$(age_h "$(last nightly-backup.yml)")
+          if [ "$b" -ge 26 ]; then echo "backup is ${b}h old: starting it"; gh workflow run nightly-backup.yml -R "$GITHUB_REPOSITORY"; fi
+          dow=$(TZ=America/Los_Angeles date +%u); hr=$(TZ=America/Los_Angeles date +%H)
+          w=$(age_h "$(last weekly-report.yml)")
+          if [ "$dow" = "5" ] && [ "$hr" -ge 4 ] && [ "$w" -ge 48 ]; then echo "weekly report missing: starting it"; gh workflow run weekly-report.yml -R "$GITHUB_REPOSITORY"; fi

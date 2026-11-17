@@ -233,8 +233,9 @@ def main():
                 'followups': (rec.get('followups') or '')[:300], 'clientFeedback': (rec.get('client') or '')[:300],
                 'link': 'https://asbcinc.github.io/LaborCalculator/jobs.html?quote=' + urllib.parse.quote(qid),
             })
-        fs.call('reports/' + rid + '-jobs', method='PATCH', body={'fields': {
-            'json': {'stringValue': json.dumps({'generatedAt': datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'), 'submissions': pending}, ensure_ascii=False)}}})
+        # Written as field `jobs` on the weekly report doc (only that field), so one URL serves both readers.
+        fs.call('reports/' + rid, method='PATCH', params={'updateMask.fieldPaths': 'jobs'}, body={'fields': {
+            'jobs': {'stringValue': json.dumps({'generatedAt': datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'), 'submissions': pending}, ensure_ascii=False)}}})
         print(f'::notice::Job-report notifications listed: {len(pending)}')
 
     owners = sorted({f['owner'] for f in keep.values() if f['owner']})

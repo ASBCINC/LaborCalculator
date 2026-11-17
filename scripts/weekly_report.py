@@ -97,7 +97,7 @@ report = {
     'leaderboardThisMonth': board[:8],
     'notes': 'variancePct > 0 means jobs took longer than quoted. Estimates are catalog labor hours (before site conditions, PM and commissioning).',
 }
-fs.call('reports/' + REPORT_ID, method='PATCH', body={'fields': {
+fs.call('reports/' + REPORT_ID, method='PATCH', params={'updateMask.fieldPaths': ['json', 'generatedAt']}, body={'fields': {  # keeps the `jobs` field the sync writes
     'json': {'stringValue': json.dumps(report, ensure_ascii=False)},
     'generatedAt': {'timestampValue': report['generatedAt']}}})
 print(f"::notice::Weekly report written: {len(jobs)} jobs this week, {report['accuracyLast90Days']['overall']['jobs']} approved jobs in 90 days")
