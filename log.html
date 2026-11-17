@@ -90,7 +90,7 @@ const fmt = v => '$' + Number(v || 0).toLocaleString('en-US', { minimumFractionD
 // v8.11.1: same sign-in as the calculator. Admins see every quote; reps only their own.
 let ME = null;
 async function quotesForUser() {
-  if (ME.role === 'admin') return db.collection('quotes').get();
+  if (ME.role === 'admin' || ME.allQuotes) return db.collection('quotes').get();
   return db.collection('quotes').where('project.salesManagerName', '==', ME.name).get();
 }
 firebase.auth().onAuthStateChanged(async (u) => {
@@ -103,8 +103,7 @@ firebase.auth().onAuthStateChanged(async (u) => {
   const email = (u.email || '').toLowerCase();
   const p = map[email] || (email === 'a.ward@asbc.us' ? { name: 'Anthony Ward', role: 'admin' } : null);
   if (!p) { document.getElementById('list').innerHTML = '<div class="empty">' + esc(email) + ' is not approved yet. Ask Anthony.</div>'; return; }
-  ME = { email, name: p.name, role: p.role || 'rep' };
-  if (ME.role === 'tech') { location.replace('./jobs.html'); return; } // techs only use the Jobs page
+  ME = { email, name: p.name, role: p.role || 'rep', allQuotes: !!p.allQuotes };
   boot();
 });
 
@@ -237,8 +236,8 @@ function renderList() {
       </div>
       <div class="qactions">
         <button class="qbtn qbtn-load" data-act="load" data-id="${r._id}">Load</button>
-        <button class="qbtn qbtn-save" data-act="save" data-id="${r._id}">Save</button>
-        <button class="qbtn qbtn-del" data-act="delete" data-id="${r._id}">Delete</button>
+        ${ME.role === 'admin' || ((r.project || {}).salesManagerName === ME.name) ? `<button class="qbtn qbtn-save" data-act="save" data-id="${r._id}">Save</button>
+        <button class="qbtn qbtn-del" data-act="delete" data-id="${r._id}">Delete</button>` : ''}
         ${ME && ME.role === 'admin' && !r.isTemplate ? `<a class="qbtn" style="display:inline-flex;align-items:center;text-decoration:none" href="./jobs.html?quote=${encodeURIComponent(r._id)}">Job</a>` : ''}
       </div>
       ${detail}

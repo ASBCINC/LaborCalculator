@@ -364,7 +364,6 @@ firebase.auth().onAuthStateChanged(async (u) => {
   const p = USERS[email] || (email === 'a.ward@asbc.us' ? { name: 'Anthony Ward', role: 'admin' } : null);
   if (!p) { app().innerHTML = '<div class="empty">' + esc(email) + ' is not approved yet. Ask Anthony.</div>'; return; }
   ME = { email, name: p.name, role: p.role || 'rep' };
-  if (ME.role === 'tech') document.getElementById('calcLink').style.display = 'none';
   document.getElementById('signOutBtn').style.display = '';
   document.getElementById('signOutBtn').textContent = 'Sign out (' + ME.name.split(' ')[0] + ')';
   try { if (qid) await showJob(qid); else await showList(); } catch (e) { app().innerHTML = '<div class="empty">Could not load: ' + esc(e.message) + '</div>'; }

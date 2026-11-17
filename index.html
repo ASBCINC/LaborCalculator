@@ -587,7 +587,7 @@
                 </details>
                 <details class="mt-3">
                     <summary class="text-xs text-brandGold cursor-pointer">Approved users</summary>
-                    <p class="text-[11px] text-textMuted mt-2">One per line: <b>email, Name, role, store</b> (role = rep, tech or admin; store = San Francisco, Palo Alto, West Hollywood, or none to leave someone off the leaderboard). Name must match the sales rep dropdown. Only these people can create a PIN and use the calculator.</p>
+                    <p class="text-[11px] text-textMuted mt-2">One per line: <b>email, Name, role, store</b>, plus <b>, all</b> at the end to let a non-admin see every quote (role = rep, tech or admin; store = San Francisco, Palo Alto, West Hollywood, or none to leave someone off the leaderboard). Name must match the sales rep dropdown. Only these people can create a PIN and use the calculator.</p>
                     <textarea id="approvedUsersText" rows="8" class="mt-2 w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-[11px] text-white font-mono"></textarea>
                     <button type="button" onclick="saveApprovedUsers()" class="mt-2 w-full text-xs bg-brandGold text-bgDark font-bold py-2 rounded-lg">Save Approved Users</button>
                 </details>
@@ -673,7 +673,7 @@
               }
           });
 
-        const APP_VERSION = '8.15.3';
+        const APP_VERSION = '8.16.0';
         const BUILD_DATE = '2026-11-16';
         let HOURLY_RATE = 200;
 
@@ -778,6 +778,7 @@
         let isListView = localStorage.getItem('asbcListView') === 'true';
         let isHoursShown = localStorage.getItem('asbcShowHours') === 'true';
         let currentLoadedIsTemplate = false;
+        let currentLoadedOwner = ''; // sales rep on the loaded quote (non-admins saving someone else's quote get a copy)
         let currentLoadedEstimateId = '';
         let pricingV2 = true; // v8.12 pricing (site, PM, commissioning, trip, minimum); false for quotes saved earlier
         let currentOppMeta = { id: '', number: '', clientName: '' }; // D-Tools opportunity kept with the quote (survives load/re-save)
@@ -1025,7 +1026,7 @@
                 const cutoff = Date.now() - (60 * 24 * 60 * 60 * 1000); 
                 // v8.11.1: admins see every quote; reps see only their own quotes plus shared templates.
                 let querySnapshot;
-                if (isAdminUser()) {
+                if (canSeeAllQuotes()) {
                     querySnapshot = await db.collection("quotes").get();
                 } else {
                     const [mine, tmpl] = await Promise.all([
@@ -1159,6 +1160,11 @@
             let id = currentLoadedEstimateId;
             const label = data.customerName;
 
+            if (id && !isAdminUser() && !currentLoadedIsTemplate && currentLoadedOwner && currentUserProfile && currentLoadedOwner !== currentUserProfile.name) {
+                alert('This quote belongs to ' + currentLoadedOwner + '. Your changes will be saved as a new copy.');
+                id = '';
+                currentLoadedEstimateId = '';
+            }
             if (id) {
                 if (currentLoadedIsTemplate && !wantsToSaveAsTemplate) {
                     id = `estimate-${Date.now()}`;
@@ -1219,7 +1225,7 @@
 
             try {
                 const docSnap = await db.collection("quotes").doc(id).get();
-                if (docSnap.exists && !isAdminUser() && !docSnap.data().isTemplate && ((docSnap.data().project || {}).salesManagerName !== (currentUserProfile && currentUserProfile.name))) {
+                if (docSnap.exists && !canSeeAllQuotes() && !docSnap.data().isTemplate && ((docSnap.data().project || {}).salesManagerName !== (currentUserProfile && currentUserProfile.name))) {
                     return alert('That quote belongs to another sales rep.');
                 }
                 if (docSnap.exists) {
@@ -1243,6 +1249,7 @@
                     document.getElementById('tripToggle').value = record.options?.trip || 'yes';
                     
                     currentLoadedIsTemplate = !!record.isTemplate;
+                    currentLoadedOwner = (record.project && record.project.salesManagerName) || '';
                     isTemplateCheckbox.checked = currentLoadedIsTemplate;
                     isLockedCheckbox.checked = !!record.isLocked;
                     currentActuals = record.actuals || null;
@@ -1793,6 +1800,7 @@
             return out;
         }
         function isAdminUser() { return !!(currentUserProfile && currentUserProfile.role === 'admin'); }
+        function canSeeAllQuotes() { return isAdminUser() || !!(currentUserProfile && currentUserProfile.allQuotes); }
         function authMsg(t) { document.getElementById('authStatus').textContent = t || ''; }
         function setAuthMode(m) {
             authMode = m;
@@ -1880,9 +1888,10 @@
                 const users = await loadApprovedUsers();
                 const p = users[email];
                 if (!p) { showAuthGate(true, email + ' is not on the approved list yet. Ask Anthony to add you, then reload.'); return; }
-                currentUserProfile = { email, name: p.name, role: p.role || 'rep' };
-                if (currentUserProfile.role === 'tech') { location.href = './jobs.html'; return; } // techs work from the Jobs page
+                currentUserProfile = { email, name: p.name, role: p.role || 'rep', allQuotes: !!p.allQuotes };
+                // v8.16.0: techs use the calculator too (no admin); Jobs link in the header
                 showAuthGate(false);
+                if (currentUserProfile.role === 'tech') { const jl = document.getElementById('jobsLink'); jl.classList.remove('hidden'); jl.classList.add('block'); jl.textContent = 'My Jobs'; }
                 if (isAdminUser()) {
                     const jl = document.getElementById('jobsLink'); jl.classList.remove('hidden'); jl.classList.add('block');
                     db.collection('quotes').where('status', '==', 'submitted').get().then(sn => { if (sn.size) jl.textContent = 'Jobs (' + sn.size + ' to review)'; }).catch(() => {});
@@ -1900,14 +1909,14 @@
         }
         function fillApprovedUsersEditor() {
             const ta = document.getElementById('approvedUsersText'); if (!ta) return;
-            ta.value = Object.entries(approvedUsers).sort((a, b) => (a[1].role === 'admin' ? -1 : 0) - (b[1].role === 'admin' ? -1 : 0) || a[1].name.localeCompare(b[1].name)).map(([e, p]) => e + ', ' + p.name + ', ' + (p.role || 'rep') + ', ' + (p.store || (window.ASBCBoard && ASBCBoard.STORE_DEFAULTS[p.name]) || '')).join('\n');
+            ta.value = Object.entries(approvedUsers).sort((a, b) => (a[1].role === 'admin' ? -1 : 0) - (b[1].role === 'admin' ? -1 : 0) || a[1].name.localeCompare(b[1].name)).map(([e, p]) => e + ', ' + p.name + ', ' + (p.role || 'rep') + ', ' + (p.store || (window.ASBCBoard && ASBCBoard.STORE_DEFAULTS[p.name]) || '') + (p.allQuotes ? ', all' : '')).join('\n');
         }
         async function saveApprovedUsers() {
             if (!isAdminUser()) return;
             const users = {}; const bad = [];
             document.getElementById('approvedUsersText').value.split('\n').map(l => l.trim()).filter(Boolean).forEach(l => {
-                const [e, n, r, st] = l.split(',').map(x => (x || '').trim());
-                if (!/@/.test(e || '') || !n) bad.push(l); else users[e.toLowerCase()] = { name: n, role: ['admin', 'tech'].includes(r) ? r : 'rep', store: st || '' };
+                const [e, n, r, st, all] = l.split(',').map(x => (x || '').trim());
+                if (!/@/.test(e || '') || !n) bad.push(l); else users[e.toLowerCase()] = { name: n, role: ['admin', 'tech'].includes(r) ? r : 'rep', store: st || '', allQuotes: /^(all|yes|all quotes)$/i.test(all || '') };
             });
             if (bad.length) { adminStatus.innerHTML = '<span class="text-red-400">Fix these lines: ' + escapeHtml(bad.join(' | ')) + '</span>'; return; }
             ADMIN_EMAILS.forEach(e => users[e] = users[e] || { name: 'Anthony Ward', role: 'admin' });
