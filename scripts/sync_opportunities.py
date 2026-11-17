@@ -197,6 +197,46 @@ def main():
             linked += 1
     print(f'::notice::Jobs updated from D-Tools projects: {linked}')
 
+    # v8.20.0: job-report notifications. Recently submitted job reports go into ONE small doc,
+    # reports/<REPORT_ID>-jobs, which Anthony's hourly Claude task reads to email the rep + Anthony once per submission.
+    rid = os.environ.get('REPORT_ID', '').strip()
+    if rid:
+        try:
+            ulist = fs.fields(fs.call('config/users')).get('users') or {}
+        except Exception:
+            ulist = {}
+        email_of = {(u or {}).get('name'): e for e, u in ulist.items()}
+        name_of = lambda e: (ulist.get(e) or {}).get('name', e)
+        # only reports submitted after this feature went live (no emails about older test jobs)
+        cutoff = max(datetime.datetime.utcnow() - datetime.timedelta(days=4), datetime.datetime(2026, 11, 17, 17, 10))
+        pending = []
+        for d in fs.list_docs('quotes'):
+            f = fs.fields(d); j = f.get('job') or {}
+            if f.get('status') not in ('submitted', 'closed') or not j.get('submittedAt'):
+                continue
+            try:
+                when = datetime.datetime.fromisoformat(str(j['submittedAt']).replace('Z', '+00:00')).replace(tzinfo=None)
+            except Exception:
+                continue
+            if when < cutoff:
+                continue
+            proj = f.get('project') or {}; qid = fs.doc_id(d); rec = j.get('recap') or {}
+            pending.append({
+                'key': qid + '@' + str(j['submittedAt']), 'job': f.get('label') or proj.get('customerName'),
+                'client': proj.get('dtoolsClientName') or '', 'dtools': proj.get('dtoolsOppNumber') or '', 'dtoolsId': proj.get('dtoolsOpportunityId') or '', 'dates': (f.get('schedule') or {}).get('dates') or [],
+                'rep': proj.get('salesManagerName') or '', 'repEmail': email_of.get(proj.get('salesManagerName')) or '',
+                'jobStatus': j.get('jobStatus') or '', 'submittedAt': j['submittedAt'], 'submittedBy': name_of(j.get('submittedBy') or ''),
+                'techs': [name_of(t) for t in ((f.get('schedule') or {}).get('techs') or [])],
+                'timeOnSiteHours': round(sum(float(r.get('hours') or 0) for r in (j.get('log') or [])), 2),
+                'extraWork': [{'desc': (x.get('desc') or '')[:160], 'hours': x.get('hours')} for x in (j.get('extras') or []) if x.get('desc') or x.get('hours')],
+                'work': (rec.get('work') or '')[:500], 'issues': (rec.get('issues') or '')[:300],
+                'followups': (rec.get('followups') or '')[:300], 'clientFeedback': (rec.get('client') or '')[:300],
+                'link': 'https://asbcinc.github.io/LaborCalculator/jobs.html?quote=' + urllib.parse.quote(qid),
+            })
+        fs.call('reports/' + rid + '-jobs', method='PATCH', body={'fields': {
+            'json': {'stringValue': json.dumps({'generatedAt': datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'), 'submissions': pending}, ensure_ascii=False)}}})
+        print(f'::notice::Job-report notifications listed: {len(pending)}')
+
     owners = sorted({f['owner'] for f in keep.values() if f['owner']})
     unmatched = sorted({f['owner'] for f in keep.values() if f['owner'] not in REPS})
     print('owners:', ', '.join(owners) if owners else '(none)')

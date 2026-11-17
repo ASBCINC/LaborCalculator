@@ -20,3 +20,4 @@ jobs:
         env:
           DTS_API_KEY: ${{ secrets.DTS_API_KEY }}
           FIREBASE_SA: ${{ secrets.FIREBASE_SA }}
+          REPORT_ID: ${{ secrets.REPORT_ID }}
