@@ -9,6 +9,8 @@
     'Tom Virasak': 'none'   // company president: not ranked
   };
   const STORES = ['San Francisco', 'Palo Alto', 'West Hollywood'];
+  const ALIASES = { 'stephen sandberg': 'Stefn Sandberg', 'tim parks': 'Timothy Parks', 'kwame yeboah': 'Kwamé Yeboah',
+    'matt': 'Matthew Stachnik', 'josh silva bang & olufsen sf': 'Josh Silva', 'joshua silva': 'Josh Silva' };
   function monthKey(d) {
     const p = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles', year: 'numeric', month: '2-digit' }).formatToParts(d || new Date());
     return p.find(x => x.type === 'year').value + '-' + p.find(x => x.type === 'month').value;
@@ -48,6 +50,14 @@
   async function readMonth(db, key) { const s = await db.collection('stats').doc(key).get(); return (s.exists && s.data().reps) || {}; }
   function ranked(reps, users) {
     // Score = 10 per counted quote + accuracy points from approved job reports.
+    // Fold older spellings from legacy quotes onto the canonical rep name before ranking.
+    const merged = {};
+    for (const [raw, v] of Object.entries(reps)) {
+      const name = ALIASES[String(raw).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()] || raw;
+      const m = merged[name] = merged[name] || {};
+      for (const k of ['quotes', 'total', 'jobs', 'accPts', 'est', 'act']) m[k] = (m[k] || 0) + (v[k] || 0);
+    }
+    reps = merged;
     return Object.entries(reps).map(([name, v]) => {
       const r = { name, quotes: v.quotes || 0, total: v.total || 0, jobs: v.jobs || 0, accPts: v.accPts || 0, est: v.est || 0, act: v.act || 0, store: storeOf(name, users) };
       r.score = r.quotes * 10 + r.accPts; r.variance = r.est > 0 ? Math.round((r.act - r.est) / r.est * 100) : null; return r;

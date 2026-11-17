@@ -73,6 +73,12 @@ tot_e = sum(r['est'] for r in reps.values()); tot_a = sum(r['act'] for r in reps
 mk = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=-8))).strftime('%Y-%m')
 try: month = fs.fields(fs.call('stats/' + mk)).get('reps') or {}
 except Exception: month = {}
+ALIAS = {'stephen sandberg': 'Stefn Sandberg', 'tim parks': 'Timothy Parks', 'kwame yeboah': 'Kwamé Yeboah', 'joshua silva': 'Josh Silva'}
+_m = {}
+for n, v in month.items():
+    k = ALIAS.get(n.lower().strip(), n); t = _m.setdefault(k, {})
+    for f in ('quotes', 'accPts', 'jobs'): t[f] = t.get(f, 0) + int(v.get(f, 0) or 0)
+month = _m
 board = sorted(({'rep': n, 'store': store_of.get(n) or '', 'score': int(v.get('quotes', 0)) * 10 + int(v.get('accPts', 0)),
                  'quotes': int(v.get('quotes', 0)), 'approvedJobs': int(v.get('jobs', 0))}
                 for n, v in month.items() if store_of.get(n) != 'none'), key=lambda x: -x['score'])
