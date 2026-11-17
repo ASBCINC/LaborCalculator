@@ -12,6 +12,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+<script src="./leaderboard-core.js"></script>
 <style>
 :root { --gold:#C7A66A; --bg:#050505; --card:#111318; --line:#26292f; --muted:#8b8f98; }
 * { box-sizing:border-box; }
@@ -237,6 +238,7 @@ function wire() {
       notes: [(j.recap || {}).issues, (j.recap || {}).followups].filter(Boolean).join(' | '), savedAt: new Date().toISOString(), source: 'job report' };
     if (!lines.length) { await REF.set({ status: 'closed', job: Object.assign({}, j, { reviewedAt: new Date().toISOString(), reviewedBy: ME.email }) }, { merge: true }); return showJob(qid); }
     await REF.set({ status: 'closed', actuals, job: Object.assign({}, j, { reviewedAt: new Date().toISOString(), reviewedBy: ME.email }) }, { merge: true });
+    try { await ASBCBoard.recordAccuracy(db, (Q.project || {}).salesManagerName, actuals.totalEstHours, actuals.totalActualHours); } catch (err) { console.warn('accuracy tally', err); }
     showJob(qid);
   });
   on('sendBack', async () => {

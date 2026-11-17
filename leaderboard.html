@@ -77,7 +77,7 @@ details[open] summary { margin-bottom:8px; }
   <div id="stores" class="stores"><div class="empty">Loading…</div></div>
   <div id="reps"></div>
   <div id="admin"></div>
-  <p class="small" style="margin-top:18px">Counts each real quote once: first save, at least one item, one quote per D-Tools opportunity; templates and re-saves don't count. Coverage = share of a rep's open D-Tools opportunities that have a labor quote.</p>
+  <p class="small" style="margin-top:18px">Score = 10 points per quote + accuracy points when a job report is approved (actual hours within 10% of the labor estimate = 10, within 25% = 5). Accuracy = actual vs estimated hours on approved jobs. Counts each real quote once: first save, at least one item, one quote per D-Tools opportunity; templates and re-saves don't count. Coverage = share of a rep's open D-Tools opportunities that have a labor quote.</p>
 </div>
 <script>
 firebase.initializeApp({ apiKey: "AIzaSyCSf560VkBf2esIH5rC-_Vcx349o7iIC-0", authDomain: "asbc-calculator.firebaseapp.com", projectId: "asbc-calculator" });
@@ -90,7 +90,7 @@ function keysFor(p) { if (p === 'month') return [MK]; if (p === 'last') return [
   const [y, m] = MK.split('-').map(Number); const q0 = Math.floor((m - 1) / 3) * 3 + 1; return [0,1,2].map(i => y + '-' + String(q0 + i).padStart(2,'0')).filter(k => k <= MK); }
 async function totalsFor(p) {
   const sum = {};
-  for (const k of keysFor(p)) { const r = await B.readMonth(db, k); for (const [n, v] of Object.entries(r)) { sum[n] = sum[n] || { quotes: 0, total: 0 }; sum[n].quotes += v.quotes || 0; sum[n].total += v.total || 0; } }
+  for (const k of keysFor(p)) { const r = await B.readMonth(db, k); for (const [n, v] of Object.entries(r)) { sum[n] = sum[n] || { quotes: 0, total: 0, jobs: 0, accPts: 0, est: 0, act: 0 }; ['quotes', 'total', 'jobs', 'accPts', 'est', 'act'].forEach(k => sum[n][k] += v[k] || 0); } }
   return sum;
 }
 function coverage(name) {
@@ -102,12 +102,12 @@ async function render() {
   const admin = ME.role === 'admin';
   const reps = B.ranked(await totalsFor(period), USERS);
   // everyone on the approved list shows up, even with 0
-  Object.values(USERS).forEach(u => { if (u.role !== 'admin' && B.storeOf(u.name, USERS) !== 'none' && !reps.find(r => r.name === u.name)) reps.push({ name: u.name, quotes: 0, total: 0, store: B.storeOf(u.name, USERS) }); });
+  Object.values(USERS).forEach(u => { if (u.role !== 'admin' && B.storeOf(u.name, USERS) !== 'none' && !reps.find(r => r.name === u.name)) reps.push({ name: u.name, quotes: 0, total: 0, jobs: 0, accPts: 0, score: 0, variance: null, store: B.storeOf(u.name, USERS) }); });
   reps.forEach(r => r.cov = coverage(r.name));
   // personal card
   const meRow = reps.find(r => r.name === ME.name); const meIdx = reps.findIndex(r => r.name === ME.name);
   document.getElementById('me').innerHTML = meRow ? `<div class="card me" style="margin-bottom:12px"><div class="small">You</div>
-    <div style="display:flex;gap:18px;align-items:baseline;flex-wrap:wrap"><div class="big">#${meIdx + 1}</div><div><b>${meRow.quotes}</b> quotes</div>
+    <div style="display:flex;gap:18px;align-items:baseline;flex-wrap:wrap"><div class="big">#${meIdx + 1}</div><div><b>${meRow.score}</b> pts</div><div><b>${meRow.quotes}</b> quotes</div><div><b>${meRow.variance === null ? '—' : (meRow.variance > 0 ? '+' : '') + meRow.variance + '%'}</b> actual vs estimate (${meRow.jobs} job${meRow.jobs === 1 ? '' : 's'})</div>
     <div><b>${meRow.cov.pct === null ? '—' : meRow.cov.pct + '%'}</b> coverage</div>${admin ? '' : ''}</div>
     ${meRow.cov.missing.length ? '<div class="small" style="margin-top:6px">Open opportunities still needing a labor quote: ' + meRow.cov.missing.slice(0, 8).map(o => esc(o.name)).join(' · ') + (meRow.cov.missing.length > 8 ? ' …' : '') + '</div>' : ''}</div>` : '';
   // stores
@@ -119,8 +119,8 @@ async function render() {
   // reps by store
   const groups = [...B.STORES, ''].map(s => [s, reps.filter(r => (r.store || '') === s)]).filter(g => g[1].length);
   document.getElementById('reps').innerHTML = groups.map(([s, rs]) => `<div class="sect">${esc(s || 'Store not set')}</div><div class="card"><table>
-    <tr><th>#</th><th>Rep</th><th>Quotes</th>${admin ? '<th>Quoted $</th>' : ''}<th>Coverage</th></tr>
-    ${rs.map(r => { const i = reps.indexOf(r); return `<tr${r.name === ME.name ? ' style="color:var(--gold)"' : ''}><td class="${i === 0 && r.quotes ? 'rank1' : ''}">${i + 1}</td><td>${esc(r.name)}</td><td>${r.quotes}</td>${admin ? '<td>' + money(r.total) + '</td>' : ''}
+    <tr><th>#</th><th>Rep</th><th>Score</th><th>Quotes</th><th>Accuracy</th>${admin ? '<th>Quoted $</th>' : ''}<th>Coverage</th></tr>
+    ${rs.map(r => { const i = reps.indexOf(r); return `<tr${r.name === ME.name ? ' style="color:var(--gold)"' : ''}><td class="${i === 0 && r.quotes ? 'rank1' : ''}">${i + 1}</td><td>${esc(r.name)}</td><td><b>${r.score}</b></td><td>${r.quotes}</td><td>${r.variance === null ? '—' : '<span class="' + (Math.abs(r.variance) <= 10 ? 'pos' : Math.abs(r.variance) > 25 ? 'neg' : '') + '">' + (r.variance > 0 ? '+' : '') + r.variance + '%</span> <span class="small">(' + r.jobs + ')</span>'}</td>${admin ? '<td>' + money(r.total) + '</td>' : ''}
       <td>${r.cov.pct === null ? '—' : r.cov.pct + '% <span class="small">(' + r.cov.done + '/' + r.cov.open + ')</span>'}</td></tr>`; }).join('')}</table></div>`).join('');
 }
 // admin: rebuild tallies from existing quotes (one-time backfill / repair)
@@ -144,6 +144,15 @@ async function rebuild() {
     const o = q.options || {};
     const pr = ASBCPricing.price(ins, prg, units, { pricingV: o.pricingV, site: o.site, trip: o.trip, recycling: o.recycling, customRecycling: o.customRecycling, crew: o.crewSize }, S);
     tally[mk][rep] = tally[mk][rep] || { quotes: 0, total: 0 }; tally[mk][rep].quotes++; tally[mk][rep].total += Math.round(pr.total * 100) / 100;
+  }
+  // approved job reports -> accuracy, by approval month
+  for (const q of docs) {
+    const a = q.actuals, j = q.job || {}; if (q.status !== 'closed' || !a || !(a.totalEstHours > 0)) continue;
+    const when = j.reviewedAt || a.savedAt; if (!when) continue; const mk = B.monthKey(new Date(when)); if (!tally[mk]) continue;
+    const rep = (q.project || {}).salesManagerName; if (!rep) continue;
+    const t = tally[mk][rep] = tally[mk][rep] || { quotes: 0, total: 0 };
+    t.jobs = (t.jobs || 0) + 1; t.accPts = (t.accPts || 0) + B.accuracyPoints(a.totalEstHours, a.totalActualHours);
+    t.est = (t.est || 0) + a.totalEstHours; t.act = (t.act || 0) + a.totalActualHours;
   }
   for (const m of months) await db.collection('stats').doc(m).set({ reps: tally[m], updatedAt: new Date(), rebuiltBy: ME.email });
   await db.collection('stats').doc('quotedOpps').set({ opps });

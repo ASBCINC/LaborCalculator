@@ -1,0 +1,17 @@
+name: Weekly labor report
+
+on:
+  schedule:
+    - cron: '7 12 * * 5'   # Fridays ~4-5 AM Pacific, before the 7:41 AM pipeline sheet
+  workflow_dispatch: {}
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install --quiet google-auth requests
+      - run: python3 scripts/weekly_report.py
+        env:
+          FIREBASE_SA: ${{ secrets.FIREBASE_SA }}
+          REPORT_ID: ${{ secrets.REPORT_ID }}

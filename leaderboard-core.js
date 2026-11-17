@@ -37,10 +37,21 @@
     await qref.set({ counted: mk }, { merge: true });
     return true;
   }
+  // v8.17.0: accuracy. When Anthony approves a job report, the rep who quoted it earns accuracy points:
+  // actual hours within 10% of the estimate = 10 pts, within 25% = 5 pts, otherwise 0.
+  function accuracyPoints(est, act) { if (!(est > 0)) return 0; const e = Math.abs(act - est) / est; return e <= 0.10 ? 10 : e <= 0.25 ? 5 : 0; }
+  async function recordAccuracy(db, repName, est, act) {
+    if (!repName || !(est > 0)) return;
+    const inc = firebase.firestore.FieldValue.increment;
+    await db.collection('stats').doc(monthKey()).set({ reps: { [repName]: { jobs: inc(1), accPts: inc(accuracyPoints(est, act)), est: inc(Math.round(est * 100) / 100), act: inc(Math.round(act * 100) / 100) } }, updatedAt: new Date() }, { merge: true });
+  }
   async function readMonth(db, key) { const s = await db.collection('stats').doc(key).get(); return (s.exists && s.data().reps) || {}; }
   function ranked(reps, users) {
-    return Object.entries(reps).map(([name, v]) => ({ name, quotes: v.quotes || 0, total: v.total || 0, store: storeOf(name, users) }))
-      .filter(r => r.store !== 'none').sort((a, b) => b.quotes - a.quotes || b.total - a.total || a.name.localeCompare(b.name));
+    // Score = 10 per counted quote + accuracy points from approved job reports.
+    return Object.entries(reps).map(([name, v]) => {
+      const r = { name, quotes: v.quotes || 0, total: v.total || 0, jobs: v.jobs || 0, accPts: v.accPts || 0, est: v.est || 0, act: v.act || 0, store: storeOf(name, users) };
+      r.score = r.quotes * 10 + r.accPts; r.variance = r.est > 0 ? Math.round((r.act - r.est) / r.est * 100) : null; return r;
+    }).filter(r => r.store !== 'none').sort((a, b) => b.score - a.score || b.quotes - a.quotes || b.total - a.total || a.name.localeCompare(b.name));
   }
-  window.ASBCBoard = { STORE_DEFAULTS, STORES, monthKey, shiftMonth, storeOf, isOpenOpp, countQuote, readMonth, ranked };
+  window.ASBCBoard = { STORE_DEFAULTS, STORES, monthKey, shiftMonth, storeOf, isOpenOpp, countQuote, readMonth, ranked, accuracyPoints, recordAccuracy };
 })();

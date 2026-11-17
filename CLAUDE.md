@@ -69,6 +69,13 @@ quote.schedule {dates, techs[emails]}) > submitted (tech: quote.job {lines[{i,id
 > closed (admin approves; writes quote.actuals in the Labor Calibration format). Techs (role "tech": Eugene Fujimoto, Joseph Upperman,
 Ivan Alecio, Mina Sedhom) never see prices or estimated hours; only Anthony assigns. Report prints to PDF via the browser.
 
+## Score + weekly report (v8.17.0)
+Leaderboard score = 10/quote + accuracy pts on approved jobs (|act-est|/est <=10% -> 10, <=25% -> 5), tallied in stats/<month>
+{jobs, accPts, est, act} by `ASBCBoard.recordAccuracy` at approval. `weekly-report.yml` (Fri ~4-5 AM PT) runs scripts/weekly_report.py
+-> doc reports/<secret REPORT_ID> {json}: last-7-day job recaps, 90-day accuracy by rep/item, month leaderboard. The Friday
+"ASBC Friday pipeline meeting sheet" scheduled task reads it by URL. When Firestore is locked, rules must still allow GET
+(not list) on reports/{id}.
+
 ## Data layer (Firebase Firestore only; the Google Sheet is a frozen archive)
 - `config/catalog` and `config/settings` are SINGLE documents (read `d.fields.items`; not a collection).
 - Catalog add-ons use `name|installHours|progHours;...`. Don't restructure without asking.

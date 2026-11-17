@@ -673,7 +673,7 @@
               }
           });
 
-        const APP_VERSION = '8.16.0';
+        const APP_VERSION = '8.17.0';
         const BUILD_DATE = '2026-11-16';
         let HOURLY_RATE = 200;
 
@@ -1004,7 +1004,7 @@
                 const B = ASBCBoard, mk = B.monthKey();
                 const top = B.ranked(await B.readMonth(db, mk), approvedUsers).slice(0, 3);
                 let line = top.length
-                    ? 'Monthly Leaderboard: ' + top.map((r, i) => (i + 1) + '. ' + r.name + ' (' + r.quotes + ')').join('  \u00b7  ')
+                    ? 'Monthly Leaderboard: ' + top.map((r, i) => (i + 1) + '. ' + r.name + ' (' + r.score + ' pts)').join('  \u00b7  ')
                     : 'Monthly Leaderboard: no quotes counted yet this month';
                 const day = Number(new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', day: 'numeric' }).format(new Date()));
                 if (day <= 7) {
