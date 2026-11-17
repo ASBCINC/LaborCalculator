@@ -99,3 +99,9 @@ secret exists → recent runs (public API) → one manual call.
 ## Bench (not committed)
 Per-rep accuracy scoreboard on log.html; sync labor-catalog.json to the live catalog; gate recycling at 0 items;
 D-Tools handoff panel (paste-ready labor block); Quote Log search wording.
+
+## Customer sign-off (v8.20.0)
+- signoff.html?quote=<id>: the assigned tech (or admin) opens it from the recap and hands the device to the client. 4 Yes/No questions (look, av, confident, issues), comments, acknowledgement, name, finger signature (600px PNG data URL).
+- Saved as quotes/<id>.signoff {status:"signed", answers, issuesText, comments, name, signature, signedAt, collectedBy, concerns}. If no signature: job.signoffSkip {status:"not-present"|"declined", reason}.
+- jobStatus "Complete" cannot be submitted without a signature or a skip reason. Reps can open the report (with signature) for their own jobs from the Quote Log ("Job report") or the email link.
+- Sync job list + weekly report carry a signoff summary (no image); weekly report adds customerSignoffLast7Days.

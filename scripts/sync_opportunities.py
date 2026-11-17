@@ -210,6 +210,16 @@ def main():
         # only reports submitted after this feature went live (no emails about older test jobs)
         cutoff = max(datetime.datetime.utcnow() - datetime.timedelta(days=4), datetime.datetime(2026, 11, 17, 17, 10))
         pending = []
+        def signoff_summary(q):  # v8.20.0 customer sign-off, without the signature image
+            so, sk = q.get('signoff') or {}, (q.get('job') or {}).get('signoffSkip') or {}
+            if so.get('status') == 'signed':
+                a = so.get('answers') or {}
+                return {'status': 'signed', 'name': so.get('name'), 'signedAt': so.get('signedAt'), 'concerns': bool(so.get('concerns')),
+                        'satisfiedLookAndFeel': a.get('look'), 'satisfiedSoundVideo': a.get('av'), 'confidentOperating': a.get('confident'),
+                        'anyIssues': a.get('issues'), 'issuesText': (so.get('issuesText') or '')[:300], 'comments': (so.get('comments') or '')[:300]}
+            if sk.get('status'):
+                return {'status': sk['status'], 'reason': (sk.get('reason') or '')[:200]}
+            return {'status': 'none'}
         for d in fs.list_docs('quotes'):
             f = fs.fields(d); j = f.get('job') or {}
             if f.get('status') not in ('submitted', 'closed') or not j.get('submittedAt'):
@@ -231,6 +241,7 @@ def main():
                 'extraWork': [{'desc': (x.get('desc') or '')[:160], 'hours': x.get('hours')} for x in (j.get('extras') or []) if x.get('desc') or x.get('hours')],
                 'work': (rec.get('work') or '')[:500], 'issues': (rec.get('issues') or '')[:300],
                 'followups': (rec.get('followups') or '')[:300], 'clientFeedback': (rec.get('client') or '')[:300],
+                'signoff': signoff_summary(f),
                 'link': 'https://asbcinc.github.io/LaborCalculator/jobs.html?quote=' + urllib.parse.quote(qid),
             })
         # Written as field `jobs` on the weekly report doc (only that field), so one URL serves both readers.

@@ -32,6 +32,17 @@ def est_hours(it):
     return per * float(it.get('qty') or 0)
 cut = lambda s, n=500: (s or '')[:n]
 
+def signoff_summary(q):  # v8.20.0 customer sign-off (no signature image)
+    so, sk = q.get('signoff') or {}, (q.get('job') or {}).get('signoffSkip') or {}
+    if so.get('status') == 'signed':
+        a = so.get('answers') or {}
+        return {'status': 'signed', 'name': so.get('name'), 'concerns': bool(so.get('concerns')),
+                'satisfiedLookAndFeel': a.get('look'), 'satisfiedSoundVideo': a.get('av'), 'confidentOperating': a.get('confident'),
+                'anyIssues': a.get('issues'), 'issuesText': cut(so.get('issuesText'), 300), 'comments': cut(so.get('comments'), 300)}
+    if sk.get('status'):
+        return {'status': sk['status'], 'reason': cut(sk.get('reason'), 200)}
+    return {'status': 'none'}
+
 jobs = []
 for q in quotes:
     j = q.get('job') or {}
@@ -54,6 +65,7 @@ for q in quotes:
         'recap': {k: cut((j.get('recap') or {}).get(k)) for k in ('work', 'issues', 'followups', 'client')},
         'extraWork': [{'desc': cut(x.get('desc'), 200), 'hours': x.get('hours')} for x in (j.get('extras') or []) if x.get('desc') or x.get('hours')],
         'returnVisitFor': (q.get('returnFor') or {}).get('label'),
+        'signoff': signoff_summary(q),
     })
 
 reps, items = {}, {}
@@ -95,6 +107,15 @@ report = {
         'itemsMostOff': sorted([i for i in items.values() if i['jobs'] >= 2], key=lambda i: abs(i['variancePct'] or 0), reverse=True)[:6],
     },
     'leaderboardThisMonth': board[:8],
+    'customerSignoffLast7Days': {
+        'completeJobs': sum(1 for x in jobs if x['jobStatus'] == 'Complete'),
+        'signed': sum(1 for x in jobs if x['jobStatus'] == 'Complete' and x['signoff']['status'] == 'signed'),
+        'notSigned': [{'job': x['job'], 'rep': x['rep'], 'reason': x['signoff'].get('status') + (': ' + x['signoff']['reason'] if x['signoff'].get('reason') else '')}
+                      for x in jobs if x['jobStatus'] == 'Complete' and x['signoff']['status'] != 'signed'],
+        'clientConcerns': [{'job': x['job'], 'rep': x['rep'], 'issues': x['signoff'].get('issuesText'), 'comments': x['signoff'].get('comments'),
+                            'no': [k for k in ('satisfiedLookAndFeel', 'satisfiedSoundVideo', 'confidentOperating') if x['signoff'].get(k) == 'no']}
+                           for x in jobs if x['signoff'].get('concerns')],
+    },
     'notes': 'variancePct > 0 means jobs took longer than quoted. Estimates are catalog labor hours (before site conditions, PM and commissioning).',
 }
 fs.call('reports/' + REPORT_ID, method='PATCH', params={'updateMask.fieldPaths': ['json', 'generatedAt']}, body={'fields': {  # keeps the `jobs` field the sync writes

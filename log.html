@@ -220,7 +220,8 @@ function renderList() {
       (r.actuals ? '<span class="badge b-a">ACTUALS</span> ' : '') +
       (r.status && r.status !== 'draft' ? '<span class="badge b-l">' + esc(String(r.status).toUpperCase()) + '</span> ' : '') +
       (r.job && r.job.jobStatus ? '<span class="badge" style="color:#8fb3ff;border-color:#33518f">' + esc(String(r.job.jobStatus).toUpperCase()) + '</span> ' : '') +
-      (r.job && r.job.extrasHours > 0 ? '<span class="badge" style="color:#ff9f6b;border-color:#8a4b2f">EXTRA WORK ' + Number(r.job.extrasHours).toFixed(2) + ' HRS: POSSIBLE CO</span>' : '');
+      (r.job && r.job.extrasHours > 0 ? '<span class="badge" style="color:#ff9f6b;border-color:#8a4b2f">EXTRA WORK ' + Number(r.job.extrasHours).toFixed(2) + ' HRS: POSSIBLE CO</span>' : '') +
+      (r.signoff && r.signoff.status === 'signed' ? ' <span class="badge" style="color:' + (r.signoff.concerns ? '#ff8b8b;border-color:#8a2f2f">CLIENT SIGNED · CONCERNS' : '#7ee2a0;border-color:#2f7a4c">CLIENT SIGNED') + '</span>' : '');
     const a = r.actuals;
     const detail = `
       <div class="qdetail">
@@ -240,7 +241,7 @@ function renderList() {
         <button class="qbtn qbtn-load" data-act="load" data-id="${r._id}">Load</button>
         ${ME.role === 'admin' || ((r.project || {}).salesManagerName === ME.name) ? `<button class="qbtn qbtn-save" data-act="save" data-id="${r._id}">Save</button>
         <button class="qbtn qbtn-del" data-act="delete" data-id="${r._id}">Delete</button>` : ''}
-        ${ME && ME.role === 'admin' && !r.isTemplate ? `<a class="qbtn" style="display:inline-flex;align-items:center;text-decoration:none" href="./jobs.html?quote=${encodeURIComponent(r._id)}">Job</a>` : ''}
+        ${ME && ME.role === 'admin' && !r.isTemplate ? `<a class="qbtn" style="display:inline-flex;align-items:center;text-decoration:none" href="./jobs.html?quote=${encodeURIComponent(r._id)}">Job</a>` : (r.job && r.job.submittedAt && ['submitted', 'closed'].includes(r.status) ? `<a class="qbtn" style="display:inline-flex;align-items:center;text-decoration:none;border-color:#2f7a4c;color:#7ee2a0" href="./jobs.html?quote=${encodeURIComponent(r._id)}">Job report</a>` : '')}
       </div>
       ${detail}
     </div>`;

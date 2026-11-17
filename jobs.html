@@ -105,6 +105,40 @@ const JOB_STATUSES = ['In Progress', 'Complete', 'Sales Follow up', 'PM Follow u
 const jsColor = s => ({ 'Complete': 'st-closed', 'In Progress': 'st-scheduled', 'Sales Follow up': 'st-submitted', 'PM Follow up': 'st-submitted', 'Cancelled': '' })[s] || '';
 const jsBadge = s => s ? `<span class="st ${jsColor(s)}">${esc(String(s).toUpperCase())}</span>` : '';
 const jsSelect = cur => `<div class="qmeta" style="margin-top:4px">Job status (required)</div><select id="jobStatus"><option value="">Select status…</option>${JOB_STATUSES.map(x => `<option ${x === cur ? 'selected' : ''}>${x}</option>`).join('')}</select>`;
+// v8.20.0: customer sign-off (signoff.html). Required to submit a job as Complete, unless the tech records
+// that the client was not present / declined, with a reason.
+const SO_Q = [['look', 'Satisfied with the look and feel of the install'], ['av', 'Satisfied with sound and video quality'], ['confident', 'Confident operating the system'], ['issues', 'Any issues with the install']];
+const SKIP = { 'not-present': 'Client not present', 'declined': 'Client declined to sign' };
+const isSigned = q => !!(q && q.signoff && q.signoff.status === 'signed');
+function signoffBox(q) {
+  const so = q && q.signoff, sk = ((q && q.job) || {}).signoffSkip || {}, signed = isSigned(q);
+  return `<div id="soCard" class="no-print" style="border-top:1px solid var(--line);margin-top:12px;padding-top:10px"><div class="sect" style="margin-top:0">Customer sign-off ${signed ? '<span class="st st-closed">SIGNED</span>' : '<span style="text-transform:none;letter-spacing:0;font-weight:400">(required to mark Complete)</span>'}</div>
+    ${signed ? `<div class="qmeta">Signed by <b>${esc(so.name)}</b> · ${esc(new Date(so.signedAt).toLocaleString('en-US'))}${so.concerns ? ' · <span style="color:#ff8b8b">client noted concerns</span>' : ''}</div>` : '<div class="qmeta">Fill in the recap first, then tap below and hand the device to the client.</div>'}
+    <div class="qactions"><button type="button" class="qbtn ${signed ? '' : 'gold'}" id="soOpen">${signed ? 'Redo customer sign-off' : 'Open customer sign-off'}</button></div>
+    ${signed ? '' : `<div class="qmeta" style="margin-top:8px">Can't get a signature?</div><div class="row2"><select id="soSkip"><option value="">—</option>${Object.entries(SKIP).map(([k, v]) => `<option value="${k}" ${sk.status === k ? 'selected' : ''}>${v}</option>`).join('')}</select><input id="soReason" placeholder="Reason" value="${esc(sk.reason || '')}"></div>`}</div>`;
+}
+function signoffSkip() { const s = document.getElementById('soSkip'); if (!s || !s.value) return null; return { status: s.value, reason: (document.getElementById('soReason').value || '').trim(), at: new Date().toISOString(), by: ME.email }; }
+function signoffProblem(q, jobStatus, skip) {
+  if (jobStatus !== 'Complete' || isSigned(q)) return '';
+  if (skip && skip.reason) return '';
+  return skip ? 'Add a reason why the client could not sign.' : 'Complete jobs need the customer sign-off. Tap "Open customer sign-off", or pick "Client not present / declined" and give a reason.';
+}
+function signoffReport(q) {
+  const so = q.signoff, sk = (q.job || {}).signoffSkip;
+  if (isSigned(q)) {
+    const a = so.answers || {}, good = (k, v) => k === 'issues' ? v === 'no' : v === 'yes';
+    const sig = /^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(so.signature || '') ? `<img src="${so.signature}" alt="Client signature" style="display:block;max-width:320px;width:100%;background:#fff;border:1px solid #ccc;border-radius:8px;margin-top:8px">` : '';
+    return `<div class="card" style="${so.concerns ? 'border-color:#8a2f2f' : ''}"><div class="sect" style="margin-top:0">Customer sign-off ${so.concerns ? '<span class="st" style="color:#ff8b8b;border-color:#8a2f2f">CLIENT CONCERNS</span>' : '<span class="st st-closed">SIGNED</span>'}</div>
+      <table>${SO_Q.map(([k, t]) => `<tr><td>${t}</td><td class="right ${a[k] ? (good(k, a[k]) ? 'pos' : 'neg') : ''}"><b>${a[k] === 'yes' ? 'Yes' : a[k] === 'no' ? 'No' : '—'}</b></td></tr>`).join('')}</table>
+      ${so.issuesText ? `<div class="qmeta" style="margin-top:8px">Issue described by the client</div><div style="white-space:pre-wrap">${esc(so.issuesText)}</div>` : ''}
+      ${so.comments ? `<div class="qmeta" style="margin-top:8px">Client comments</div><div style="white-space:pre-wrap">${esc(so.comments)}</div>` : ''}
+      <div style="margin-top:10px">✓ The client acknowledged that the installation meets their expectations.</div>${sig}
+      <div class="qmeta" style="margin-top:4px">Signed by <b>${esc(so.name)}</b> · ${esc(new Date(so.signedAt).toLocaleString('en-US'))} · collected by ${esc(nameOf(so.collectedBy))}</div></div>`;
+  }
+  if (sk && sk.status) return `<div class="card"><div class="sect" style="margin-top:0">Customer sign-off</div><div style="color:#ff9f6b">${esc(SKIP[sk.status] || sk.status)}</div>${sk.reason ? `<div class="qmeta">${esc(sk.reason)}</div>` : ''}</div>`;
+  if ((q.job || {}).jobStatus === 'Complete') return '<div class="card"><div class="sect" style="margin-top:0">Customer sign-off</div><div class="qmeta">Not collected.</div></div>';
+  return '';
+}
 const STATUS = { draft: 'Draft', won: 'Won', scheduled: 'Scheduled', submitted: 'Submitted', closed: 'Closed' };
 const stBadge = s => `<span class="st st-${esc(s || 'draft')}">${esc((STATUS[s] || 'Draft').toUpperCase())}</span>`;
 let ME = null, USERS = {}, CATALOG = new Map();
@@ -126,15 +160,17 @@ async function showList() {
   document.getElementById('pageTitle').textContent = ME.role === 'tech' ? 'My Jobs' : 'Jobs';
   let docs;
   if (ME.role === 'tech') docs = (await db.collection('quotes').where('schedule.techs', 'array-contains', ME.email).get()).docs;
+  else if (ME.role === 'rep' && !ME.allQuotes) docs = (await db.collection('quotes').where('project.salesManagerName', '==', ME.name).get()).docs;
   else docs = (await db.collection('quotes').where('status', 'in', ['won', 'scheduled', 'submitted', 'closed']).get()).docs;
   const jobs = docs.map(d => ({ _id: d.id, ...d.data() })).filter(q => q.status && q.status !== 'draft');
   const first = q => ((q.schedule && q.schedule.dates) || []).slice().sort()[0] || '';
-  const groups = ME.role === 'tech'
+  const groups = ME.role === 'rep' ? [['Job reports', jobs.filter(q => ['submitted', 'closed'].includes(q.status))], ['Scheduled', jobs.filter(q => q.status === 'scheduled')]]
+    : ME.role === 'tech'
     ? [['Assigned to you', jobs.filter(q => q.status === 'scheduled')], ['Submitted', jobs.filter(q => q.status === 'submitted')], ['Closed', jobs.filter(q => q.status === 'closed')]]
     : [['To review', jobs.filter(q => q.status === 'submitted')], ['Won: needs scheduling', jobs.filter(q => q.status === 'won')], ['Scheduled', jobs.filter(q => q.status === 'scheduled')], ['Closed', jobs.filter(q => q.status === 'closed')]];
-  app().innerHTML = `<div class="qactions" style="margin:0 0 6px"><button class="qbtn gold" onclick="showNew()">+ Job report without a quote</button></div>` + groups.filter(g => g[1].length || g[0] !== 'Closed').map(([t, list]) => `<div class="sect">${esc(t)} (${list.length})</div>` +
+  app().innerHTML = (ME.role === 'rep' ? '' : `<div class="qactions" style="margin:0 0 6px"><button class="qbtn gold" onclick="showNew()">+ Job report without a quote</button></div>`) + groups.filter(g => g[1].length || g[0] !== 'Closed').map(([t, list]) => `<div class="sect">${esc(t)} (${list.length})</div>` +
     (list.length ? list.sort((a, b) => first(a).localeCompare(first(b))).map(q => `<a href="?quote=${encodeURIComponent(q._id)}" style="text-decoration:none;color:inherit"><div class="qrow">
-      <div class="qtop"><div><div class="qname">${esc(label(q))} ${stBadge(q.status)} ${jsBadge((q.job || {}).jobStatus)}</div>
+      <div class="qtop"><div><div class="qname">${esc(label(q))} ${stBadge(q.status)} ${jsBadge((q.job || {}).jobStatus)}${isSigned(q) ? ' <span class="st st-closed">' + (q.signoff.concerns ? 'SIGNED · CONCERNS' : 'SIGNED') + '</span>' : ''}</div>
       <div class="qmeta">${esc((q.project || {}).dtoolsClientName || '')}${(q.project || {}).dtoolsOppNumber ? ' · #' + esc(q.project.dtoolsOppNumber) : ''} · Rep: ${esc((q.project || {}).salesManagerName || '—')}</div></div>
       <div class="qnums"><div class="qnum-b">${esc(((q.schedule || {}).dates || []).map(fmtDate).join(', ') || 'Not scheduled')}</div>
       <div class="qmeta">${esc(((q.schedule || {}).techs || []).map(nameOf).join(', '))}</div></div></div></div></a>`).join('') : '<div class="empty" style="padding:10px 0">None</div>')).join('')
@@ -150,7 +186,8 @@ async function showJob(id) {
   Q = s.data();
   const assigned = ((Q.schedule || {}).techs || []).includes(ME.email);
   if (ME.role === 'tech' && !assigned) { app().innerHTML = '<div class="empty">This job is not assigned to you.</div>'; return; }
-  if (ME.role === 'rep') { app().innerHTML = '<div class="empty">Jobs are for technicians and admins.</div>'; return; }
+  if (ME.role === 'rep' && !ME.allQuotes && (Q.project || {}).salesManagerName !== ME.name) { app().innerHTML = '<div class="empty">This job belongs to another sales rep.</div>'; return; }
+  if (ME.role === 'rep' && !['submitted', 'closed'].includes(Q.status)) { app().innerHTML = '<div class="empty">The installer has not submitted a report for this job yet.</div>'; return; }
   document.getElementById('pageTitle').textContent = label(Q);
   const st = Q.status || 'draft';
   let html = `<div class="card"><div class="qtop"><div><div class="qname">${esc(label(Q))} ${stBadge(st)} ${jsBadge((Q.job || {}).jobStatus)}</div>
@@ -201,6 +238,7 @@ function logForm() {
     <button type="button" class="qbtn" id="addLog" style="margin-top:6px">+ Add day / tech</button></div>
     <div class="card"><div class="sect" style="margin-top:0">Job recap</div>${jsSelect(((typeof Q !== 'undefined' && Q && Q.job) || {}).jobStatus || '')}
     ${[['work', 'Work completed'], ['issues', 'Problems / what took longer'], ['followups', 'Open items / return visit needed'], ['client', 'Client feedback']].map(([k, t]) => `<div class="qmeta" style="margin-top:8px;display:flex;justify-content:space-between;align-items:center">${t}<button type="button" class="qbtn bl" data-k="${k}" style="height:24px;padding:0 8px">• Bullet</button></div><textarea class="rc" data-k="${k}" rows="3">${esc((j.recap || {})[k] || '')}</textarea>`).join('')}
+    ${signoffBox(Q)}
     <div class="qactions"><button class="qbtn" id="saveJob">Save progress</button><button class="qbtn gold" id="submitJob">Submit to Anthony</button></div><div id="jobMsg" class="qmeta"></div></div>`;
 }
 function collectJob() {
@@ -211,7 +249,7 @@ function collectJob() {
   const recap = {}; document.querySelectorAll('.rc').forEach(t => recap[t.dataset.k] = t.value.trim());
   const extras = [...document.querySelectorAll('#exT tr')].slice(1).map(tr => ({ desc: tr.querySelector('.exd').value.trim(), hours: Number(tr.querySelector('.exh').value) || 0 })).filter(x => x.desc || x.hours);
   const jsEl = document.getElementById('jobStatus');
-  return Object.assign({}, Q.job || {}, { jobStatus: jsEl ? jsEl.value : ((Q.job || {}).jobStatus || ''), lines, log, recap, extras, extrasHours: Math.round(extras.reduce((a, x) => a + x.hours, 0) * 100) / 100, savedAt: new Date().toISOString(), savedBy: ME.email });
+  return Object.assign({}, Q.job || {}, { jobStatus: jsEl ? jsEl.value : ((Q.job || {}).jobStatus || ''), lines, log, recap, extras, signoffSkip: signoffSkip(), extrasHours: Math.round(extras.reduce((a, x) => a + x.hours, 0) * 100) / 100, savedAt: new Date().toISOString(), savedBy: ME.email });
 }
 function report(admin) {
   const j = Q.job || {}; const lines = j.lines || [];
@@ -235,7 +273,7 @@ function report(admin) {
   const head = `<div class="print-only"><b>ASBC Job Report</b> · ${esc(label(Q))} · printed ${new Date().toLocaleDateString('en-US')}</div>`;
   const itemsCard = timeOnly ? `<div class="card">${head}<div class="sect" style="margin-top:0">Total time on site</div><div class="big" style="font-size:24px;font-weight:800;color:var(--gold)">${hrs(tLog)} hrs</div>
     ${admin && Q.noQuote && !Q.returnFor ? '<div class="qmeta" style="margin-top:6px"><b style="color:#ff9f6b">No labor quote was submitted for this job.</b> Time on site only; nothing to compare against an estimate.</div>' : ''}</div>` : null;
-  if (timeOnly) return parentCard + itemsCard + extrasCard + daily() + recapCard() + actions;
+  if (timeOnly) return parentCard + itemsCard + extrasCard + daily() + recapCard() + signoffReport(Q) + actions;
   return `<div class="card">${head}
     <div class="sect" style="margin-top:0">Hours by item</div><table><tr><th>Item</th><th>Qty</th>${admin ? '<th class="right">Est</th>' : ''}<th class="right">Actual</th>${admin ? '<th class="right">Var</th>' : ''}<th>Note</th></tr>
     ${zones.map(z => { const zr = rows.filter(r => r.zone === z); const ze = zr.reduce((a, r) => a + r.est, 0), za = zr.reduce((a, r) => a + (Number(r.act) || 0), 0);
@@ -243,7 +281,7 @@ function report(admin) {
       zr.map(r => `<tr><td>${esc(lineName(r.it))}</td><td>${esc(r.it.qty)}</td>${admin ? `<td class="right">${hrs(r.est)}</td>` : ''}<td class="right">${r.act == null ? '—' : hrs(r.act)}</td>${admin ? `<td class="right">${v(r.est, r.act)}</td>` : ''}<td>${esc(r.note || '')}</td></tr>`).join(''); }).join('')}
     <tr><td><b>Total</b></td><td></td>${admin ? `<td class="right"><b>${hrs(tEst)}</b></td>` : ''}<td class="right"><b>${hrs(tAct)}</b></td>${admin ? `<td class="right"><b>${v(tEst, tAct)}</b></td>` : ''}<td></td></tr></table>
     ${admin ? '<div class="qmeta" style="margin-top:6px">' + (Q.noQuote ? '<b style="color:#ff9f6b">No labor quote was submitted for this job.</b> Estimates shown are catalog hours for the items the tech picked; "Other" items have no estimate.' : 'Estimates are catalog labor hours (before site conditions, PM and commissioning).') + '</div>' : ''}</div>
-${extrasCard}${daily()}${recapCard()}${actions}`;
+${extrasCard}${daily()}${recapCard()}${signoffReport(Q)}${actions}`;
 }
 function wire() {
   const on = (id, fn) => { const el = document.getElementById(id); if (el) el.addEventListener('click', fn); };
@@ -287,6 +325,7 @@ function wire() {
     location.href = '?quote=' + encodeURIComponent(id);
   });
   on('addLog', () => { const tr = document.querySelector('#logT tr:last-child').cloneNode(true); tr.querySelector('.lh').value = ''; document.getElementById('logT').appendChild(tr); });
+  on('soOpen', async () => { await save(REF, { job: collectJob() }); location.href = './signoff.html?quote=' + encodeURIComponent(qid); });
   on('saveJob', async () => { await save(REF, { job: collectJob() }); document.getElementById('jobMsg').textContent = 'Saved. You can come back and finish later.'; });
   on('submitJob', async () => {
     const job = collectJob();
@@ -295,6 +334,7 @@ function wire() {
     if (!(Q.items || []).length && !job.log.length) { document.getElementById('jobMsg').textContent = 'Enter your time on site first.'; return; }
     if (!job.log.length && !confirm('No daily time log entered. Submit anyway?')) return;
     if (!job.jobStatus) { document.getElementById('jobMsg').textContent = 'Pick a job status in the recap first.'; return; }
+    const soP = signoffProblem(Q, job.jobStatus, job.signoffSkip); if (soP) { document.getElementById('jobMsg').textContent = soP; return; }
     job.submittedAt = new Date().toISOString(); job.submittedBy = ME.email; job.reviewNote = '';
     await save(REF, { job, status: 'submitted' });
     showJob(qid);
@@ -330,6 +370,7 @@ function showNew() {
     <button type="button" class="qbtn" id="addLog" style="margin-top:6px">+ Add day / tech</button></div>
     <div class="card"><div class="sect" style="margin-top:0">Job recap</div>${jsSelect(((typeof Q !== 'undefined' && Q && Q.job) || {}).jobStatus || '')}
     ${[['work', 'Work completed'], ['issues', 'Problems / what took longer'], ['followups', 'Open items / return visit needed'], ['client', 'Client feedback']].map(([k, t]) => `<div class="qmeta" style="margin-top:8px;display:flex;justify-content:space-between;align-items:center">${t}<button type="button" class="qbtn bl" data-k="${k}" style="height:24px;padding:0 8px">• Bullet</button></div><textarea class="rc" data-k="${k}" rows="3"></textarea>`).join('')}
+    ${signoffBox(null)}
     <div class="qactions"><button class="qbtn gold" id="nSubmit">Submit to Anthony</button></div><div id="nMsg" class="qmeta"></div></div>`;
   document.getElementById('addLog').onclick = () => { const tr = document.querySelector('#logT tr:last-child').cloneNode(true); tr.querySelector('.lh').value = ''; document.getElementById('logT').appendChild(tr); };
   document.getElementById('nRep').onchange = async (e) => {
@@ -348,7 +389,8 @@ function showNew() {
     if (NEW.open) box.innerHTML = `<span style="color:#ffd479">This opportunity already has a labor quote (${esc(label(NEW.open))}).</span> <button class="qbtn gold" onclick="attachToQuote()">Log hours on that quote instead</button>`;
     else if (NEW.closed) box.innerHTML = '<span style="color:#ff9f6b">A job report was already submitted for this opportunity. Ask Anthony before adding another.</span>';
   };
-  document.getElementById('nSubmit').onclick = submitNew;
+  document.getElementById('nSubmit').onclick = () => submitNew(false);
+  document.getElementById('soOpen').onclick = () => submitNew(true);
 }
 async function attachToQuote() {
   const q = NEW.open; if (!q) return;
@@ -357,7 +399,7 @@ async function attachToQuote() {
   await db.collection('quotes').doc(q._id).set({ status: 'scheduled', schedule: { dates: sc.dates || [], techs: [...new Set((sc.techs || []).concat(techList))] } }, { merge: true });
   location.href = '?quote=' + encodeURIComponent(q._id);
 }
-async function submitNew() {
+async function submitNew(toSign) {  // toSign: save as an open job and go to the customer sign-off page
   const msg = t => document.getElementById('nMsg').textContent = t;
   const rep = document.getElementById('nRep').value, oppId = document.getElementById('nOpp').value;
   if (!rep || !oppId) return msg('Pick the sales rep and the opportunity first.');
@@ -367,21 +409,24 @@ async function submitNew() {
   const recap = {}; document.querySelectorAll('.rc').forEach(t => recap[t.dataset.k] = t.value.trim());
   if (!recap.work) return msg('Fill in "Work completed" in the recap.');
   const jobStatus = (document.getElementById('jobStatus') || {}).value || '';
-  if (!jobStatus) return msg('Pick a job status in the recap.');
+  if (!jobStatus && !toSign) return msg('Pick a job status in the recap.');
+  const skip = signoffSkip();
+  if (!toSign) { const soP = signoffProblem(null, jobStatus, skip); if (soP) return msg(soP); }
   const items = [], lines = [];
-  const job = { jobStatus, lines, log, totalHours: Math.round(log.reduce((a, r) => a + r.hours, 0) * 100) / 100, recap, savedAt: new Date().toISOString(), savedBy: ME.email, submittedAt: new Date().toISOString(), submittedBy: ME.email, reviewNote: '' };
+  const job = { jobStatus, lines, log, totalHours: Math.round(log.reduce((a, r) => a + r.hours, 0) * 100) / 100, recap, signoffSkip: skip, savedAt: new Date().toISOString(), savedBy: ME.email, submittedAt: new Date().toISOString(), submittedBy: ME.email, reviewNote: '' };
+  if (toSign) { delete job.submittedAt; delete job.submittedBy; }
   const dates = [...new Set(log.map(r => r.date))].sort();
   const techList = [...new Set(log.map(r => r.who).filter(Boolean).concat(ME.role === 'tech' ? [ME.email] : []))];
   if (NEW.open) return msg('This opportunity already has a labor quote. Tap "Log hours on that quote instead" above.');
   if (NEW.closed && !confirm('A job report already exists for this opportunity. Submit another one anyway?')) return;
   const id = 'job-' + Date.now();
   await db.collection('quotes').doc(id).set({
-    id, label: opp.name, noQuote: true, status: 'submitted', items,
+    id, label: opp.name, noQuote: true, status: toSign ? 'scheduled' : 'submitted', items,
     project: { customerName: opp.name, salesManagerName: rep, dtoolsOpportunityId: oppId, dtoolsOppNumber: opp.number || '', dtoolsClientName: opp.clientName || '' },
     schedule: { dates, techs: techList, updatedAt: new Date().toISOString(), updatedBy: ME.email },
     job, updatedAt: new Date(), isTemplate: false, counted: 'no-quote'
   });
-  location.href = '?quote=' + encodeURIComponent(id);
+  location.href = (toSign ? './signoff.html' : '') + '?quote=' + encodeURIComponent(id);
 }
 
 // ---------- bullet points in recap boxes (v8.15.3) ----------
@@ -435,7 +480,7 @@ firebase.auth().onAuthStateChanged(async (u) => {
   const email = (u.email || '').toLowerCase();
   const p = USERS[email] || (email === 'a.ward@asbc.us' ? { name: 'Anthony Ward', role: 'admin' } : null);
   if (!p) { app().innerHTML = '<div class="empty">' + esc(email) + ' is not approved yet. Ask Anthony.</div>'; return; }
-  ME = { email, name: p.name, role: p.role || 'rep' };
+  ME = { email, name: p.name, role: p.role || 'rep', allQuotes: !!p.allQuotes };
   document.getElementById('signOutBtn').style.display = '';
   document.getElementById('signOutBtn').textContent = 'Sign out (' + ME.name.split(' ')[0] + ')';
   try { if (qid) await showJob(qid); else await showList(); } catch (e) { app().innerHTML = '<div class="empty">Could not load: ' + esc(e.message) + '</div>'; }
