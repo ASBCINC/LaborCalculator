@@ -87,6 +87,17 @@ textarea { background:#101216; border:1px solid var(--line); color:#fff; border-
 // a daily time log and a recap -> Submitted -> admin approves (Closed; feeds Labor Calibration) or sends back.
 firebase.initializeApp({ apiKey: "AIzaSyCSf560VkBf2esIH5rC-_Vcx349o7iIC-0", authDomain: "asbc-calculator.firebaseapp.com", projectId: "asbc-calculator" });
 const db = firebase.firestore();
+// v8.18.0: works offline on site. Data the tech has opened is kept on the device; saves made with no signal
+// are queued and sync automatically when the connection returns.
+try { db.enablePersistence({ synchronizeTabs: true }).catch(() => {}); } catch (e) {}
+async function save(ref, data) {
+  const p = ref.set(data, { merge: true });
+  if (!navigator.onLine) { flash('No signal: saved on this device. It will sync automatically when you are back online.'); p.catch(() => {}); return; }
+  await p;
+}
+function flash(t) { let b = document.getElementById('flash'); if (!b) { b = document.createElement('div'); b.id = 'flash'; b.className = 'no-print'; b.style.cssText = 'position:fixed;left:12px;right:12px;bottom:12px;background:#1a1d23;border:1px solid #C7A66A;color:#fff;padding:10px 12px;border-radius:10px;font-size:13px;z-index:99'; document.body.appendChild(b); } b.textContent = t; b.style.display = ''; clearTimeout(b._t); b._t = setTimeout(() => b.style.display = 'none', 5000); }
+window.addEventListener('offline', () => flash('You are offline. Keep working; your entries will sync later.'));
+window.addEventListener('online', () => flash('Back online: syncing your saved entries.'));
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const hrs = v => (Math.round((Number(v) || 0) * 100) / 100).toFixed(2);
 const STATUS = { draft: 'Draft', won: 'Won', scheduled: 'Scheduled', submitted: 'Submitted', closed: 'Closed' };
@@ -162,12 +173,24 @@ function logForm() {
   const zones = [...new Set(items.map(x => x.it.zone || 'General'))];
   const log = (j.log && j.log.length ? j.log : [{ date: new Date().toISOString().slice(0, 10), who: ME.role === 'tech' ? ME.email : '', hours: '' }]);
   const tOpts = sel => techs().map(t => `<option value="${esc(t.email)}" ${t.email === sel ? 'selected' : ''}>${esc(t.name)}</option>`).join('');
-  return `<div class="card"><div class="sect" style="margin-top:0">Actual hours per item</div>
+  const clock = ((j.clocks || {})[ME.email]) || null;
+  const extras = (j.extras && j.extras.length) ? j.extras : [{ desc: '', hours: '' }];
+  const timer = `<div class="card no-print"><div class="sect" style="margin-top:0">Day timer</div>
+    ${clock ? `<div class="qmeta">Clocked in at <b>${esc(new Date(clock.start).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }))}</b> (${esc(new Date(clock.start).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }))}).</div>
+      <div class="qactions"><button class="qbtn gold" id="clockOut">End day</button><button class="qbtn" id="clockCancel">Cancel timer</button></div>`
+    : `<div class="qmeta">Tap Start when you arrive; tap End when you leave. Your hours are added to the time log below.</div><div class="qactions"><button class="qbtn gold" id="clockIn">Start day</button></div>`}</div>`;
+  const parent = Q.returnFor ? `<div class="card" style="border-color:#8a6d2f"><div class="sect" style="margin-top:0;color:#ffd479">Return visit</div><div class="qmeta">For: ${esc(Q.returnFor.label || '')}</div><div style="white-space:pre-wrap;margin-top:6px">${esc(Q.returnFor.openItems || '')}</div></div>` : '';
+  const itemsCard = items.length ? `<div class="card"><div class="sect" style="margin-top:0">Actual hours per item</div>
     <div class="qmeta">Enter the total hours spent on each line (all techs combined). Add a note if something ran long or short.</div>
     ${zones.map(z => `<div class="sect">${esc(z)}</div>` + items.filter(x => (x.it.zone || 'General') === z).map(x => `<div class="item">
       <div class="nm">${esc(lineName(x.it))}${Number(x.it.qty) > 1 ? ' <span class="qmeta">×' + esc(x.it.qty) + '</span>' : ''}</div>
       <input type="number" min="0" step="0.25" inputmode="decimal" class="ah" data-i="${x.i}" placeholder="hrs" value="${x.prev.actualHours ?? ''}">
-      <input type="text" class="note an" data-i="${x.i}" placeholder="Note (optional)" value="${esc(x.prev.note || '')}"></div>`).join('')).join('')}</div>
+      <input type="text" class="note an" data-i="${x.i}" placeholder="Note (optional)" value="${esc(x.prev.note || '')}"></div>`).join('')).join('')}</div>` : '';
+  const extrasCard = `<div class="card"><div class="sect" style="margin-top:0">Unplanned / extra work</div>
+    <div class="qmeta">Anything done that was NOT on the quote (possible change order). Anthony and the sales rep are flagged.</div>
+    <table id="exT"><tr><th>What was done</th><th style="width:80px">Hours</th></tr>${extras.map(x => `<tr><td><input class="exd" value="${esc(x.desc || '')}" placeholder="e.g. Moved outlet behind TV"></td><td><input type="number" class="exh" min="0" step="0.25" value="${esc(x.hours ?? '')}"></td></tr>`).join('')}</table>
+    <button type="button" class="qbtn" id="addEx" style="margin-top:6px">+ Add extra</button></div>`;
+  return parent + timer + itemsCard + extrasCard + `
     <div class="card"><div class="sect" style="margin-top:0">Daily time log</div>
     <table id="logT"><tr><th>Date</th><th>Tech</th><th>Hours</th></tr>${log.map(r => `<tr><td><input type="date" class="ld" value="${esc(r.date || '')}"></td><td><select class="lw"><option value="">—</option>${tOpts(r.who)}</select></td><td><input type="number" class="lh" min="0" step="0.25" value="${esc(r.hours)}"></td></tr>`).join('')}</table>
     <button type="button" class="qbtn" id="addLog" style="margin-top:6px">+ Add day / tech</button></div>
@@ -181,7 +204,8 @@ function collectJob() {
     return { i, id: it.id, zone: it.zone || 'General', actualHours: el.value === '' ? null : Number(el.value), note }; });
   const log = [...document.querySelectorAll('#logT tr')].slice(1).map(tr => ({ date: tr.querySelector('.ld').value, who: tr.querySelector('.lw').value, hours: Number(tr.querySelector('.lh').value) || 0 })).filter(r => r.date && r.hours);
   const recap = {}; document.querySelectorAll('.rc').forEach(t => recap[t.dataset.k] = t.value.trim());
-  return Object.assign({}, Q.job || {}, { lines, log, recap, savedAt: new Date().toISOString(), savedBy: ME.email });
+  const extras = [...document.querySelectorAll('#exT tr')].slice(1).map(tr => ({ desc: tr.querySelector('.exd').value.trim(), hours: Number(tr.querySelector('.exh').value) || 0 })).filter(x => x.desc || x.hours);
+  return Object.assign({}, Q.job || {}, { lines, log, recap, extras, extrasHours: Math.round(extras.reduce((a, x) => a + x.hours, 0) * 100) / 100, savedAt: new Date().toISOString(), savedBy: ME.email });
 }
 function report(admin) {
   const j = Q.job || {}; const lines = j.lines || [];
@@ -195,12 +219,17 @@ function report(admin) {
   const recapCard = () => `    <div class="card"><div class="sect" style="margin-top:0">Recap</div>${[['work', 'Work completed'], ['issues', 'Problems / what took longer'], ['followups', 'Open items / return visit'], ['client', 'Client feedback']].map(([k, t]) => `<div class="qmeta" style="margin-top:6px">${t}</div><div style="white-space:pre-wrap">${esc((j.recap || {})[k] || '—')}</div>`).join('')}
     <div class="qmeta" style="margin-top:10px">Submitted by ${esc(nameOf(j.submittedBy))}${j.submittedAt ? ' · ' + esc(new Date(j.submittedAt).toLocaleString('en-US')) : ''}${j.reviewedAt && (Q.status === 'closed') ? ' · Approved by ' + esc(nameOf(j.reviewedBy)) + ' ' + esc(new Date(j.reviewedAt).toLocaleDateString('en-US')) : ''}</div></div>`;
   const actions = `<div class="qactions no-print"><button class="qbtn" onclick="window.print()">Print / Save PDF</button>
+    ${admin && (j.recap || {}).followups && !j.returnVisitId ? '<button class="qbtn" id="makeReturn" style="border-color:#8a6d2f;color:#ffd479">Create return visit</button>' : ''}${admin && j.returnVisitId ? '<a class="qbtn" style="display:inline-flex;align-items:center;text-decoration:none" href="?quote=' + encodeURIComponent(j.returnVisitId) + '">Open return visit</a>' : ''}
     ${admin && Q.status === 'submitted' ? '<button class="qbtn gold" id="approveJob">Approve &amp; close</button><button class="qbtn qbtn-del" id="sendBack">Send back</button>' : ''}</div><div id="revMsg" class="qmeta no-print"></div>`;
-  const timeOnly = Q.noQuote && !(Q.items || []).length;
+  const ex = (j.extras || []).filter(x => x.desc || x.hours);
+  const extrasCard = ex.length ? `<div class="card" style="border-color:#8a4b2f"><div class="sect" style="margin-top:0;color:#ff9f6b">Unplanned / extra work: possible change order (${hrs(ex.reduce((a, x) => a + (Number(x.hours) || 0), 0))} hrs)</div>
+    <table><tr><th>What was done</th><th class="right">Hours</th></tr>${ex.map(x => `<tr><td>${esc(x.desc)}</td><td class="right">${hrs(x.hours)}</td></tr>`).join('')}</table></div>` : '';
+  const parentCard = Q.returnFor ? `<div class="card"><div class="qmeta">Return visit for <b>${esc(Q.returnFor.label || '')}</b>. Open items were:</div><div style="white-space:pre-wrap">${esc(Q.returnFor.openItems || '')}</div></div>` : '';
+  const timeOnly = !(Q.items || []).length;
   const head = `<div class="print-only"><b>ASBC Job Report</b> · ${esc(label(Q))} · printed ${new Date().toLocaleDateString('en-US')}</div>`;
   const itemsCard = timeOnly ? `<div class="card">${head}<div class="sect" style="margin-top:0">Total time on site</div><div class="big" style="font-size:24px;font-weight:800;color:var(--gold)">${hrs(tLog)} hrs</div>
-    ${admin ? '<div class="qmeta" style="margin-top:6px"><b style="color:#ff9f6b">No labor quote was submitted for this job.</b> Time on site only; nothing to compare against an estimate.</div>' : ''}</div>` : null;
-  if (timeOnly) return itemsCard + daily() + recapCard() + actions;
+    ${admin && Q.noQuote && !Q.returnFor ? '<div class="qmeta" style="margin-top:6px"><b style="color:#ff9f6b">No labor quote was submitted for this job.</b> Time on site only; nothing to compare against an estimate.</div>' : ''}</div>` : null;
+  if (timeOnly) return parentCard + itemsCard + extrasCard + daily() + recapCard() + actions;
   return `<div class="card">${head}
     <div class="sect" style="margin-top:0">Hours by item</div><table><tr><th>Item</th><th>Qty</th>${admin ? '<th class="right">Est</th>' : ''}<th class="right">Actual</th>${admin ? '<th class="right">Var</th>' : ''}<th>Note</th></tr>
     ${zones.map(z => { const zr = rows.filter(r => r.zone === z); const ze = zr.reduce((a, r) => a + r.est, 0), za = zr.reduce((a, r) => a + (Number(r.act) || 0), 0);
@@ -208,7 +237,7 @@ function report(admin) {
       zr.map(r => `<tr><td>${esc(lineName(r.it))}</td><td>${esc(r.it.qty)}</td>${admin ? `<td class="right">${hrs(r.est)}</td>` : ''}<td class="right">${r.act == null ? '—' : hrs(r.act)}</td>${admin ? `<td class="right">${v(r.est, r.act)}</td>` : ''}<td>${esc(r.note || '')}</td></tr>`).join(''); }).join('')}
     <tr><td><b>Total</b></td><td></td>${admin ? `<td class="right"><b>${hrs(tEst)}</b></td>` : ''}<td class="right"><b>${hrs(tAct)}</b></td>${admin ? `<td class="right"><b>${v(tEst, tAct)}</b></td>` : ''}<td></td></tr></table>
     ${admin ? '<div class="qmeta" style="margin-top:6px">' + (Q.noQuote ? '<b style="color:#ff9f6b">No labor quote was submitted for this job.</b> Estimates shown are catalog hours for the items the tech picked; "Other" items have no estimate.' : 'Estimates are catalog labor hours (before site conditions, PM and commissioning).') + '</div>' : ''}</div>
-${daily()}${recapCard()}${actions}`;
+${extrasCard}${daily()}${recapCard()}${actions}`;
 }
 function wire() {
   const on = (id, fn) => { const el = document.getElementById(id); if (el) el.addEventListener('click', fn); };
@@ -217,18 +246,50 @@ function wire() {
     const ts = [...document.querySelectorAll('.tk:checked')].map(x => x.value);
     let st = document.getElementById('stSel').value;
     if (['draft', 'won'].includes(st) && dates.length && ts.length) st = 'scheduled';
-    await REF.set({ status: st, schedule: { dates, techs: ts, updatedAt: new Date().toISOString(), updatedBy: ME.email } }, { merge: true });
+    await save(REF, { status: st, schedule: { dates, techs: ts, updatedAt: new Date().toISOString(), updatedBy: ME.email } });
     showJob(qid);
   });
+  on('addEx', () => { const tr = document.querySelector('#exT tr:last-child').cloneNode(true); tr.querySelectorAll('input').forEach(i => i.value = ''); document.getElementById('exT').appendChild(tr); });
+  on('clockIn', async () => {
+    const clocks = Object.assign({}, (Q.job || {}).clocks, { [ME.email]: { start: new Date().toISOString() } });
+    await save(REF, { job: Object.assign({}, collectJob(), { clocks }) }); showJob(qid);
+  });
+  on('clockCancel', async () => {
+    if (!confirm('Cancel the running timer? Nothing will be added to the time log.')) return;
+    const clocks = Object.assign({}, (Q.job || {}).clocks); delete clocks[ME.email];
+    await save(REF, { job: Object.assign({}, collectJob(), { clocks }) }); showJob(qid);
+  });
+  on('clockOut', async () => {
+    const c = ((Q.job || {}).clocks || {})[ME.email]; if (!c) return;
+    const h = Math.max(0.25, Math.round((Date.now() - new Date(c.start).getTime()) / 3600000 * 4) / 4);
+    if (!confirm('End day: ' + h.toFixed(2) + ' hours on site. Add to the time log?')) return;
+    const job = collectJob();
+    const day = new Date(c.start); const d = day.getFullYear() + '-' + String(day.getMonth() + 1).padStart(2, '0') + '-' + String(day.getDate()).padStart(2, '0');
+    job.log = (job.log || []).filter(r => r.hours).concat([{ date: d, who: ME.email, hours: h }]);
+    job.clocks = Object.assign({}, job.clocks); delete job.clocks[ME.email];
+    await save(REF, { job }); showJob(qid);
+  });
+  on('makeReturn', async () => {
+    const j = Q.job || {}; const id = 'job-' + Date.now();
+    await db.collection('quotes').doc(id).set({
+      id, label: 'Return visit: ' + label(Q), noQuote: true, status: 'scheduled', items: [],
+      project: Object.assign({}, Q.project || {}), returnFor: { id: qid, label: label(Q), openItems: (j.recap || {}).followups || '' },
+      schedule: { dates: [], techs: ((Q.schedule || {}).techs || []).slice(), updatedAt: new Date().toISOString(), updatedBy: ME.email },
+      updatedAt: new Date(), isTemplate: false, counted: 'return-visit'
+    });
+    await save(REF, { job: Object.assign({}, j, { returnVisitId: id }) });
+    location.href = '?quote=' + encodeURIComponent(id);
+  });
   on('addLog', () => { const tr = document.querySelector('#logT tr:last-child').cloneNode(true); tr.querySelector('.lh').value = ''; document.getElementById('logT').appendChild(tr); });
-  on('saveJob', async () => { await REF.set({ job: collectJob() }, { merge: true }); document.getElementById('jobMsg').textContent = 'Saved. You can come back and finish later.'; });
+  on('saveJob', async () => { await save(REF, { job: collectJob() }); document.getElementById('jobMsg').textContent = 'Saved. You can come back and finish later.'; });
   on('submitJob', async () => {
     const job = collectJob();
     const missing = job.lines.filter(l => l.actualHours == null).length;
     if (missing && !confirm(missing + ' item(s) have no hours. Submit anyway?')) return;
+    if (!(Q.items || []).length && !job.log.length) { document.getElementById('jobMsg').textContent = 'Enter your time on site first.'; return; }
     if (!job.log.length && !confirm('No daily time log entered. Submit anyway?')) return;
     job.submittedAt = new Date().toISOString(); job.submittedBy = ME.email; job.reviewNote = '';
-    await REF.set({ job, status: 'submitted' }, { merge: true });
+    await save(REF, { job, status: 'submitted' });
     showJob(qid);
   });
   on('approveJob', async () => {

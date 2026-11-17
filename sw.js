@@ -1,5 +1,5 @@
-// ASBC Labor Calculator service worker (v8.17.1): offline-ready, network-first.
-const CACHE_NAME = 'asbc-calc-v8.17.1';
+// ASBC Labor Calculator service worker (v8.18.0): offline-ready, network-first.
+const CACHE_NAME = 'asbc-calc-v8.18.0';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -44,7 +44,8 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     fetch(request)
       .then((response) => {
-        if (response && response.ok && url.origin === self.location.origin) {
+        // v8.18.0: also keep the Firebase library (www.gstatic.com) so the Jobs page opens with no signal
+        if (response && ((response.ok && url.origin === self.location.origin) || url.hostname === 'www.gstatic.com')) {
           const copy = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
         }

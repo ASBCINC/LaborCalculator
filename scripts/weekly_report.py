@@ -52,6 +52,8 @@ for q in quotes:
         'estHours': round(est, 2) if est else None, 'actualHours': round(act, 2) if est else None,
         'variancePct': round((act - est) / est * 100) if est else None,
         'recap': {k: cut((j.get('recap') or {}).get(k)) for k in ('work', 'issues', 'followups', 'client')},
+        'extraWork': [{'desc': cut(x.get('desc'), 200), 'hours': x.get('hours')} for x in (j.get('extras') or []) if x.get('desc') or x.get('hours')],
+        'returnVisitFor': (q.get('returnFor') or {}).get('label'),
     })
 
 reps, items = {}, {}

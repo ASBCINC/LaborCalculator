@@ -218,7 +218,8 @@ function renderList() {
       (r.isTemplate ? '<span class="badge b-t">TEMPLATE</span> ' : '') +
       (r.isLocked ? '<span class="badge b-l">LOCKED</span> ' : '') +
       (r.actuals ? '<span class="badge b-a">ACTUALS</span> ' : '') +
-      (r.status && r.status !== 'draft' ? '<span class="badge b-l">' + esc(String(r.status).toUpperCase()) + '</span>' : '');
+      (r.status && r.status !== 'draft' ? '<span class="badge b-l">' + esc(String(r.status).toUpperCase()) + '</span> ' : '') +
+      (r.job && r.job.extrasHours > 0 ? '<span class="badge" style="color:#ff9f6b;border-color:#8a4b2f">EXTRA WORK ' + Number(r.job.extrasHours).toFixed(2) + ' HRS: POSSIBLE CO</span>' : '');
     const a = r.actuals;
     const detail = `
       <div class="qdetail">

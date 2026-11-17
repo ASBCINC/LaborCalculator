@@ -5,6 +5,11 @@ on:
     - cron: '*/15 * * * *'
   workflow_dispatch: {}
 
+# v8.18.0: webhook/cron bursts never pile up: at most one run at a time plus one waiting.
+concurrency:
+  group: dtools-sync
+  cancel-in-progress: false
+
 jobs:
   sync:
     runs-on: ubuntu-latest
