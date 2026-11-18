@@ -92,6 +92,25 @@
         }
 
         .estimate-open { transform: translateY(0) !important; }
+        /* v8.21.0 layout */
+        .pricing-collapsed { display: none; }
+        #pricingDetails { max-height: 45vh; }
+        .zone-collapsed { display: none; }
+        #categoryButtons { scrollbar-width: none; }
+        #categoryButtons::-webkit-scrollbar { display: none; }
+        @media (min-width: 1024px) {
+            body.estimate-wide #catalogPanel { width: 50% !important; }
+            body.estimate-wide #estimatePanel { width: 50% !important; }
+        }
+        @media (max-width: 639px) {
+            #moreTools { display: none; }
+            #moreTools.open { display: flex; flex-direction: column; align-items: stretch; gap: 8px; position: fixed; top: 6rem; right: 8px; z-index: 60; background: #fff; border: 1px solid #ddd; border-radius: 12px; padding: 10px; box-shadow: 0 12px 30px rgba(0,0,0,.35); }
+            #moreTools.open > * { justify-content: flex-start; }
+        }
+        @media print {
+            .pricing-collapsed, #pricingDetails { display: block !important; max-height: none !important; overflow: visible !important; }
+            .zone-collapsed { display: block !important; }
+        }
         .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
 
         body:not(.show-item-hours) .item-hours-display {
@@ -231,12 +250,12 @@
 
 <body class="bg-bgDark text-white h-screen overflow-hidden font-sans">
     <div id="adminEditModeBanner" class="admin-edit-banner hidden">Admin Edit Mode Active: tap any product title to edit</div>
-    <header class="h-28 bg-white text-black shadow-sm">
-        <div class="h-16 px-3 sm:px-5 flex items-center justify-between">
+    <header class="h-24 sm:h-28 bg-white text-black shadow-sm">
+        <div class="h-12 sm:h-16 px-3 sm:px-5 flex items-center justify-between">
             <div class="flex items-center gap-3 sm:gap-5 min-w-0">
-                <img src="./bo-california-logo.png" alt="Bang &amp; Olufsen California" class="h-9 sm:h-11 w-auto max-w-[62vw] sm:max-w-none object-contain">
-                <div class="w-px h-9 bg-[#D8D8D8] shrink-0"></div>
-                <img src="./asbc-logo.png" alt="ASBC" id="asbcLogo" class="h-7 sm:h-8 w-auto object-contain shrink-0">
+                <img src="./bo-california-logo.png" alt="Bang &amp; Olufsen California" class="h-7 sm:h-11 w-auto max-w-[45vw] sm:max-w-none object-contain">
+                <div class="w-px h-7 sm:h-9 bg-[#D8D8D8] shrink-0"></div>
+                <img src="./asbc-logo.png" alt="ASBC" id="asbcLogo" class="h-5 sm:h-8 w-auto object-contain shrink-0">
                 <div class="hidden lg:block min-w-0 border-l border-[#E2E2E2] pl-5">
                     <div class="text-[10px] uppercase tracking-[0.24em] text-[#777777]">Internal Project Tool</div>
                     <div class="text-sm tracking-wide text-black">Labor Estimator</div>
@@ -251,16 +270,16 @@
                     <span id="installAppText">Install App</span>
                 </button>
                 <div class="text-right leading-tight">
-                    <div class="text-xs sm:text-sm text-[#666666] whitespace-nowrap" data-rate-display>$200/hr</div>
+                    <div class="hidden sm:block text-xs sm:text-sm text-[#666666] whitespace-nowrap" data-rate-display>$200/hr</div>
                     <div id="versionNumber" class="text-[9px] sm:text-[10px] text-[#999999] whitespace-nowrap cursor-pointer select-none"></div>
-                    <a href="./leaderboard.html" class="block text-[9px] sm:text-[10px] text-[#C7A66A] whitespace-nowrap underline print-hide">Leaderboard</a>
+                    <a href="./leaderboard.html" class="text-[9px] sm:text-[10px] text-[#C7A66A] whitespace-nowrap underline print-hide">Leaderboard</a>
                     <a id="jobsLink" href="./jobs.html" class="hidden text-[9px] sm:text-[10px] text-[#C7A66A] whitespace-nowrap underline print-hide">Jobs</a>
                     <button id="userBadge" type="button" onclick="signOutUser(true)" class="hidden text-[9px] sm:text-[10px] text-[#999999] whitespace-nowrap underline" title="Sign out"></button>
                 </div>
             </div>
         </div>
 
-        <div id="projectTools" class="h-12 px-3 sm:px-5 flex items-center gap-2 border-t border-[#EBEBEB] bg-[#F7F7F5] print-hide overflow-x-auto">
+        <div id="projectTools" class="h-12 px-2 sm:px-5 flex items-center gap-2 border-t border-[#EBEBEB] bg-[#F7F7F5] print-hide overflow-x-auto">
             <input id="customerName" type="text" placeholder="Opportunity name" class="hidden h-9 w-40 sm:w-48 shrink-0 bg-white border border-[#D8D8D8] rounded-md px-3 text-sm text-black placeholder:text-[#888888]">
             <select id="salesManagerName" class="h-9 w-36 sm:w-44 shrink-0 bg-white border border-[#D8D8D8] rounded-md px-2 text-sm text-black">
                 <option value="">Select sales rep</option>
@@ -283,6 +302,8 @@
             <select id="dtoolsOpportunity" class="h-9 w-40 sm:w-48 shrink-0 bg-white border border-[#D8D8D8] rounded-md px-2 text-sm text-black">
                 <option value="">D-Tools opportunities</option>
             </select>
+            <button id="moreToolsButton" type="button" onclick="document.getElementById('moreTools').classList.toggle('open')" class="sm:hidden h-9 shrink-0 px-3 rounded-md bg-white border border-[#CFCFCF] text-black text-sm font-medium">More</button>
+            <div id="moreTools" class="sm:contents">
             <label class="flex items-center gap-1.5 shrink-0 bg-[#EAEAEA] border border-[#D0D0D0] rounded-md px-2.5 h-9 cursor-pointer hover:bg-[#E0E0E0] transition-colors">
                 <input type="checkbox" id="isTemplateCheckbox" class="w-3.5 h-3.5 rounded-sm border-gray-400 text-black focus:ring-black">
                 <span class="text-[11px] font-bold text-black uppercase tracking-wide mt-0.5">Template</span>
@@ -298,12 +319,13 @@
                 <span class="text-[11px] font-bold text-black uppercase tracking-wide mt-0.5">Show Hours</span>
             </label>
 
-            <a href="./log.html" target="_blank" rel="noopener" title="Browse every saved quote and labor calibration" class="h-9 shrink-0 inline-flex items-center bg-white border border-[#CFCFCF] text-black font-medium rounded-md px-4 text-sm">Saved Quotes</a>
+            <a href="./log.html" title="Browse every saved quote and labor calibration" class="h-9 shrink-0 inline-flex items-center bg-white border border-[#CFCFCF] text-black font-medium rounded-md px-4 text-sm">Saved Quotes</a>
+            </div>
         </div>
     </header>
 
-    <main class="h-[calc(100vh-7rem)] flex overflow-hidden relative">
-        <section id="catalogPanel" class="w-full md:w-2/3 flex flex-col border-r border-gray-800 pb-20 md:pb-0">
+    <main class="h-[calc(100vh-6rem)] h-[calc(100dvh-6rem)] sm:h-[calc(100vh-7rem)] sm:h-[calc(100dvh-7rem)] flex overflow-hidden relative">
+        <section id="catalogPanel" class="w-full lg:w-[60%] flex flex-col border-r border-gray-800 pb-20 lg:pb-0">
             <div class="p-3 sm:p-4 bg-bgPanel border-b border-gray-800 space-y-3 shrink-0">
                 <div class="flex gap-2">
                     <div class="w-5/12 sm:w-1/3 relative shrink-0">
@@ -315,7 +337,7 @@
                     <input id="searchInput" type="search" autocomplete="off" placeholder="Search products..." class="flex-1 min-w-0 bg-gray-900 border border-gray-700 rounded-xl px-4 h-12 text-base outline-none focus:border-brandGold focus:ring-1 focus:ring-brandGold">
                 </div>
 
-                <div id="categoryButtons" class="flex flex-wrap gap-2 pb-1"></div>
+                <div id="categoryButtons" class="flex flex-nowrap sm:flex-wrap gap-2 pb-1 overflow-x-auto sm:overflow-visible"></div>
 
                 <div class="flex justify-between items-center text-xs text-textMuted">
                     <span id="resultCount">0 products</span>
@@ -330,13 +352,13 @@
             <div id="productGrid" class="flex-1 overflow-y-auto p-2.5 sm:p-3 content-start"></div>
         </section>
 
-        <section id="estimatePanel" class="fixed md:static inset-x-0 bottom-0 z-40 md:z-auto w-full md:w-1/3 h-[88vh] md:h-full bg-bgPanel flex flex-col overflow-y-auto shadow-2xl md:shadow-none rounded-t-2xl md:rounded-none border-t md:border-t-0 border-gray-700 translate-y-full md:translate-y-0 transition-transform duration-300">
+        <section id="estimatePanel" class="fixed lg:static inset-x-0 bottom-0 z-40 lg:z-auto w-full lg:w-[40%] h-[88vh] h-[88dvh] lg:h-full bg-bgPanel flex flex-col overflow-y-auto shadow-2xl lg:shadow-none rounded-t-2xl lg:rounded-none border-t lg:border-t-0 border-gray-700 translate-y-full lg:translate-y-0 transition-transform duration-300">
             <div class="sticky top-0 z-20 p-4 border-b border-gray-800 flex justify-between items-center shrink-0 bg-bgPanel print-hide">
                 <div>
                     <h2 class="text-xl font-medium tracking-wide text-white">Project Estimate</h2>
                     <p id="quoteItemCount" class="text-xs text-textMuted">0 items</p>
                 </div>
-                <button id="closeEstimateButton" type="button" onclick="toggleEstimate(false)" class="md:hidden w-11 h-11 bg-gray-800 rounded-full text-xl" aria-label="Close estimate">×</button>
+                <div class="flex items-center gap-2"><button id="expandEstimateButton" type="button" onclick="toggleWideEstimate()" class="hidden lg:inline-flex items-center h-9 px-3 rounded-lg border border-gray-700 text-xs text-textMuted hover:border-brandGold hover:text-brandGold" title="Give the estimate more of the screen">Expand</button><button id="closeEstimateButton" type="button" onclick="toggleEstimate(false)" class="lg:hidden w-11 h-11 bg-gray-800 rounded-full text-xl" aria-label="Close estimate">×</button></div>
             </div>
 
             <!-- Enhanced Print Document Header -->
@@ -382,6 +404,8 @@
 
             <!-- Cost & Schedule Summary Block -->
             <div id="summaryPrintBlock" class="sticky bottom-0 z-20 p-3 sm:p-4 bg-gray-900 border-t border-gray-800 shrink-0 safe-bottom shadow-[0_-10px_20px_rgba(0,0,0,0.45)]">
+                <button type="button" id="pricingToggle" onclick="togglePricingDetails()" class="print-hide w-full flex justify-between items-center text-xs text-textMuted mb-2 hover:text-brandGold"><span><span id="pricingToggleIcon">▸</span> Pricing details &amp; options</span><span id="pricingToggleSummary" class="font-mono"></span></button>
+                <div id="pricingDetails" class="pricing-collapsed overflow-y-auto">
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2 mb-3 print-hide">
                     <label class="text-[10px] sm:text-xs text-textMuted flex flex-col">
                         <span>Site conditions</span>
@@ -438,22 +462,21 @@
                     <div id="tripRow" class="hidden flex justify-between text-brandGold"><span>Trip / mobilization</span><span id="tripAmount">$0.00</span></div>
                     <div id="recyclingRow" class="hidden flex justify-between text-brandGold"><span id="recyclingLabel">Recycling fee</span><span id="recyclingAmount">$75.00</span></div>
                 </div>
+                </div>
 
-                <div class="flex justify-between items-end border-t border-gray-700 pt-3 mb-3">
+                <div class="flex justify-between items-end border-t border-gray-700 pt-2 mb-2">
                     <span class="uppercase tracking-wider text-textMuted font-bold">Total Estimate</span>
                     <span id="priceTotal" class="text-2xl sm:text-3xl font-bold text-brandGold font-mono">$0.00</span>
                 </div>
 
-                <div class="grid grid-cols-3 gap-2 print-hide">
+                <div class="grid grid-cols-4 gap-2 print-hide">
                     <button type="button" onclick="clearQuote()" class="bg-[#171717] border border-[#2A2A2A] font-semibold py-3 rounded-xl">Clear</button>
                     <button type="button" onclick="saveAndPrint()" class="bg-white text-black font-bold py-3 rounded-xl">Save/Print</button>
                     <button type="button" onclick="toggleActualsModal(true)" class="bg-brandGold text-bgDark font-bold py-3 rounded-xl">Actuals</button>
                     <button type="button" onclick="shareQuote()" class="bg-brandGold text-bgDark font-bold py-3 rounded-xl">Share</button>
                 </div>
                 
-                <p class="text-[10px] sm:text-xs text-textMuted mt-3.5 text-center leading-relaxed print-hide px-2">
-                    <span class="text-brandGold font-medium">Note:</span> Cloud quotes are automatically purged after 60 days to optimize system performance. Please <strong>Print</strong> or <strong>Share</strong> estimates for long-term project records.
-                </p>
+                <p class="text-[10px] text-textMuted mt-2 text-center leading-snug print-hide px-2">Saved quotes are kept in the Quote Log; the Saved list here shows the last 60 days.</p>
             </div>
 
             <!-- Formal Client SOW Signature Block (Printed PDF Only) -->
@@ -465,12 +488,12 @@
         </section>
     </main>
 
-    <button id="mobileQuoteBar" type="button" onclick="toggleEstimate(true)" class="md:hidden fixed z-30 left-3 right-3 bottom-3 bg-brandGold text-bgDark rounded-2xl shadow-2xl px-4 py-3 flex items-center justify-between font-bold safe-bottom">
+    <button id="mobileQuoteBar" type="button" onclick="toggleEstimate(true)" class="lg:hidden fixed z-30 left-3 right-3 bottom-3 bg-brandGold text-bgDark rounded-2xl shadow-2xl px-4 py-3 flex items-center justify-between font-bold safe-bottom">
         <span><span id="mobileItemCount">0</span> items · <span id="mobileHours">0.00</span> hrs</span>
         <span id="mobilePrice" class="font-mono text-lg">$0.00</span>
     </button>
 
-    <div id="estimateBackdrop" onclick="toggleEstimate(false)" class="hidden md:hidden fixed inset-0 z-30 bg-black/70"></div>
+    <div id="estimateBackdrop" onclick="toggleEstimate(false)" class="hidden lg:hidden fixed inset-0 z-30 bg-black/70"></div>
 
     <!-- Custom Labor Modal -->
     <div id="customItemModal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 p-4">
@@ -673,8 +696,8 @@
               }
           });
 
-        const APP_VERSION = '8.20.2';
-        const BUILD_DATE = '2026-11-17';
+        const APP_VERSION = '8.21.0';
+        const BUILD_DATE = '2026-11-18';
         let HOURLY_RATE = 200;
 
         // Add-on labor options for the dropdown on every product tile.
@@ -774,8 +797,9 @@
 
 
         let catalog = [];
+        const collapsedZones = new Set(); // v8.21.0: estimate rooms folded by the user
         let catalogLoadError = null;
-        let isListView = localStorage.getItem('asbcListView') === 'true';
+        let isListView = localStorage.getItem('asbcListView') !== null ? localStorage.getItem('asbcListView') === 'true' : window.innerWidth < 640; // v8.21.0: phones start in List view
         let isHoursShown = localStorage.getItem('asbcShowHours') === 'true';
         let currentLoadedIsTemplate = false;
         let currentLoadedOwner = ''; // sales rep on the loaded quote (non-admins saving someone else's quote get a copy)
@@ -1531,13 +1555,14 @@
                     zoneCard.className = 'print-zone-card bg-gray-900 rounded-xl border border-gray-800 overflow-hidden';
 
                     const zoneHeader = document.createElement('div');
-                    zoneHeader.className = 'print-zone-header bg-gray-800/80 px-3 py-2 border-b border-gray-800 flex justify-between items-center';
+                    zoneHeader.className = 'print-zone-header bg-gray-800/80 px-3 py-2 border-b border-gray-800 flex justify-between items-center cursor-pointer select-none';
+                    zoneHeader.dataset.zoneToggle = zoneName;
                     
                     const zoneTotalHours = zoneTotals[zoneName] || 0;
                     const zoneCost = zoneTotalHours * HOURLY_RATE;
 
                     zoneHeader.innerHTML = `
-                        <div class="text-[11px] text-brandGold uppercase tracking-wider font-bold">${escapeHtml(zoneName)}<button type="button" data-rename-zone="${escapeHtml(zoneName)}" class="zone-rename-btn ml-2 print-hide" title="Rename this space">Rename</button></div>
+                        <div class="text-[11px] text-brandGold uppercase tracking-wider font-bold"><span class="print-hide inline-block w-3 text-textMuted">${collapsedZones.has(zoneName) ? '▸' : '▾'}</span>${escapeHtml(zoneName)} <span class="print-hide normal-case tracking-normal font-normal text-textMuted">(${zonesObj[zoneName].length})</span><button type="button" data-rename-zone="${escapeHtml(zoneName)}" class="zone-rename-btn ml-2 print-hide" title="Rename this space">Rename</button></div>
                         <div class="text-[10px] text-textMuted font-mono">
                             ${isHoursShown ? `${zoneTotalHours.toFixed(2)} hrs · ` : ''}${currencyFormatter.format(zoneCost)}
                         </div>
@@ -1545,7 +1570,7 @@
                     zoneCard.appendChild(zoneHeader);
 
                     const itemsContainer = document.createElement('div');
-                    itemsContainer.className = 'divide-y divide-gray-800/60';
+                    itemsContainer.className = 'divide-y divide-gray-800/60' + (collapsedZones.has(zoneName) ? ' zone-collapsed' : '');
 
                     zonesObj[zoneName].forEach(item => {
                         const installHours = Number(item.installHours) || 0;
@@ -1571,7 +1596,7 @@
                             ? `<select data-quote-addon-index="${item.originalIndex}" class="addon-select mt-1 print-hide">${addonOptionsHtml(item.addon ? item.addon.name : '', lineAddonOptions)}</select>${item.addon ? `<div class="text-[11px] text-brandGold font-mono mt-0.5">+ ${(addonHoursPerItem * quantity).toFixed(2)} hrs add-on</div>` : ''}`
                             : (item.addon ? `<div class="text-[11px] text-brandGold font-mono mt-0.5">+ ${escapeHtml(item.addon.name)} · ${(addonHoursPerItem * quantity).toFixed(2)} hrs add-on</div>` : '');
                         const row = document.createElement('div');
-                        row.className = 'print-item-row p-2.5 flex justify-between items-center hover:bg-gray-800/30 transition-colors';
+                        row.className = 'print-item-row px-2.5 py-1.5 flex justify-between items-center hover:bg-gray-800/30 transition-colors';
                         row.innerHTML = `
                             <div class="flex-1 pr-3">
                                 <div class="text-sm font-medium leading-tight mb-0.5 text-white flex items-center gap-2">
@@ -1582,9 +1607,9 @@
                                 ${addonCell}
                             </div>
                             <div class="flex items-center bg-gray-800 rounded-lg print-hide shrink-0">
-                                <button type="button" data-quote-index="${item.originalIndex}" data-change="-1" class="quote-quantity-button w-9 h-9 text-lg">−</button>
-                                <input type="number" inputmode="numeric" pattern="[0-9]*" min="0" step="1" value="${quantity}" data-qty-quote-index="${item.originalIndex}" aria-label="Quantity" class="qty-input w-11 h-9 text-center font-mono text-sm">
-                                <button type="button" data-quote-index="${item.originalIndex}" data-change="1" class="quote-quantity-button w-9 h-9 text-lg">+</button>
+                                <button type="button" data-quote-index="${item.originalIndex}" data-change="-1" class="quote-quantity-button w-8 h-8 text-lg">−</button>
+                                <input type="number" inputmode="numeric" pattern="[0-9]*" min="0" step="1" value="${quantity}" data-qty-quote-index="${item.originalIndex}" aria-label="Quantity" class="qty-input w-10 h-8 text-center font-mono text-sm">
+                                <button type="button" data-quote-index="${item.originalIndex}" data-change="1" class="quote-quantity-button w-8 h-8 text-lg">+</button>
                             </div>
                             <div class="hidden print:block text-xs font-mono font-bold text-black">
                                 Qty: ${quantity}
@@ -1648,6 +1673,7 @@
             document.getElementById('hoursTotal').textContent = totalHours.toFixed(2);
             
             document.getElementById('daysTotal').textContent = daysOnSite.toFixed(1) + ' days';
+            updatePricingToggleSummary();
             document.getElementById('crewSizeDisplay').textContent = selectedCrewSize;
 
             document.getElementById('priceTotal').textContent = currencyFormatter.format(finalPrice);
@@ -1701,7 +1727,7 @@
                 }
                 return;
             }
-            window.print();
+            setPrintTitle(); window.print();
         }
 
         async function saveAndPrint() {
@@ -1719,7 +1745,7 @@
                 return;
             }
             const ok = await saveEstimate(true);
-            if (ok) window.print();
+            if (ok) { setPrintTitle(); window.print(); }
         }
 
         function toggleFavorite(itemId) {
@@ -1728,6 +1754,35 @@
             localStorage.setItem('asbcFavoriteIds', JSON.stringify([...favoriteIds]));
             renderCatalog();
         }
+
+        // v8.21.0: layout helpers
+        function toggleWideEstimate(force) {
+            const on = typeof force === 'boolean' ? force : !document.body.classList.contains('estimate-wide');
+            document.body.classList.toggle('estimate-wide', on);
+            localStorage.setItem('asbcWideEstimate', on ? '1' : '0');
+            const b = document.getElementById('expandEstimateButton'); if (b) b.textContent = on ? 'Shrink' : 'Expand';
+        }
+        function togglePricingDetails(force) {
+            const box = document.getElementById('pricingDetails');
+            const open = typeof force === 'boolean' ? force : box.classList.contains('pricing-collapsed');
+            box.classList.toggle('pricing-collapsed', !open);
+            document.getElementById('pricingToggleIcon').textContent = open ? '▾' : '▸';
+            localStorage.setItem('asbcPricingOpen', open ? '1' : '0');
+        }
+        function updatePricingToggleSummary() {
+            const el = document.getElementById('pricingToggleSummary'); if (!el) return;
+            const h = (document.getElementById('hoursTotal') || {}).textContent || '0.00';
+            const d = (document.getElementById('daysTotal') || {}).textContent || '';
+            el.textContent = h + ' hrs · ' + d;
+        }
+        // PDF file name = opportunity name (browsers use the page title as the default PDF name)
+        const _appTitle = () => `Labor Calculator | ASBC v${APP_VERSION}`;
+        function setPrintTitle() {
+            const n = (customerName.value || '').trim().replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, ' ').slice(0, 120);
+            if (n) document.title = n;
+        }
+        window.addEventListener('beforeprint', setPrintTitle);
+        window.addEventListener('afterprint', () => { document.title = _appTitle(); });
 
         function toggleEstimate(show) {
             document.getElementById('estimatePanel').classList.toggle('estimate-open', show);
@@ -2604,6 +2659,8 @@
         quoteList.addEventListener('click', event => {
             const zoneBtn = event.target.closest('[data-rename-zone]');
             if (zoneBtn) { renameZone(zoneBtn.dataset.renameZone); return; }
+            const zt = event.target.closest('[data-zone-toggle]');
+            if (zt) { const z = zt.dataset.zoneToggle; collapsedZones.has(z) ? collapsedZones.delete(z) : collapsedZones.add(z); renderQuote(); return; }
             const button = event.target.closest('.quote-quantity-button');
             if (!button) return;
             updateQuoteQuantity(Number(button.dataset.quoteIndex), Number(button.dataset.change));
@@ -2787,6 +2844,10 @@
         applyProjectData();
         loadRepLeaderboard();
         let _bootQuoteId = new URLSearchParams(location.search).get('quote'); // opened after sign-in (see onAuthStateChanged)
+        if (_bootQuoteId) history.replaceState(null, '', location.pathname); // keep the address clean after a Load from Saved Quotes
+        if (localStorage.getItem('asbcWideEstimate') === '1') toggleWideEstimate(true);
+        if (localStorage.getItem('asbcPricingOpen') === '1') togglePricingDetails(true);
+        document.addEventListener('click', e => { const m = document.getElementById('moreTools'); if (m && m.classList.contains('open') && !e.target.closest('#moreTools') && !e.target.closest('#moreToolsButton')) m.classList.remove('open'); });
         
         restoreActiveDraft();
         loadAppSettings();
