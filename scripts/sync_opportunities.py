@@ -126,6 +126,41 @@ def main():
         'changed': fs.typed(changed), 'deleted': fs.typed(deleted)}})
     print(f'::notice::D-Tools sync: {len(keep)} open opportunities, {changed} changed, {deleted} removed')
 
+    # v8.20.2: D-Tools opportunity names change as deals evolve. Saved quotes and job reports keep the name they
+    # were saved with, so bring every linked quote's name, client and D-Tools # up to date (only fields that changed).
+    renamed = 0
+    for d in fs.list_docs('quotes'):
+        f = fs.fields(d)
+        if f.get('isTemplate'):
+            continue
+        proj = f.get('project') or {}
+        o = byid.get(proj.get('dtoolsOpportunityId') or '')
+        if not o or not (o.get('name') or '').strip():
+            continue
+        new_name, old_name = o['name'].strip(), (proj.get('customerName') or '').strip()
+        want = {'customerName': new_name, 'dtoolsClientName': o.get('clientName') or proj.get('dtoolsClientName') or '',
+                'dtoolsOppNumber': str(o.get('number') or proj.get('dtoolsOppNumber') or '')}
+        diff = {k: v for k, v in want.items() if (proj.get(k) or '') != v}
+        label = f.get('label') or ''
+        if label.startswith('Return visit: '):
+            new_label = 'Return visit: ' + new_name
+        elif not label or label == old_name:
+            new_label = new_name
+        else:
+            new_label = label  # a custom label someone typed: leave it
+        if not diff and new_label == label:
+            continue
+        fields, mask = {}, []
+        if diff:
+            fields['project'] = {'mapValue': {'fields': {k: fs.typed(v) for k, v in diff.items()}}}
+            mask += ['project.' + k for k in diff]
+        if new_label != label:
+            fields['label'] = fs.typed(new_label); mask.append('label')
+        fs.call('quotes/' + urllib.parse.quote(fs.doc_id(d)), method='PATCH', body={'fields': fields},
+                params={'updateMask.fieldPaths': mask})
+        renamed += 1
+    print(f'::notice::Quotes updated with current D-Tools opportunity names: {renamed}')
+
     # v8.14.0: quotes whose D-Tools opportunity is Won move to status "won" (only from draft / no status).
     won_ids = {o['id'] for o in opps if str(o.get('systemState', '')).lower() == 'won' or 'won' in str(o.get('stage', '')).lower()}
     marked = 0
