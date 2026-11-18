@@ -105,3 +105,7 @@ D-Tools handoff panel (paste-ready labor block); Quote Log search wording.
 - Saved as quotes/<id>.signoff {status:"signed", answers, issuesText, comments, name, signature, signedAt, collectedBy, concerns}. If no signature: job.signoffSkip {status:"not-present"|"declined", reason}.
 - jobStatus "Complete" cannot be submitted without a signature or a skip reason. Reps can open the report (with signature) for their own jobs from the Quote Log ("Job report") or the email link.
 - Sync job list + weekly report carry a signoff summary (no image); weekly report adds customerSignoffLast7Days.
+
+## v8.21.0
+- index.html: estimate panel compact sticky footer (total + buttons), Pricing details toggle (#pricingDetails, remembered), collapsible rooms, 60/40 split at lg (1024+) with Expand to 50/50, slide-up estimate below 1024, phone header/More menu/swipe categories/List default, PDF file name = opportunity name (setPrintTitle), Saved Quotes opens in same window.
+- jobs.html: each item line and extra-work row records who did it (lines[].by / extras[].by: tech email, "*" = multiple); report shows a Who column.
