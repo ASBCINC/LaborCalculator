@@ -163,21 +163,36 @@ async function showList() {
   else if (ME.role === 'rep' && !ME.allQuotes) docs = (await db.collection('quotes').where('project.salesManagerName', '==', ME.name).get()).docs;
   else docs = (await db.collection('quotes').where('status', 'in', ['won', 'scheduled', 'submitted', 'closed']).get()).docs;
   const dated = q => ((q.schedule || {}).dates || []).length > 0;
-  const jobs = docs.map(d => ({ _id: d.id, ...d.data() })).filter(q => q.status && q.status !== 'draft' && !(q.jobHidden && !dated(q)));  // a removed job comes back once it gets install dates
+  const jobs = docs.map(d => ({ _id: d.id, ...d.data() })).filter(q => q.status && q.status !== 'draft' && !q.jobDeleted && !(q.jobHidden && !dated(q)));  // removed undated jobs come back once they get dates; deleted jobs come back only if re-scheduled from the Quote Log
   const first = q => ((q.schedule && q.schedule.dates) || []).slice().sort()[0] || '';
   const groups = ME.role === 'rep' ? [['Job reports', jobs.filter(q => ['submitted', 'closed'].includes(q.status))], ['Scheduled', jobs.filter(q => q.status === 'scheduled')]]
     : ME.role === 'tech'
     ? [['Assigned to you', jobs.filter(q => q.status === 'scheduled')], ['Submitted', jobs.filter(q => q.status === 'submitted')], ['Closed', jobs.filter(q => q.status === 'closed')]]
     : [['To review', jobs.filter(q => q.status === 'submitted')], ['Won: needs scheduling', jobs.filter(q => q.status === 'won')], ['Scheduled', jobs.filter(q => q.status === 'scheduled' && dated(q))], ['Not on the calendar', jobs.filter(q => q.status === 'scheduled' && !dated(q))], ['Closed', jobs.filter(q => q.status === 'closed')]];
-  app().innerHTML = (ME.role === 'rep' ? '' : `<div class="qactions" style="margin:0 0 6px"><button class="qbtn gold" onclick="showNew()">+ Job report without a quote</button></div>`) + groups.filter(g => g[1].length || !['Closed', 'Not on the calendar'].includes(g[0])).map(([t, list]) => `<div class="sect">${esc(t)} (${list.length})</div>` + (t === 'Not on the calendar' ? '<div class="qmeta" style="margin:-4px 0 8px">Marked scheduled but no install date. Open one to add dates, or Remove it from the Jobs page (the quote stays in the Quote Log).</div>' : '') +
+  app().innerHTML = (ME.role === 'rep' ? '' : `<div class="qactions" style="margin:0 0 6px"><button class="qbtn gold" onclick="showNew()">+ Job report without a quote</button></div>`) + groups.filter(g => g[1].length || !['Closed', 'Not on the calendar'].includes(g[0])).map(([t, list]) => `<div class="sect">${esc(t)} (${list.length})</div>` + (t === 'Not on the calendar' ? '<div class="qmeta" style="margin:-4px 0 8px">Marked scheduled but no install date. Open one to add dates, or Delete it.</div>' : '') +
     (list.length ? list.sort((a, b) => first(a).localeCompare(first(b))).map(q => `<a href="?quote=${encodeURIComponent(q._id)}" style="text-decoration:none;color:inherit"><div class="qrow">
       <div class="qtop"><div><div class="qname">${esc(label(q))} ${stBadge(q.status)} ${jsBadge((q.job || {}).jobStatus)}${isSigned(q) ? ' <span class="st st-closed">' + (q.signoff.concerns ? 'SIGNED · CONCERNS' : 'SIGNED') + '</span>' : ''}</div>
       <div class="qmeta">${esc((q.project || {}).dtoolsClientName || '')}${(q.project || {}).dtoolsOppNumber ? ' · #' + esc(q.project.dtoolsOppNumber) : ''} · Rep: ${esc((q.project || {}).salesManagerName || '—')}</div></div>
       <div class="qnums"><div class="qnum-b">${esc(((q.schedule || {}).dates || []).map(fmtDate).join(', ') || 'Not scheduled')}</div>
-      <div class="qmeta">${esc(((q.schedule || {}).techs || []).map(nameOf).join(', '))}</div>${ME.role === 'admin' && t === 'Not on the calendar' ? `<button class="qbtn qbtn-del" style="margin-top:6px" onclick="event.preventDefault();event.stopPropagation();hideJob('${esc(q._id)}')">Remove</button>` : ''}</div></div></div></a>`).join('') : '<div class="empty" style="padding:10px 0">None</div>')).join('')
+      <div class="qmeta">${esc(((q.schedule || {}).techs || []).map(nameOf).join(', '))}</div>${ME.role === 'admin' ? `<button class="qbtn qbtn-del" style="margin-top:6px" onclick="event.preventDefault();event.stopPropagation();deleteJob('${esc(q._id)}')">Delete</button>` : ''}</div></div></div></a>`).join('') : '<div class="empty" style="padding:10px 0">None</div>')).join('')
     + (ME.role === 'admin' ? '<p class="qmeta" style="margin-top:14px">To schedule any quote (even one not yet Won), open it from the Quote Log and tap Job.</p>' : '');
 }
 
+// v8.20.2: admin Delete on every job in the lists. A job report made without a quote (or a return visit) is deleted for good;
+// a job built on a labor quote is taken off the Jobs page only, so the quote, its actuals and the client sign-off are kept
+// (scheduling it again from the Quote Log brings it back).
+async function deleteJob(id) {
+  const ref = db.collection('quotes').doc(id); const s = await ref.get(); if (!s.exists) return showList();
+  const q = s.data(), name = label(q);
+  if (q.noQuote) {
+    if (!confirm('Delete the job "' + name + '"?\n\nThis job has no labor quote, so its report, time log and sign-off are deleted permanently.')) return;
+    await ref.delete();
+  } else {
+    if (!confirm('Delete the job "' + name + '" from the Jobs page?\n\nThe labor quote stays in the Quote Log with any hours and sign-off already recorded. Scheduling it again from the Quote Log brings the job back.')) return;
+    await save(ref, { jobDeleted: true, jobDeletedAt: new Date().toISOString(), jobDeletedBy: ME.email });
+  }
+  showList();
+}
 // v8.20.1: admin can take an undated job off the Jobs page (reversible: scheduling it again from the Quote Log brings it back)
 async function hideJob(id) {
   if (!confirm('Remove this job from the Jobs page? The quote stays in the Quote Log, and scheduling it again brings it back.')) return;
@@ -298,7 +313,7 @@ function wire() {
     const ts = [...document.querySelectorAll('.tk:checked')].map(x => x.value);
     let st = document.getElementById('stSel').value;
     if (['draft', 'won'].includes(st) && dates.length && ts.length) st = 'scheduled';
-    await save(REF, { status: st, jobHidden: false, schedule: { dates, techs: ts, updatedAt: new Date().toISOString(), updatedBy: ME.email } });
+    await save(REF, { status: st, jobHidden: false, jobDeleted: false, schedule: { dates, techs: ts, updatedAt: new Date().toISOString(), updatedBy: ME.email } });
     showJob(qid);
   });
   on('addEx', () => { const tr = document.querySelector('#exT tr:last-child').cloneNode(true); tr.querySelectorAll('input').forEach(i => i.value = ''); document.getElementById('exT').appendChild(tr); });
