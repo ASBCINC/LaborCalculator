@@ -268,7 +268,7 @@ function logForm() {
     <div class="card"><div class="sect" style="margin-top:0">Job recap</div>${jsSelect(((typeof Q !== 'undefined' && Q && Q.job) || {}).jobStatus || '')}
     ${[['work', 'Work completed'], ['issues', 'Problems / what took longer'], ['followups', 'Open items / return visit needed'], ['client', 'Client feedback']].map(([k, t]) => `<div class="qmeta" style="margin-top:8px;display:flex;justify-content:space-between;align-items:center">${t}<button type="button" class="qbtn bl" data-k="${k}" style="height:24px;padding:0 8px">• Bullet</button></div><textarea class="rc" data-k="${k}" rows="3">${esc((j.recap || {})[k] || '')}</textarea>`).join('')}
     ${signoffBox(Q)}
-    <div class="qactions"><button class="qbtn" id="saveJob">Save progress</button><button class="qbtn gold" id="submitJob">Submit to Anthony</button></div><div id="jobMsg" class="qmeta"></div></div>`;
+    <div class="qactions"><button class="qbtn" id="saveJob">Save progress</button><button class="qbtn gold" id="submitJob">Submit to PM</button></div><div id="jobMsg" class="qmeta"></div></div>`;
 }
 function collectJob() {
   const lines = [...document.querySelectorAll('.ah')].map(el => { const i = Number(el.dataset.i); const it = Q.items[i];
@@ -401,7 +401,7 @@ function showNew() {
     <div class="card"><div class="sect" style="margin-top:0">Job recap</div>${jsSelect(((typeof Q !== 'undefined' && Q && Q.job) || {}).jobStatus || '')}
     ${[['work', 'Work completed'], ['issues', 'Problems / what took longer'], ['followups', 'Open items / return visit needed'], ['client', 'Client feedback']].map(([k, t]) => `<div class="qmeta" style="margin-top:8px;display:flex;justify-content:space-between;align-items:center">${t}<button type="button" class="qbtn bl" data-k="${k}" style="height:24px;padding:0 8px">• Bullet</button></div><textarea class="rc" data-k="${k}" rows="3"></textarea>`).join('')}
     ${signoffBox(null)}
-    <div class="qactions"><button class="qbtn gold" id="nSubmit">Submit to Anthony</button></div><div id="nMsg" class="qmeta"></div></div>`;
+    <div class="qactions"><button class="qbtn gold" id="nSubmit">Submit to PM</button></div><div id="nMsg" class="qmeta"></div></div>`;
   document.getElementById('addLog').onclick = () => { const tr = document.querySelector('#logT tr:last-child').cloneNode(true); tr.querySelector('.lh').value = ''; document.getElementById('logT').appendChild(tr); };
   document.getElementById('nRep').onchange = async (e) => {
     const sel = document.getElementById('nOpp'); sel.disabled = true; sel.innerHTML = '<option value="">Loading…</option>';

@@ -42,10 +42,19 @@
         ::-webkit-scrollbar-thumb:hover { background: #D4AF37; }
 
         .category-active {
-            background: #111111 !important;
+            background: #C7A66A !important;
             border-color: #C7A66A !important;
-            color: #C7A66A !important;
+            color: #0A0A0A !important;
+            font-weight: 600;
         }
+        .cat-count { margin-left: 6px; font-size: 11px; opacity: .55; font-variant-numeric: tabular-nums; }
+        .cat-group-label { font-size: 9px; text-transform: uppercase; letter-spacing: .12em; color: #6B6B6B; padding-left: 8px; margin-left: 2px; border-left: 1px solid #2A2A2A; white-space: nowrap; }
+        #categoryWrap.fade-r #categoryButtons { -webkit-mask-image: linear-gradient(to right, #000 85%, transparent); mask-image: linear-gradient(to right, #000 85%, transparent); }
+        #categoryWrap.fade-l #categoryButtons { -webkit-mask-image: linear-gradient(to left, #000 85%, transparent); mask-image: linear-gradient(to left, #000 85%, transparent); }
+        #categoryWrap.fade-l.fade-r #categoryButtons { -webkit-mask-image: linear-gradient(to right, transparent, #000 10%, #000 88%, transparent); mask-image: linear-gradient(to right, transparent, #000 10%, #000 88%, transparent); }
+        .cat-arrow { position: absolute; top: 2px; z-index: 5; width: 30px; height: 34px; align-items: center; justify-content: center; border-radius: 9999px; background: #171717; border: 1px solid #2A2A2A; color: #C7A66A; font-size: 18px; opacity: 0; pointer-events: none; transition: opacity .15s; }
+        .cat-arrow-l { left: -4px; } .cat-arrow-r { right: -4px; }
+        #categoryWrap.fade-l .cat-arrow-l, #categoryWrap.fade-r .cat-arrow-r { opacity: 1; pointer-events: auto; }
 
         .favorites-active {
             background: #111111 !important;
@@ -337,7 +346,7 @@
                     <input id="searchInput" type="search" autocomplete="off" placeholder="Search products..." class="flex-1 min-w-0 bg-gray-900 border border-gray-700 rounded-xl px-4 h-12 text-base outline-none focus:border-brandGold focus:ring-1 focus:ring-brandGold">
                 </div>
 
-                <div id="categoryButtons" class="flex flex-nowrap sm:flex-wrap gap-2 pb-1 overflow-x-auto sm:overflow-visible"></div>
+                <div id="categoryWrap" class="relative"><button type="button" onclick="scrollCategories(-1)" class="cat-arrow cat-arrow-l hidden sm:flex" aria-label="Scroll categories left">‹</button><div id="categoryButtons" class="flex flex-nowrap items-center gap-2 pb-1 overflow-x-auto"></div><button type="button" onclick="scrollCategories(1)" class="cat-arrow cat-arrow-r hidden sm:flex" aria-label="Scroll categories right">›</button></div>
 
                 <div class="flex justify-between items-center text-xs text-textMuted">
                     <span id="resultCount">0 products</span>
@@ -696,7 +705,7 @@
               }
           });
 
-        const APP_VERSION = '8.21.1';
+        const APP_VERSION = '8.21.2';
         const BUILD_DATE = '2026-11-18';
         let HOURLY_RATE = 200;
 
@@ -1302,14 +1311,31 @@
             }[character]));
         }
 
+        // v8.21.2: category buttons grouped by trade, short labels, counts, one scrolling row
+        const CATEGORY_GROUPS = [
+            ['Audio & Video', ['Bang & Olufsen Audio', 'Audio (Other Brands)', 'TV & Home Theater', 'Kaleidescape']],
+            ['Control', ['Control', 'Basalte', 'Lighting & Shading']],
+            ['Network & Security', ['Networking', 'Security Cameras', 'Access Control']],
+            ['Infrastructure', ['Wire Runs', 'Rack / Backbox / Structured Media', 'Service']],
+        ];
+        const CATEGORY_SHORT = { 'Bang & Olufsen Audio': 'B&O', 'Audio (Other Brands)': 'Other Audio', 'TV & Home Theater': 'TV & Theater', 'Control': 'Control4 / Josh', 'Lighting & Shading': 'Lighting & Shades', 'Security Cameras': 'Cameras', 'Rack / Backbox / Structured Media': 'Racks & SME' };
+        const catShort = c => CATEGORY_SHORT[c] || c;
         function buildCategoryButtons() {
-            const categories = ['All', ...new Set(catalog.map(item => item.category).filter(c => c !== 'Project Management'))]; // PM is automatic since v8.12
+            const counts = {};
+            catalog.forEach(i => { if (i.category !== 'Project Management') counts[i.category] = (counts[i.category] || 0) + 1; }); // PM is automatic since v8.12
+            const present = new Set(Object.keys(counts));
+            const groups = CATEGORY_GROUPS.map(([g, cats]) => [g, cats.filter(c => present.has(c))]).filter(g => g[1].length);
+            const placed = new Set(groups.flatMap(g => g[1]));
+            const extra = [...present].filter(c => !placed.has(c)).sort();
+            if (extra.length) groups.push(['Other', extra]);
+            if (selectedCategory !== 'All' && !present.has(selectedCategory)) selectedCategory = 'All';
             categoryButtons.innerHTML = '';
-            categories.forEach(category => {
+            const chip = (category, label, n) => {
                 const button = document.createElement('button');
                 button.type = 'button';
-                button.textContent = category;
-                button.className = 'category-button shrink-0 whitespace-nowrap min-h-10 px-4 rounded-full border border-[#242424] bg-[#0F0F0F] text-white text-sm transition-colors duration-200 hover:border-[#555555]';
+                button.innerHTML = `${escapeHtml(label)}<span class="cat-count">${n}</span>`;
+                button.title = category;
+                button.className = 'category-button shrink-0 whitespace-nowrap min-h-9 px-3.5 rounded-full border border-[#242424] bg-[#0F0F0F] text-white text-sm transition-colors duration-200 hover:border-[#555555]';
                 button.dataset.category = category;
                 button.addEventListener('click', () => {
                     selectedCategory = category;
@@ -1317,13 +1343,32 @@
                     renderCatalog();
                 });
                 categoryButtons.appendChild(button);
+            };
+            chip('All', 'All', Object.values(counts).reduce((a, b) => a + b, 0));
+            groups.forEach(([g, cats]) => {
+                const lab = document.createElement('span');
+                lab.className = 'cat-group-label shrink-0';
+                lab.textContent = g;
+                categoryButtons.appendChild(lab);
+                cats.forEach(c => chip(c, catShort(c), counts[c]));
             });
             updateCategoryButtonStyles();
+            updateCategoryFades();
         }
+        function updateCategoryFades() {
+            const el = categoryButtons, wrap = el.parentElement;
+            const atStart = el.scrollLeft <= 2, atEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 2;
+            wrap.classList.toggle('fade-l', !atStart); wrap.classList.toggle('fade-r', !atEnd);
+        }
+        function scrollCategories(dir) { categoryButtons.scrollBy({ left: dir * Math.max(200, categoryButtons.clientWidth * 0.7), behavior: 'smooth' }); }
+        categoryButtons.addEventListener('scroll', updateCategoryFades, { passive: true });
+        window.addEventListener('resize', updateCategoryFades);
 
         function updateCategoryButtonStyles() {
             document.querySelectorAll('.category-button').forEach(button => {
-                button.classList.toggle('category-active', button.dataset.category === selectedCategory);
+                const on = button.dataset.category === selectedCategory;
+                button.classList.toggle('category-active', on);
+                if (on && button.scrollIntoView) button.scrollIntoView({ block: 'nearest', inline: 'nearest' });
             });
         }
 
@@ -1331,11 +1376,11 @@
             const searchText = searchInput.value.trim().toLowerCase();
             return catalog.filter(item => {
                 if (item.category === 'Project Management') return false; // automatic since v8.12
-                const matchesCategory = selectedCategory === 'All' || item.category === selectedCategory;
+                const matchesCategory = selectedCategory === 'All' || !!searchText || item.category === selectedCategory; // v8.21.2: search looks in every category
                 const matchesSearch = !searchText || `${item.name} ${item.category}`.toLowerCase().includes(searchText);
                 const matchesFavorite = !favoritesOnly || favoriteIds.has(item.id);
                 return matchesCategory && matchesSearch && matchesFavorite;
-            });
+            }).sort((a, b) => searchText && selectedCategory !== 'All' ? (b.category === selectedCategory) - (a.category === selectedCategory) : 0);
         }
 
         function updateViewToggleButton() {
@@ -1357,7 +1402,10 @@
             const visibleItems = getVisibleCatalogItems();
             const currentZone = activeZone.value.trim() || 'General';
             productGrid.innerHTML = '';
-            document.getElementById('resultCount').textContent = `${visibleItems.length} product${visibleItems.length === 1 ? '' : 's'}`;
+            const _search = searchInput.value.trim();
+            const _inCat = selectedCategory === 'All' ? 0 : visibleItems.filter(i => i.category === selectedCategory).length;
+            document.getElementById('resultCount').textContent = `${visibleItems.length} product${visibleItems.length === 1 ? '' : 's'}` +
+                (_search && selectedCategory !== 'All' ? ` · ${_inCat} in ${catShort(selectedCategory)} first, ${visibleItems.length - _inCat} in other categories` : '');
 
             if (visibleItems.length === 0) {
                 productGrid.className = 'flex-1 overflow-y-auto p-2.5 sm:p-3 flex flex-col gap-2 content-start';
