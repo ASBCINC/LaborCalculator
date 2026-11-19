@@ -283,6 +283,10 @@ def main():
         fs.call('reports/' + rid, method='PATCH', params={'updateMask.fieldPaths': 'jobs'}, body={'fields': {
             'jobs': {'stringValue': json.dumps({'generatedAt': datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'), 'submissions': pending}, ensure_ascii=False)}}})
         print(f'::notice::Job-report notifications listed: {len(pending)}')
+        # v8.21.4: the scheduled Claude tasks can't reach Firestore, so the same list is also written to jobs.json;
+        # the workflow encrypts it and publishes it on the `data` branch (only when the list changed).
+        with open('jobs.json', 'w', encoding='utf-8') as fh:
+            json.dump({'submissions': sorted(pending, key=lambda x: x['key'])}, fh, ensure_ascii=False, sort_keys=True)
 
     owners = sorted({f['owner'] for f in keep.values() if f['owner']})
     unmatched = sorted({f['owner'] for f in keep.values() if f['owner'] not in REPS})

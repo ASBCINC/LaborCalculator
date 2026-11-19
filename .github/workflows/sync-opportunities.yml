@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: read
+  contents: write  # publishes the encrypted job list to the `data` branch
   actions: write   # lets this run start the backup / weekly report when GitHub skipped their schedule
 
 jobs:
@@ -36,3 +36,19 @@ jobs:
           dow=$(TZ=America/Los_Angeles date +%u); hr=$(TZ=America/Los_Angeles date +%H)
           w=$(age_h "$(last weekly-report.yml)")
           if [ "$dow" = "5" ] && [ "$hr" -ge 4 ] && [ "$w" -ge 48 ]; then echo "weekly report missing: starting it"; gh workflow run weekly-report.yml -R "$GITHUB_REPOSITORY"; fi
+      - name: Publish encrypted job list for the scheduled email task (data branch)
+        env:
+          JOBS_KEY: ${{ secrets.JOBS_KEY }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [ -n "$JOBS_KEY" ] && [ -f jobs.json ] || { echo "no JOBS_KEY or no job list: skipping"; exit 0; }
+          new=$(sha256sum jobs.json | cut -c1-64)
+          old=$(curl -fsS "https://raw.githubusercontent.com/$GITHUB_REPOSITORY/data/jobs.sha?t=$(date +%s)" 2>/dev/null || echo none)
+          [ "$old" = "$new" ] && { echo "job list unchanged"; exit 0; }
+          mkdir -p /tmp/pub && cd /tmp/pub && git init -q && git checkout -q -b data
+          openssl enc -aes-256-cbc -pbkdf2 -salt -pass env:JOBS_KEY -base64 -in "$GITHUB_WORKSPACE/jobs.json" -out jobs.enc
+          printf '%s' "$new" > jobs.sha
+          git add jobs.enc jobs.sha
+          git -c user.name=asbc-sync -c user.email=sync@users.noreply.github.com commit -qm "job list $(date -u +%FT%TZ)"
+          git push -qf "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" data
+          echo "published job list ($new)"
