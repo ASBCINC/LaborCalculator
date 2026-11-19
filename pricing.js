@@ -19,7 +19,7 @@
     return out;
   }
   // install/prog = catalog hours (qty included); itemCount = number of units on the quote.
-  // opts: { pricingV, site: 'standard'|'moderate'|'difficult', trip: 'yes'|'no', recycling, customRecycling, crew }
+  // opts: { pricingV, site: 'standard'|'moderate'|'difficult', trip: 'yes'|'no', pm: 'yes'|'no', recycling, customRecycling, crew }
   function price(install, prog, itemCount, opts, s) {
     s = settings(s); opts = opts || {};
     const v2 = opts.pricingV === 2;           // quotes saved before v8.12 keep their old math
@@ -27,7 +27,8 @@
     const sitePct = !v2 ? 0 : opts.site === 'difficult' ? s.difficultPct : opts.site === 'moderate' ? s.moderatePct : 0;
     const siteHours = install * sitePct / 100;
     const adjusted = install + siteHours + prog;
-    const pmHours = v2 && has ? adjusted * s.pmPct / 100 : 0;
+    const pmOn = opts.pm == null ? true : opts.pm === 'yes'; // v8.21.3: PM is a Yes/No option (No by default for new quotes); quotes saved without it keep PM
+    const pmHours = v2 && has && pmOn ? adjusted * s.pmPct / 100 : 0;
     const commHours = v2 && has ? Math.max(s.commissioningMin, adjusted * s.commissioningPct / 100) : 0;
     const subtotal = adjusted + pmHours + commHours;
     const minApplied = v2 && has && subtotal < s.minHours;

@@ -168,7 +168,7 @@ function quotePrice(q, hours) {
   const o = q.options || {};
   const h = quoteHours(q);
   const r = ASBCPricing.price(h.install, h.prog, h.units, {
-    pricingV: o.pricingV, site: o.site, trip: o.trip, recycling: o.recycling, customRecycling: o.customRecycling, crew: o.crewSize
+    pricingV: o.pricingV, site: o.site, trip: o.trip, pm: o.pm, recycling: o.recycling, customRecycling: o.customRecycling, crew: o.crewSize
   }, Object.assign({}, SETTINGS, { materialsPct: Number(o.markup) || 5 }));
   return { labor: r.labor, materials: r.materials, trip: r.trip, recycling: r.recycling, total: r.total, billedHours: r.billedHours };
 }
