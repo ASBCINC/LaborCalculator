@@ -2,7 +2,7 @@ name: Sync D-Tools opportunities
 
 on:
   schedule:
-    - cron: '*/15 * * * *'
+    - cron: '7 * * * *'
   workflow_dispatch: {}
 
 # v8.18.0: webhook/cron bursts never pile up: at most one run at a time plus one waiting.
