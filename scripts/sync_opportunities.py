@@ -125,11 +125,16 @@ def main():
         'lastRun': {'timestampValue': now}, 'total': fs.typed(len(keep)),
         'changed': fs.typed(changed), 'deleted': fs.typed(deleted)}})
     print(f'::notice::D-Tools sync: {len(keep)} open opportunities, {changed} changed, {deleted} removed')
+    # Nothing changed in D-Tools: skip the quote updates that depend on it (saves Firestore reads).
+    # The job-report notifications below still run every time.
+    quiet = not changed and not deleted
+    if quiet:
+        print('::notice::No D-Tools changes: skipping quote name / Won / project updates')
 
     # v8.20.2: D-Tools opportunity names change as deals evolve. Saved quotes and job reports keep the name they
     # were saved with, so bring every linked quote's name, client and D-Tools # up to date (only fields that changed).
     renamed = 0
-    for d in fs.list_docs('quotes'):
+    for d in ([] if quiet else fs.list_docs('quotes')):
         f = fs.fields(d)
         if f.get('isTemplate'):
             continue
@@ -164,7 +169,7 @@ def main():
     # v8.14.0: quotes whose D-Tools opportunity is Won move to status "won" (only from draft / no status).
     won_ids = {o['id'] for o in opps if str(o.get('systemState', '')).lower() == 'won' or 'won' in str(o.get('stage', '')).lower()}
     marked = 0
-    if won_ids:
+    if won_ids and not quiet:
         for d in fs.list_docs('quotes'):
             f = fs.fields(d)
             opp = (f.get('project') or {}).get('dtoolsOpportunityId')
@@ -194,7 +199,7 @@ def main():
         return None
     def day(v):
         return str(v)[:10] if v else None
-    if tech_by_name:
+    if tech_by_name and not quiet:
         for d in fs.list_docs('quotes'):
             f = fs.fields(d)
             st = f.get('status') or 'draft'
