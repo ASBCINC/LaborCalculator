@@ -970,7 +970,7 @@
   {
     "programmingHours": 0.25,
     "category": "Lighting & Shading",
-    "addons": "",
+    "addons": "Fascia or pocket close-out|0.50|0.00;Side channels (per pair)|0.50|0.00;High window / ladder work|0.50|0.00",
     "installHours": 2,
     "name": "Lutron Motorized Shade, Hardwired (Each)",
     "id": "lighting-shading--lutron-motorized-shade-hardwired-each"
@@ -978,10 +978,50 @@
   {
     "id": "lighting-shading--lutron-motorized-shade-battery-each",
     "programmingHours": 0.25,
-    "addons": "",
+    "addons": "Fascia or pocket close-out|0.50|0.00;Side channels (per pair)|0.50|0.00;High window / ladder work|0.50|0.00",
     "category": "Lighting & Shading",
     "name": "Lutron Motorized Shade, Battery (Each)",
     "installHours": 1.25
+  },
+  {
+    "id": "lighting-shading--lutron-palladiom-wire-free-shade-battery-each",
+    "category": "Lighting & Shading",
+    "name": "Lutron Palladiom Wire-Free Shade, Battery (Each)",
+    "installHours": 1.5,
+    "programmingHours": 0.25,
+    "addons": "Large shade (over 8 ft)|0.50|0.00;Door application|0.50|0.00;High window / ladder work|0.50|0.00"
+  },
+  {
+    "category": "Lighting & Shading",
+    "id": "lighting-shading--lutron-palladiom-shade-hardwired-each",
+    "name": "Lutron Palladiom Shade, Hardwired (Each)",
+    "installHours": 2,
+    "programmingHours": 0.25,
+    "addons": "Large shade (over 8 ft)|0.50|0.00;Door application|0.50|0.00;High window / ladder work|0.50|0.00"
+  },
+  {
+    "category": "Lighting & Shading",
+    "id": "lighting-shading--lutron-dual-shade-sheer-blackout-each",
+    "name": "Lutron Dual Shade, Sheer + Blackout (Each)",
+    "installHours": 1.75,
+    "programmingHours": 0.5,
+    "addons": "Fascia or pocket close-out|0.50|0.00;Side channels (per pair)|0.50|0.00;High window / ladder work|0.50|0.00"
+  },
+  {
+    "category": "Lighting & Shading",
+    "id": "lighting-shading--lutron-motorized-drapery-track-each",
+    "name": "Lutron Motorized Drapery Track (Each)",
+    "installHours": 2.5,
+    "programmingHours": 0.25,
+    "addons": "High window / ladder work|0.50|0.00"
+  },
+  {
+    "category": "Lighting & Shading",
+    "id": "lighting-shading--lutron-pico-remote-each",
+    "name": "Lutron Pico Remote (Each)",
+    "installHours": 0.1,
+    "programmingHours": 0.1,
+    "addons": ""
   },
   {
     "installHours": 1,
@@ -1715,6 +1755,46 @@
     "id": "basalte--basalte-integration-lighting-shades-climate-or-av-per-subsystem",
     "category": "Basalte",
     "name": "Basalte Integration: Lighting, Shades, Climate or AV (Per Subsystem)",
+    "installHours": 0,
+    "programmingHours": 1.5,
+    "addons": ""
+  },
+  {
+    "category": "Basalte",
+    "id": "basalte--basalte-adelante-door-station-each",
+    "name": "Basalte Adelante Door Station / Intercom (Each)",
+    "installHours": 2.5,
+    "programmingHours": 1,
+    "addons": "Wire run|2.00|0.00;Connect to existing lock release|0.50|0.25;Wide-angle camera module|0.25|0.25;Fingerprint reader module (incl. enrollment)|0.25|0.50;RFID keycard reader module (incl. badge setup)|0.25|0.50;Numeric keypad module|0.25|0.25;House number module|0.25|0.00;Lighting module|0.25|0.25;Speaker module|0.25|0.00;Flush-mount (in-wall) kit|1.00|0.00;Pole mount (standalone)|1.50|0.00"
+  },
+  {
+    "category": "Basalte",
+    "id": "basalte--basalte-lena-touch-display-intercom-indoor-station-each",
+    "name": "Basalte Lena Touch Display, Intercom Indoor Station (Each)",
+    "installHours": 1,
+    "programmingHours": 0.5,
+    "addons": "Wire run|2.00|0.00"
+  },
+  {
+    "category": "Basalte",
+    "id": "basalte--basalte-ellie-touch-display-intercom-indoor-station-each",
+    "name": "Basalte Ellie Touch Display, Intercom Indoor Station (Each)",
+    "installHours": 1,
+    "programmingHours": 0.5,
+    "addons": "Wire run|2.00|0.00"
+  },
+  {
+    "category": "Basalte",
+    "id": "basalte--basalte-lisa-touch-display-intercom-indoor-station-each",
+    "name": "Basalte Lisa Touch Display, Intercom Indoor Station (Each)",
+    "installHours": 0.75,
+    "programmingHours": 0.5,
+    "addons": "Wire run|2.00|0.00"
+  },
+  {
+    "category": "Basalte",
+    "id": "basalte--basalte-intercom-setup-per-system",
+    "name": "Basalte Intercom Setup: Door Station to Displays & App, incl. 2N (Per System)",
     "installHours": 0,
     "programmingHours": 1.5,
     "addons": ""
