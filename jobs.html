@@ -116,7 +116,7 @@ input, select, textarea { font-size:16px; }
 <div class="wrap">
   <header>
     <h1>ASBC <span id="pageTitle">Jobs</span></h1>
-    <div style="display:flex;gap:6px" class="no-print"><a class="btn" href="./jobs.html">All jobs</a><a class="btn" id="calcLink" href="./index.html">Calculator</a><button class="btn" id="installBtn" style="display:none;border-color:#C7A66A;color:#C7A66A">Install app</button><button class="btn" id="signOutBtn" style="display:none" onclick="if(confirm('Sign out on this device?'))firebase.auth().signOut().then(()=>location.href='./index.html')">Sign out</button></div>
+    <div style="display:flex;gap:6px" class="no-print"><a class="btn" href="./jobs.html">All jobs</a><a class="btn" href="./calendar.html">Calendar</a><a class="btn" id="calcLink" href="./index.html">Calculator</a><button class="btn" id="installBtn" style="display:none;border-color:#C7A66A;color:#C7A66A">Install app</button><button class="btn" id="signOutBtn" style="display:none" onclick="if(confirm('Sign out on this device?'))firebase.auth().signOut().then(()=>location.href='./index.html')">Sign out</button></div>
   </header>
   <div id="app"><div class="empty">Loading…</div></div>
 </div>
@@ -202,6 +202,7 @@ const app = () => document.getElementById('app');
 const qid = new URLSearchParams(location.search).get('quote');
 const techs = () => Object.entries(USERS).filter(([e, u]) => u.role === 'tech').map(([e, u]) => ({ email: e, name: u.name }));
 const nameOf = e => (USERS[e] && USERS[e].name) || e;
+const tWin = sc => { const f = v => { if (!v) return ''; const [h, m] = v.split(':').map(Number); return ((h % 12) || 12) + ':' + String(m).padStart(2, '0') + (h < 12 ? ' AM' : ' PM'); }; return f(sc.start) + (sc.end ? '–' + f(sc.end) : ''); };  // v8.26.0 time window
 const fmtDate = d => d ? new Date(d + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : '';
 const label = q => q.label || (q.project && q.project.customerName) || 'Untitled';
 function lineEst(it) {
@@ -404,7 +405,7 @@ async function showJob(id) {
   const st = Q.status || 'draft';
   let html = `<div class="card"><div class="qtop"><div><div class="qname">${esc(label(Q))} ${stBadge(st)} ${jsBadge((Q.job || {}).jobStatus)}</div>
     <div class="qmeta">${esc((Q.project || {}).dtoolsClientName || '')}${(Q.project || {}).dtoolsOppNumber ? ' · D-Tools #' + esc(Q.project.dtoolsOppNumber) : ''} · Rep: ${esc((Q.project || {}).salesManagerName || '—')}</div>
-    ${Q.noQuote ? '<div class="qmeta" style="color:#ff9f6b">Job report without a labor quote</div>' : ''}<div class="qmeta">Dates: ${esc(((Q.schedule || {}).dates || []).map(fmtDate).join(', ') || '—')} · Techs: ${esc(((Q.schedule || {}).techs || []).map(nameOf).join(', ') || '—')}</div></div></div>
+    ${Q.noQuote ? '<div class="qmeta" style="color:#ff9f6b">Job report without a labor quote</div>' : ''}<div class="qmeta">Dates: ${esc(((Q.schedule || {}).dates || []).map(fmtDate).join(', ') || '—')}${(Q.schedule || {}).start ? ' · ' + esc(tWin(Q.schedule)) : ''} · Techs: ${esc(((Q.schedule || {}).techs || []).map(nameOf).join(', ') || '—')}</div></div></div>
     ${Q.job && Q.job.reviewNote && st === 'scheduled' ? `<div class="qmeta" style="color:#ff9f6b;margin-top:6px">Sent back by ${esc(nameOf(Q.job.reviewedBy))}: ${esc(Q.job.reviewNote)}</div>` : ''}</div>`;
   if (ME.role === 'admin') html += scheduleCard(st);
   html += '<div id="visits"></div>';
@@ -420,6 +421,7 @@ function scheduleCard(st) {
   return `<details class="card no-print" ${['draft', 'won'].includes(st) ? 'open' : ''}><summary>Schedule &amp; assign</summary>
     <div class="sect">Install date(s)</div><div id="dates">${dates.map(d => `<input type="date" class="dt" value="${esc(d)}" style="margin-bottom:6px">`).join('')}</div>
     <button type="button" class="qbtn" onclick="document.getElementById('dates').insertAdjacentHTML('beforeend','<input type=date class=dt style=margin-bottom:6px>')">+ Add date</button>
+    <div class="sect">Time window (shown on the Calendar)</div><div class="row2"><input type="time" id="tStart" value="${esc(sc.start || '')}" aria-label="Start time"><input type="time" id="tEnd" value="${esc(sc.end || '')}" aria-label="End time"></div>
     <div class="sect">Technicians</div>${techs().map(t => `<label class="chk"><input type="checkbox" class="tk" value="${esc(t.email)}" ${(sc.techs || []).includes(t.email) ? 'checked' : ''}> ${esc(t.name)}</label>`).join('') || '<div class="qmeta">No techs on the Approved users list yet.</div>'}
     <div class="sect">Status</div><select id="stSel">${Object.entries(STATUS).map(([k, v]) => `<option value="${k}" ${k === st ? 'selected' : ''}>${v}</option>`).join('')}</select>
     <div class="qactions"><button class="qbtn gold" id="saveSched">Save schedule</button></div><div id="schedMsg" class="qmeta"></div></details>`;
@@ -508,7 +510,7 @@ function wire() {
     const ts = [...document.querySelectorAll('.tk:checked')].map(x => x.value);
     let st = document.getElementById('stSel').value;
     if (['draft', 'won'].includes(st) && dates.length && ts.length) st = 'scheduled';
-    await save(REF, { status: st, jobHidden: false, jobDeleted: false, schedule: { dates, techs: ts, updatedAt: new Date().toISOString(), updatedBy: ME.email } });
+    await save(REF, { status: st, jobHidden: false, jobDeleted: false, schedule: { dates, techs: ts, start: document.getElementById('tStart').value || '', end: document.getElementById('tEnd').value || '', updatedAt: new Date().toISOString(), updatedBy: ME.email } });
     showJob(qid);
   });
   on('addEx', () => { const tr = document.querySelector('#exT tr:last-child').cloneNode(true); tr.querySelectorAll('input').forEach(i => i.value = ''); document.getElementById('exT').appendChild(tr); });

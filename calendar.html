@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#050505">
+<title>Calendar | ASBC Labor Calculator</title>
+<link rel="icon" href="./favicon.svg">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+<script src="./update-check.js" defer></script>
+<style>
+:root { --gold:#C7A66A; --bg:#050505; --card:#111318; --line:#26292f; --muted:#8b8f98; --sf:#f59e0b; --la:#3b82f6; --none:#6b7280; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:#fff; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; }
+.wrap { max-width:1200px; margin:0 auto; padding:14px 14px 40px; }
+header { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px; flex-wrap:wrap; }
+h1 { font-size:20px; margin:0; } h1 span { color:var(--gold); }
+.btn { display:inline-flex; align-items:center; justify-content:center; height:38px; padding:0 12px; border-radius:9px; border:1px solid var(--line); color:#fff; text-decoration:none; font-size:13px; font-weight:600; background:#1a1d23; cursor:pointer; }
+.bar { display:flex; align-items:center; gap:8px; margin-bottom:10px; flex-wrap:wrap; }
+.bar .month { font-size:18px; font-weight:800; min-width:170px; text-align:center; }
+.legend { display:flex; gap:12px; flex-wrap:wrap; font-size:12px; color:var(--muted); margin-left:auto; }
+.legend i { display:inline-block; width:12px; height:12px; border-radius:3px; vertical-align:-2px; margin-right:5px; }
+.grid { display:grid; grid-template-columns:repeat(7, minmax(0, 1fr)); border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+.dow { background:#0c0e12; color:var(--muted); font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; padding:6px; text-align:center; border-bottom:1px solid var(--line); }
+.day { min-height:118px; border-right:1px solid #1b1e24; border-bottom:1px solid #1b1e24; padding:4px; background:var(--card); cursor:pointer; overflow:hidden; }
+.day:nth-child(7n) { border-right:0; }
+.day.out { background:#0b0d11; } .day.out .num { color:#454a53; }
+.day.today .num { background:var(--gold); color:#050505; }
+.day.sel { outline:2px solid var(--gold); outline-offset:-2px; }
+.num { display:inline-block; font-size:12px; font-weight:700; min-width:22px; height:22px; line-height:22px; text-align:center; border-radius:11px; color:#c9ccd2; margin-bottom:2px; }
+.ev { display:block; text-decoration:none; color:#fff; border-radius:6px; padding:3px 5px; margin-top:3px; font-size:11px; line-height:1.25; border-left:4px solid var(--none); background:#1b1f27; overflow:hidden; }
+.ev b { display:block; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ev .t { color:#c9ccd2; font-size:10px; white-space:nowrap; }
+.ev.SF { border-left-color:var(--sf); background:rgba(245,158,11,.16); } .ev.LA { border-left-color:var(--la); background:rgba(59,130,246,.18); }
+.ev.BOTH { border-left-color:var(--sf); background:linear-gradient(90deg, rgba(245,158,11,.22), rgba(59,130,246,.22)); }
+.ev.done { opacity:.55; }
+.more { font-size:10px; color:var(--muted); margin-top:3px; }
+.agenda { margin-top:12px; }
+.agenda h3 { font-size:14px; margin:0 0 6px; color:var(--gold); }
+.aev { display:flex; gap:10px; align-items:center; text-decoration:none; color:#fff; background:var(--card); border:1px solid var(--line); border-left:6px solid var(--none); border-radius:10px; padding:10px 12px; margin-bottom:6px; }
+.aev.SF { border-left-color:var(--sf); } .aev.LA { border-left-color:var(--la); } .aev.BOTH { border-left-color:var(--sf); box-shadow:inset 6px 0 0 -3px var(--la); }
+.aev .nm { font-weight:700; font-size:15px; } .aev .meta { color:var(--muted); font-size:12px; margin-top:2px; }
+.tag { font-size:10px; font-weight:800; letter-spacing:.05em; padding:2px 7px; border-radius:999px; border:1px solid; white-space:nowrap; }
+.tag.SF { color:var(--sf); border-color:rgba(245,158,11,.5); } .tag.LA { color:var(--la); border-color:rgba(59,130,246,.5); } .tag.none { color:var(--muted); border-color:var(--line); }
+.empty { text-align:center; color:var(--muted); padding:30px 0; }
+select { background:#101216; border:1px solid var(--line); color:#fff; border-radius:9px; height:38px; padding:0 10px; font-size:14px; }
+@media (max-width:700px) {
+  .wrap { padding:10px 8px 40px; } .bar .month { min-width:0; flex:1; font-size:16px; }
+  .legend { margin-left:0; width:100%; }
+  .day { min-height:64px; padding:2px; } .num { font-size:11px; min-width:20px; height:20px; line-height:20px; }
+  .ev { padding:0; height:6px; margin-top:2px; border-left-width:0; border-radius:3px; background:var(--none); }
+  .ev.SF { background:var(--sf); } .ev.LA { background:var(--la); } .ev.BOTH { background:linear-gradient(90deg, var(--sf) 50%, var(--la) 50%); }
+  .ev b, .ev .t { display:none; } .more { font-size:9px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>ASBC <span>Calendar</span></h1>
+    <div style="display:flex;gap:6px"><a class="btn" href="./jobs.html">Jobs</a><a class="btn" href="./index.html">Calculator</a></div>
+  </header>
+  <div class="bar">
+    <button class="btn" id="prev" aria-label="Previous month">‹</button>
+    <div class="month" id="monthLbl"></div>
+    <button class="btn" id="next" aria-label="Next month">›</button>
+    <button class="btn" id="today">Today</button>
+    <select id="teamF" aria-label="Filter by team"><option value="">All teams</option><option value="SF">SF Team</option><option value="LA">LA Team</option></select>
+    <div class="legend"><span><i style="background:var(--sf)"></i>SF Team (Joseph, Eugene)</span><span><i style="background:var(--la)"></i>LA Team (Ivan, Mina)</span><span><i style="background:var(--none)"></i>Other / not assigned</span></div>
+  </div>
+  <div id="cal"><div class="empty">Loading…</div></div>
+  <div class="agenda" id="agenda"></div>
+</div>
+<script>
+// v8.26.0 Calendar: month view of every scheduled job (install dates + time window from Jobs > Schedule & assign).
+// Team colors come from the assigned techs' first names: SF Team = Joseph, Eugene (orange); LA Team = Ivan, Mina (blue).
+firebase.initializeApp({ apiKey: "AIzaSyCSf560VkBf2esIH5rC-_Vcx349o7iIC-0", authDomain: "asbc-calculator.firebaseapp.com", projectId: "asbc-calculator" });
+const db = firebase.firestore();
+try { db.enablePersistence({ synchronizeTabs: true }).catch(() => {}); } catch (e) {}
+const TEAMS = { SF: { label: 'SF Team', names: ['joseph', 'eugene'] }, LA: { label: 'LA Team', names: ['ivan', 'mina'] } };
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+let ME = null, USERS = {}, JOBS = [], VIEW = new Date(), SEL = null;
+VIEW.setDate(1);
+const ymd = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+const nameOf = e => (USERS[e] && USERS[e].name) || e;
+const first = e => String(nameOf(e) || '').trim().split(/[\s@.]+/)[0].toLowerCase();
+function teamOf(techs) {
+  const f = (techs || []).map(first);
+  const sf = f.some(n => TEAMS.SF.names.includes(n)), la = f.some(n => TEAMS.LA.names.includes(n));
+  return sf && la ? 'BOTH' : sf ? 'SF' : la ? 'LA' : '';
+}
+const teamTag = t => t === 'BOTH' ? '<span class="tag SF">SF Team</span> <span class="tag LA">LA Team</span>' : t ? `<span class="tag ${t}">${TEAMS[t].label}</span>` : '<span class="tag none">No team</span>';
+const t12 = v => { if (!v) return ''; const [h, m] = v.split(':').map(Number); return ((h % 12) || 12) + (m ? ':' + String(m).padStart(2, '0') : '') + (h < 12 ? 'a' : 'p'); };
+const windowOf = s => s && s.start ? t12(s.start) + (s.end ? '–' + t12(s.end) : '') : 'Time TBD';
+const label = q => q.label || (q.project && q.project.customerName) || 'Untitled';
+function render() {
+  const teamF = document.getElementById('teamF').value;
+  const y = VIEW.getFullYear(), m = VIEW.getMonth();
+  document.getElementById('monthLbl').textContent = VIEW.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  const start = new Date(y, m, 1); start.setDate(1 - start.getDay());
+  const byDay = {};
+  JOBS.forEach(q => { const t = teamOf((q.schedule || {}).techs); if (teamF && t !== teamF && !(t === 'BOTH')) return;
+    ((q.schedule || {}).dates || []).forEach(d => (byDay[d] = byDay[d] || []).push(Object.assign({ _team: t }, q))); });
+  Object.values(byDay).forEach(l => l.sort((a, b) => String((a.schedule || {}).start || '99').localeCompare(String((b.schedule || {}).start || '99'))));
+  const today = ymd(new Date());
+  let html = '<div class="grid">' + ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => `<div class="dow">${d}</div>`).join('');
+  for (let i = 0; i < 42; i++) {
+    const d = new Date(start); d.setDate(start.getDate() + i); const k = ymd(d), evs = byDay[k] || [];
+    if (i === 35 && d.getMonth() !== m) break;
+    html += `<div class="day ${d.getMonth() !== m ? 'out' : ''} ${k === today ? 'today' : ''} ${k === SEL ? 'sel' : ''}" data-day="${k}"><span class="num">${d.getDate()}</span>` +
+      evs.slice(0, 4).map(q => `<a class="ev ${q._team} ${['submitted', 'closed'].includes(q.status) ? 'done' : ''}" href="./jobs.html?quote=${encodeURIComponent(q._id)}" title="${esc(label(q))} · ${esc(windowOf(q.schedule))}"><b>${esc(label(q))}</b><span class="t">${esc(windowOf(q.schedule))}</span></a>`).join('') +
+      (evs.length > 4 ? `<div class="more">+${evs.length - 4} more</div>` : '') + '</div>';
+  }
+  document.getElementById('cal').innerHTML = html + '</div>';
+  renderAgenda(byDay);
+}
+function renderAgenda(byDay) {
+  const box = document.getElementById('agenda');
+  const y = VIEW.getFullYear(), m = VIEW.getMonth();
+  const days = SEL ? [SEL] : Object.keys(byDay).filter(k => k.startsWith(y + '-' + String(m + 1).padStart(2, '0'))).sort();
+  const title = SEL ? new Date(SEL + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) : 'This month';
+  box.innerHTML = `<h3>${esc(title)}${SEL ? ' <button class="btn" style="height:28px;font-size:11px;margin-left:6px" onclick="SEL=null;render()">Show whole month</button>' : ''}</h3>` +
+    (days.flatMap(k => (byDay[k] || []).map(q => ({ k, q }))).map(({ k, q }) => `<a class="aev ${q._team}" href="./jobs.html?quote=${encodeURIComponent(q._id)}"><div style="flex:1;min-width:0"><div class="nm">${esc(label(q))}</div>
+      <div class="meta">${SEL ? '' : esc(new Date(k + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })) + ' · '}${esc(windowOf(q.schedule))} · ${esc(((q.schedule || {}).techs || []).map(nameOf).join(', ') || 'No techs')}${(q.project || {}).dtoolsClientName ? ' · ' + esc(q.project.dtoolsClientName) : ''}</div></div>${teamTag(q._team)}</a>`).join('') || '<div class="empty" style="padding:14px 0">Nothing scheduled.</div>');
+}
+document.getElementById('prev').onclick = () => { VIEW.setMonth(VIEW.getMonth() - 1); SEL = null; render(); };
+document.getElementById('next').onclick = () => { VIEW.setMonth(VIEW.getMonth() + 1); SEL = null; render(); };
+document.getElementById('today').onclick = () => { VIEW = new Date(); VIEW.setDate(1); SEL = ymd(new Date()); render(); };
+document.getElementById('teamF').onchange = render;
+document.getElementById('cal').addEventListener('click', e => { if (e.target.closest('.ev') && window.innerWidth > 700) return; const d = e.target.closest('.day'); if (!d) return; e.preventDefault(); SEL = d.dataset.day === SEL ? null : d.dataset.day; render(); if (SEL) document.getElementById('agenda').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+firebase.auth().onAuthStateChanged(async u => {
+  if (!u) { document.getElementById('cal').innerHTML = '<div class="empty">Sign in on the <a href="./" style="color:#C7A66A">calculator</a> first, then reopen the Calendar.</div>'; return; }
+  const us = await db.collection('config').doc('users').get().catch(() => null);
+  USERS = (us && us.exists && us.data().users) || {};
+  const email = (u.email || '').toLowerCase();
+  const p = USERS[email] || (email === 'a.ward@asbc.us' ? { name: 'Anthony Ward', role: 'admin' } : null);
+  if (!p) { document.getElementById('cal').innerHTML = '<div class="empty">' + esc(email) + ' is not approved yet. Ask Anthony.</div>'; return; }
+  ME = { email, name: p.name, role: p.role || 'rep', allQuotes: !!p.allQuotes };
+  let docs;
+  if (ME.role === 'tech') docs = (await db.collection('quotes').where('schedule.techs', 'array-contains', ME.email).get()).docs;
+  else if (ME.role === 'rep' && !ME.allQuotes) docs = (await db.collection('quotes').where('project.salesManagerName', '==', ME.name).get()).docs;
+  else docs = (await db.collection('quotes').where('status', 'in', ['won', 'scheduled', 'submitted', 'closed']).get()).docs;
+  JOBS = docs.map(d => ({ _id: d.id, ...d.data() })).filter(q => !q.jobDeleted && !q.isTemplate && ((q.schedule || {}).dates || []).length);
+  render();
+});
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
+</script>
+</body>
+</html>
