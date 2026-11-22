@@ -139,6 +139,19 @@ function signoffReport(q) {
   if ((q.job || {}).jobStatus === 'Complete') return '<div class="card"><div class="sect" style="margin-top:0">Customer sign-off</div><div class="qmeta">Not collected.</div></div>';
   return '';
 }
+// v8.23.0: install photos go to Microsoft Forms ("ASBC Job Photos", ASBC sign-in) and land in Anthony's OneDrive.
+// The app only links to the form with the job filled in; no photos are stored in Firebase.
+const PHOTO_FORM = 'https://forms.cloud.microsoft/Pages/ResponsePage.aspx?id=C6HUDyF_EU-gpuCh9nlT-CEs4-VpOHpCu8bPd7brj3FURTFWRk82TDZWREE0NUNXQVlGUzc5RUdQVy4u&r1d298ce2470e4902b2d711a5630902ff=';
+const photoJob = q => label(q) + (q && q.id ? ' [' + q.id + ']' : '');
+function photoBox(q) {
+  const ph = ((q && q.job) || {}).photos || {};
+  return `<div class="no-print" style="border-top:1px solid var(--line);margin-top:12px;padding-top:10px"><div class="sect" style="margin-top:0">Install photos ${ph.uploaded ? '<span class="st st-closed">UPLOADED</span>' : ''}</div>
+    <div class="qmeta">Opens the ASBC Job Photos form (sign in with your ASBC Microsoft account). Up to 10 photos or videos per upload; submit again for more.</div>
+    <div class="qactions"><a class="qbtn gold" id="photoOpen" href="${PHOTO_FORM + encodeURIComponent(photoJob(q))}" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center">Upload photos</a></div>
+    <label class="qmeta" style="display:flex;align-items:center;gap:6px;margin-top:6px"><input type="checkbox" id="photosDone" ${ph.uploaded ? 'checked' : ''} style="width:auto"> I uploaded the photos for this job</label></div>`;
+}
+function photosVal() { const c = document.getElementById('photosDone'); if (!c) return undefined; const was = ((typeof Q !== 'undefined' && Q && Q.job) || {}).photos || {}; return c.checked ? (was.uploaded ? was : { uploaded: true, at: new Date().toISOString(), by: ME.email }) : { uploaded: false }; }
+const photoReport = q => { const ph = (q.job || {}).photos; return ph && ph.uploaded ? `<div class="card"><div class="sect" style="margin-top:0">Install photos</div><div>Uploaded by ${esc(nameOf(ph.by))} · ${esc(new Date(ph.at).toLocaleString('en-US'))}</div><div class="qmeta">Saved in Anthony's OneDrive (ASBC Job Photos form), under job: ${esc(photoJob(q))}</div></div>` : ''; };
 // v8.21.0: who did each task (item lines and extra work)
 const jobTechs = () => { const ids = ((typeof Q !== 'undefined' && Q && Q.schedule) || {}).techs || []; const list = techs().filter(t => ids.includes(t.email)); return list.length ? list : techs(); };
 const techPick = (cls, attrs, sel) => { const cur = sel != null && sel !== '' ? sel : (ME && ME.role === 'tech' ? ME.email : '');
@@ -267,6 +280,7 @@ function logForm() {
     <button type="button" class="qbtn" id="addLog" style="margin-top:6px">+ Add day / tech</button></div>
     <div class="card"><div class="sect" style="margin-top:0">Job recap</div>${jsSelect(((typeof Q !== 'undefined' && Q && Q.job) || {}).jobStatus || '')}
     ${[['work', 'Work completed'], ['issues', 'Problems / what took longer'], ['followups', 'Open items / return visit needed'], ['client', 'Client feedback']].map(([k, t]) => `<div class="qmeta" style="margin-top:8px;display:flex;justify-content:space-between;align-items:center">${t}<button type="button" class="qbtn bl" data-k="${k}" style="height:24px;padding:0 8px">• Bullet</button></div><textarea class="rc" data-k="${k}" rows="3">${esc((j.recap || {})[k] || '')}</textarea>`).join('')}
+    ${photoBox(Q)}
     ${signoffBox(Q)}
     <div class="qactions"><button class="qbtn" id="saveJob">Save progress</button><button class="qbtn gold" id="submitJob">Submit to PM</button></div><div id="jobMsg" class="qmeta"></div></div>`;
 }
@@ -279,7 +293,7 @@ function collectJob() {
   const recap = {}; document.querySelectorAll('.rc').forEach(t => recap[t.dataset.k] = t.value.trim());
   const extras = [...document.querySelectorAll('#exT tr')].slice(1).map(tr => ({ desc: tr.querySelector('.exd').value.trim(), hours: Number(tr.querySelector('.exh').value) || 0, by: (tr.querySelector('.exw') || {}).value || '' })).filter(x => x.desc || x.hours);
   const jsEl = document.getElementById('jobStatus');
-  return Object.assign({}, Q.job || {}, { jobStatus: jsEl ? jsEl.value : ((Q.job || {}).jobStatus || ''), lines, log, recap, extras, signoffSkip: signoffSkip(), extrasHours: Math.round(extras.reduce((a, x) => a + x.hours, 0) * 100) / 100, savedAt: new Date().toISOString(), savedBy: ME.email });
+  return Object.assign({}, Q.job || {}, { jobStatus: jsEl ? jsEl.value : ((Q.job || {}).jobStatus || ''), lines, log, recap, extras, signoffSkip: signoffSkip(), photos: photosVal() || (Q.job || {}).photos || null, extrasHours: Math.round(extras.reduce((a, x) => a + x.hours, 0) * 100) / 100, savedAt: new Date().toISOString(), savedBy: ME.email });
 }
 function report(admin) {
   const j = Q.job || {}; const lines = j.lines || [];
@@ -303,7 +317,7 @@ function report(admin) {
   const head = `<div class="print-only"><b>ASBC Job Report</b> · ${esc(label(Q))} · printed ${new Date().toLocaleDateString('en-US')}</div>`;
   const itemsCard = timeOnly ? `<div class="card">${head}<div class="sect" style="margin-top:0">Total time on site</div><div class="big" style="font-size:24px;font-weight:800;color:var(--gold)">${hrs(tLog)} hrs</div>
     ${admin && Q.noQuote && !Q.returnFor ? '<div class="qmeta" style="margin-top:6px"><b style="color:#ff9f6b">No labor quote was submitted for this job.</b> Time on site only; nothing to compare against an estimate.</div>' : ''}</div>` : null;
-  if (timeOnly) return parentCard + itemsCard + extrasCard + daily() + recapCard() + signoffReport(Q) + actions;
+  if (timeOnly) return parentCard + itemsCard + extrasCard + daily() + recapCard() + photoReport(Q) + signoffReport(Q) + actions;
   return `<div class="card">${head}
     <div class="sect" style="margin-top:0">Hours by item</div><table><tr><th>Item</th><th>Qty</th>${admin ? '<th class="right">Est</th>' : ''}<th class="right">Actual</th>${admin ? '<th class="right">Var</th>' : ''}<th>Who</th><th>Note</th></tr>
     ${zones.map(z => { const zr = rows.filter(r => r.zone === z); const ze = zr.reduce((a, r) => a + r.est, 0), za = zr.reduce((a, r) => a + (Number(r.act) || 0), 0);
@@ -311,7 +325,7 @@ function report(admin) {
       zr.map(r => `<tr><td>${esc(lineName(r.it))}</td><td>${esc(r.it.qty)}</td>${admin ? `<td class="right">${hrs(r.est)}</td>` : ''}<td class="right">${r.act == null ? '—' : hrs(r.act)}</td>${admin ? `<td class="right">${v(r.est, r.act)}</td>` : ''}<td>${esc(techLabel(r.by))}</td><td>${esc(r.note || '')}</td></tr>`).join(''); }).join('')}
     <tr><td><b>Total</b></td><td></td>${admin ? `<td class="right"><b>${hrs(tEst)}</b></td>` : ''}<td class="right"><b>${hrs(tAct)}</b></td>${admin ? `<td class="right"><b>${v(tEst, tAct)}</b></td>` : ''}<td></td><td></td></tr></table>
     ${admin ? '<div class="qmeta" style="margin-top:6px">' + (Q.noQuote ? '<b style="color:#ff9f6b">No labor quote was submitted for this job.</b> Estimates shown are catalog hours for the items the tech picked; "Other" items have no estimate.' : 'Estimates are catalog labor hours (before site conditions, PM and commissioning).') + '</div>' : ''}</div>
-${extrasCard}${daily()}${recapCard()}${signoffReport(Q)}${actions}`;
+${extrasCard}${daily()}${recapCard()}${photoReport(Q)}${signoffReport(Q)}${actions}`;
 }
 function wire() {
   const on = (id, fn) => { const el = document.getElementById(id); if (el) el.addEventListener('click', fn); };
