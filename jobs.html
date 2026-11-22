@@ -204,6 +204,8 @@ const qid = new URLSearchParams(location.search).get('quote');
 const techs = () => Object.entries(USERS).filter(([e, u]) => u.role === 'tech').map(([e, u]) => ({ email: e, name: u.name }));
 const nameOf = e => (USERS[e] && USERS[e].name) || e;
 const tWin = sc => { const f = v => { if (!v) return ''; const [h, m] = v.split(':').map(Number); return ((h % 12) || 12) + ':' + String(m).padStart(2, '0') + (h < 12 ? ' AM' : ' PM'); }; return f(sc.start) + (sc.end ? '–' + f(sc.end) : ''); };  // v8.26.0 time window
+// v8.32.0: install days with their own D-Tools time window, e.g. "Mon, Nov 23 11:00 AM–4:00 PM"
+const dayWins = sc => (sc.dates || []).map(d => fmtDate(d) + (sc.times && sc.times[d] ? ' ' + tWin(sc.times[d]) : (!sc.times || !Object.keys(sc.times).length) && sc.start ? ' ' + tWin(sc) : sc.fromDtools ? ' (all day)' : '')).join(', ');
 const fmtDate = d => d ? new Date(d + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : '';
 const label = q => q.label || (q.project && q.project.customerName) || 'Untitled';
 function lineEst(it) {
@@ -406,7 +408,7 @@ async function showJob(id) {
   const st = Q.status || 'draft';
   let html = `<div class="card"><div class="qtop"><div><div class="qname">${esc(label(Q))} ${stBadge(st)} ${jsBadge((Q.job || {}).jobStatus)}</div>
     <div class="qmeta">${esc((Q.project || {}).dtoolsClientName || '')}${(Q.project || {}).dtoolsOppNumber ? ' · D-Tools #' + esc(Q.project.dtoolsOppNumber) : ''} · Rep: ${esc((Q.project || {}).salesManagerName || '—')}</div>
-    ${Q.noQuote ? '<div class="qmeta" style="color:#ff9f6b">Job report without a labor quote</div>' : ''}<div class="qmeta">Dates: ${esc(((Q.schedule || {}).dates || []).map(fmtDate).join(', ') || '—')}${(Q.schedule || {}).start ? ' · ' + esc(tWin(Q.schedule)) : ''} · Techs: ${esc(((Q.schedule || {}).techs || []).map(nameOf).join(', ') || '—')}</div></div></div>
+    ${Q.noQuote ? '<div class="qmeta" style="color:#ff9f6b">Job report without a labor quote</div>' : ''}<div class="qmeta">Dates: ${esc(dayWins(Q.schedule || {}) || '—')} · Techs: ${esc(((Q.schedule || {}).techs || []).map(nameOf).join(', ') || '—')}</div>${(Q.schedule || {}).address ? `<div class="qmeta">Address: <a href="https://maps.google.com/?q=${encodeURIComponent(Q.schedule.address)}" target="_blank" rel="noopener" style="color:#C7A66A">${esc(Q.schedule.address)}</a></div>` : ''}${((Q.schedule || {}).notes || []).length ? `<div class="qmeta" style="white-space:pre-wrap;color:#e9dcc0">D-Tools notes: ${esc(Q.schedule.notes.join('\n'))}</div>` : ''}</div></div>
     ${Q.job && Q.job.reviewNote && st === 'scheduled' ? `<div class="qmeta" style="color:#ff9f6b;margin-top:6px">Sent back by ${esc(nameOf(Q.job.reviewedBy))}: ${esc(Q.job.reviewNote)}</div>` : ''}</div>`;
   if (ME.role === 'admin') html += scheduleCard(st);
   html += '<div id="visits"></div>';
@@ -431,7 +433,10 @@ function logForm() {
   const j = Q.job || {}; const lines = j.lines || [];
   const items = (Q.items || []).map((it, i) => ({ it, i, prev: lines.find(l => l.i === i) || {} }));
   const zones = [...new Set(items.map(x => x.it.zone || 'General'))];
-  const log = (j.log && j.log.length ? j.log : [{ date: new Date().toISOString().slice(0, 10), who: ME.role === 'tech' ? ME.email : '', hours: '' }]);
+  // v8.32.0: a new report starts with one row per scheduled day per assigned tech (from the Calendar / D-Tools)
+  const sc0 = Q.schedule || {}, who0 = ME.role === 'tech' ? [ME.email] : (sc0.techs || []).length ? sc0.techs : [''];
+  const pre = (sc0.dates || []).flatMap(d => who0.map(w => ({ date: d, who: w, hours: '' })));
+  const log = (j.log && j.log.length ? j.log : pre.length ? pre : [{ date: new Date().toISOString().slice(0, 10), who: ME.role === 'tech' ? ME.email : '', hours: '' }]);
   const tOpts = sel => techs().map(t => `<option value="${esc(t.email)}" ${t.email === sel ? 'selected' : ''}>${esc(t.name)}</option>`).join('');
   const clock = ((j.clocks || {})[ME.email]) || null;
   const extras = (j.extras && j.extras.length) ? j.extras : [{ desc: '', hours: '' }];
@@ -511,7 +516,10 @@ function wire() {
     const ts = [...document.querySelectorAll('.tk:checked')].map(x => x.value);
     let st = document.getElementById('stSel').value;
     if (['draft', 'won'].includes(st) && dates.length && ts.length) st = 'scheduled';
-    await save(REF, { status: st, jobHidden: false, jobDeleted: false, schedule: { dates, techs: ts, start: document.getElementById('tStart').value || '', end: document.getElementById('tEnd').value || '', updatedAt: new Date().toISOString(), updatedBy: ME.email } });
+    const tS = document.getElementById('tStart').value || '', tE = document.getElementById('tEnd').value || '', sc0 = Q.schedule || {};
+    const sched = { dates, techs: ts, start: tS, end: tE, updatedAt: new Date().toISOString(), updatedBy: ME.email };
+    if (tS !== (sc0.start || '') || tE !== (sc0.end || '')) sched.times = firebase.firestore.FieldValue.delete();  // v8.32.0: a hand-set window replaces the per-day D-Tools windows
+    await save(REF, { status: st, jobHidden: false, jobDeleted: false, schedule: sched });
     showJob(qid);
   });
   on('addEx', () => { const tr = document.querySelector('#exT tr:last-child').cloneNode(true); tr.querySelectorAll('input').forEach(i => i.value = ''); document.getElementById('exT').appendChild(tr); });

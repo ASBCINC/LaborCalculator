@@ -153,3 +153,14 @@ D-Tools handoff panel (paste-ready labor block); Quote Log search wording.
 - dtools-schedule.js exposes window.asbcImportSchedule(projects) (admin only), loaded by calendar.html. The hourly 'ASBC D-Tools pull (v2)' scheduled task runs it from the built-in browser with each PM project's D-Tools tasks.
 - Maps task assignees to lead/installer emails, merges with hand-added dates/techs (schedule.dtoolsImport), hash-skips unchanged (schedule.dtoolsHash); never reopens or creates jobs for Installed/Completed projects; new jobs are job-dt-<dtoolsId>.
 - sync_opportunities.py patches schedule with a per-field updateMask so the time window and import fields survive.
+
+## v8.31.1 — calendar sync reads D-Tools calendar events
+- The D-Tools pull now reads Events/GetEvents3 (via the signed-in D-Tools page in the built-in browser), one task entry per event day, so multi-day installs get every day. Dashboard dtasks were stale and had one date per task.
+- asbcImportSchedule: optional task.end sets schedule.end; 00:00 times count as all-day. Don't pass numeric D-Tools ids as dtoolsId (pipeline ids are GUIDs); it resolves by name.
+
+## v8.32.0 — whole D-Tools calendar -> jobs + calendar events
+- The D-Tools pull sends EVERY GetEvents3 event (projectIds []) with desc/address and mine (Anthony is PM) to asbcImportSchedule.
+- Matching a project to a labor quote: D-Tools GUID, project number, project name, or the client's name (label/customerName/dtoolsClientName). A real quote wins over a job-dt placeholder; an empty placeholder (no job/signoff) is deleted and the quote gets the D-Tools link fields.
+- schedule.times[date] = {start,end} per day; schedule.notes (event descriptions), schedule.address, schedule.dtoolsEventIds. Calendar shows per-day windows ('All day' for D-Tools all-day events); hand-saving a different window in Schedule & assign deletes times.
+- Events with no calculator job (other PMs, finished, no quote) go to config/dtoolsEvents {events, at}; calendar.html shows them dashed with a D-T tag, team color from assigned names, description in the agenda.
+- jobs.html: header shows per-day windows, address (maps link) and D-Tools notes; a new report's time log starts with one row per scheduled day per assigned tech.
