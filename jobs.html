@@ -367,6 +367,7 @@ function wire() {
     const soP = signoffProblem(Q, job.jobStatus, job.signoffSkip); if (soP) { document.getElementById('jobMsg').textContent = soP; return; }
     job.submittedAt = new Date().toISOString(); job.submittedBy = ME.email; job.reviewNote = '';
     await save(REF, { job, status: 'submitted' });
+    notifyRecap(qid);
     showJob(qid);
   });
   on('approveJob', async () => {
@@ -429,6 +430,9 @@ async function attachToQuote() {
   await db.collection('quotes').doc(q._id).set({ status: 'scheduled', schedule: { dates: sc.dates || [], techs: [...new Set((sc.techs || []).concat(techList))] } }, { merge: true });
   location.href = '?quote=' + encodeURIComponent(q._id);
 }
+// v8.22.0: instant Teams message to Anthony and the sales rep when a job report is submitted (relay Worker; never blocks the submit).
+const RECAP_URL = 'https://yellow-cloud-830a.a-ward-612.workers.dev/recap';
+async function notifyRecap(id, test) { try { const token = await firebase.auth().currentUser.getIdToken(); const r = await fetch(RECAP_URL, { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify({ quote: id, test: !!test }) }); return r.ok ? r.json() : { error: r.status }; } catch (e) { console.warn('recap notify', e); return { error: String(e) }; } }
 async function submitNew(toSign) {  // toSign: save as an open job and go to the customer sign-off page
   const msg = t => document.getElementById('nMsg').textContent = t;
   const rep = document.getElementById('nRep').value, oppId = document.getElementById('nOpp').value;
@@ -456,6 +460,7 @@ async function submitNew(toSign) {  // toSign: save as an open job and go to the
     schedule: { dates, techs: techList, updatedAt: new Date().toISOString(), updatedBy: ME.email },
     job, updatedAt: new Date(), isTemplate: false, counted: 'no-quote'
   });
+  if (!toSign) await notifyRecap(id);
   location.href = (toSign ? './signoff.html' : '') + '?quote=' + encodeURIComponent(id);
 }
 
