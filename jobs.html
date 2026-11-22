@@ -13,6 +13,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
 <script src="./leaderboard-core.js"></script>
+<script src="./update-check.js" defer></script>
 <style>
 :root { --gold:#C7A66A; --bg:#050505; --card:#111318; --line:#26292f; --muted:#8b8f98; }
 * { box-sizing:border-box; }
@@ -326,6 +327,8 @@ function steppers(root) {
     w.appendChild(mk('−', -0.25)); w.appendChild(inp); w.appendChild(mk('+', 0.25));
   });
 }
+// v8.25.0: save an open recap before the Update button reloads the page
+window.asbcBeforeUpdate = async () => { if (REF && document.querySelector('.step')) { clearTimeout(SAVE_T); try { await REF.set(EDIT ? { jobDraft: collectJob() } : { job: collectJob() }, { merge: true }); } catch (e) {} } };
 function saveState(t) { const el = document.getElementById('saveState'); if (el) el.textContent = t; }
 function autosave() {
   if (!REF || !document.querySelector('.step')) return;

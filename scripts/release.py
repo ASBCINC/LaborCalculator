@@ -46,7 +46,10 @@ def bump(v):
     w, n3 = re.subn(r"asbc-calc-v[\d.]+", f"asbc-calc-v{v}", w, 1)
     w = re.sub(r"service worker \(v[\d.]+\)", f"service worker (v{v})", w, 1)
     if (n1, n2, n3) != (1, 1, 1): sys.exit(f"bump failed: APP_VERSION={n1} BUILD_DATE={n2} CACHE_NAME={n3}")
-    wr("index.html", s); wr("sw.js", w); print(f"bumped to v{v} ({today})")
+    u = rd("update-check.js")
+    u, n4 = re.subn(r"const ASBC_VERSION = '[\d.]+';", f"const ASBC_VERSION = '{v}';", u, 1)
+    if n4 != 1: sys.exit("bump failed: ASBC_VERSION in update-check.js")
+    wr("index.html", s); wr("sw.js", w); wr("update-check.js", u); print(f"bumped to v{v} ({today})")
 
 def lint():
     bad = 0

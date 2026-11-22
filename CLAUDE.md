@@ -118,3 +118,8 @@ D-Tools handoff panel (paste-ready labor block); Quote Log search wording.
 - Relay Worker: Teams title "Job report updated (rev N)" + What changed (needs re-paste into Cloudflare).
 - No approval step (v8.24.0): Submit/Resubmit sets status 'closed' (shown as SUBMITTED), saves quote.actuals via actualsFrom() and tallies estimate accuracy once. Legacy 'submitted' jobs show as 'Awaiting approval' and keep the admin Approve/Send back buttons.
 - Duplicates allowed: the no-quote form no longer blocks a second report for the same opportunity; report view has '+ Another report for this project' (jobs.html?new=1&opp=&rep= prefills the form).
+
+## v8.25.0 (2026-11-22) update button
+- update-check.js (loaded by index.html and jobs.html): compares its ASBC_VERSION with the live sw.js cache name on open, on return to screen and every 30 min; shows a gold "Update available" pill. Tap: window.asbcBeforeUpdate() (jobs.html saves an open recap), clears caches, reloads. release.py bump now also updates ASBC_VERSION.
+- sw.js fetches same-origin files with cache: no-cache (revalidates with GitHub Pages instead of its 10-minute cache).
+- v8.24.1: Upload photos on the no-quote job report form (NEW.id picked when the form opens).
