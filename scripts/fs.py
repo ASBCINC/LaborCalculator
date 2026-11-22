@@ -4,7 +4,7 @@ Auth: if the FIREBASE_SA secret (service-account JSON) is set, every call uses a
 OAuth token for that account (works after the database is locked to signed-in users).
 Otherwise it falls back to the public web API key (only works while rules are open).
 """
-import json, os, urllib.request, urllib.parse
+import json, os, time, urllib.request, urllib.parse, urllib.error
 
 PROJECT = 'asbc-calculator'
 ROOT = f'https://firestore.googleapis.com/v1/projects/{PROJECT}/databases/(default)/documents'
@@ -31,10 +31,28 @@ def call(path, method='GET', body=None, params=None):
     url = f'{ROOT}/{path}' + (f'?{q}' if q else '')
     data = json.dumps(body).encode() if body is not None else None
     if data: headers['Content-Type'] = 'application/json'
-    req = urllib.request.Request(url, method=method, headers=headers, data=data)
-    with urllib.request.urlopen(req, timeout=60) as r:
-        txt = r.read().decode()
-        return json.loads(txt) if txt else {}
+    for attempt in (1, 2):
+        req = urllib.request.Request(url, method=method, headers=headers, data=data)
+        try:
+            with urllib.request.urlopen(req, timeout=60) as r:
+                txt = r.read().decode()
+                return json.loads(txt) if txt else {}
+        except urllib.error.HTTPError as e:
+            detail = e.read().decode('utf-8', 'replace')[:400]
+            # 429 = quota/rate limit; 5xx = brief Google-side error: wait and try once more
+            if attempt == 1 and e.code in (429, 500, 502, 503, 504):
+                time.sleep(5); continue
+            raise FirestoreError(e.code, method, path, detail) from None
+        except urllib.error.URLError as e:
+            if attempt == 1:
+                time.sleep(5); continue
+            raise FirestoreError(0, method, path, str(e.reason)) from None
+
+class FirestoreError(Exception):
+    """A Firestore REST call failed after a retry. .code is the HTTP status (429 = daily quota / rate limit)."""
+    def __init__(self, code, method, path, detail):
+        self.code, self.method, self.path, self.detail = code, method, path, detail
+        super().__init__(f'Firestore {method} {path.split("?")[0]} failed: HTTP {code} {detail}')
 
 def list_docs(collection):
     docs, tok = [], None

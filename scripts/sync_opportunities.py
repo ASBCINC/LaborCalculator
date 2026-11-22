@@ -9,7 +9,7 @@ fields: name, clientName, owner (normalized to rep name when it matches),
 stage, stageGroup, total, price, modifiedDate, isArchived, updatedAt.
 Docs that no longer exist in D-Tools (or are archived) are removed.
 """
-import json, os, sys, datetime, urllib.request, urllib.parse, unicodedata
+import json, os, sys, datetime, hashlib, traceback, urllib.request, urllib.parse, unicodedata
 sys.path.insert(0, os.path.dirname(__file__))
 import fs  # Firestore helper (service-account auth when FIREBASE_SA is set)
 
@@ -101,8 +101,14 @@ def main():
             'modifiedDate': o.get('modifiedDate'), 'createdDate': o.get('createdDate'),
         }
 
+    # v8.22.1: fingerprint of the D-Tools list. Same as last run -> skip reading all opportunity docs (saves ~240 reads).
+    fp = hashlib.sha256(json.dumps(keep, sort_keys=True, default=str).encode()).hexdigest()
+    try:
+        last_fp = (fs.fields(fs.call('config/sync')) or {}).get('fingerprint')
+    except fs.FirestoreError:
+        last_fp = None
     # Current Firestore docs: write only the ones that changed (fewer writes, same result).
-    existing = {fs.doc_id(d): fs.fields(d) for d in fs.list_docs('opportunities')}
+    existing = {oid: f for oid, f in keep.items()} if last_fp == fp else {fs.doc_id(d): fs.fields(d) for d in fs.list_docs('opportunities')}
     now = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
     norm = lambda v: None if v == '' else v
     changed = deleted = 0
@@ -123,7 +129,7 @@ def main():
     # One small status doc the app reads for its "D-Tools synced X min ago" stamp.
     fs.call('config/sync', method='PATCH', body={'fields': {
         'lastRun': {'timestampValue': now}, 'total': fs.typed(len(keep)),
-        'changed': fs.typed(changed), 'deleted': fs.typed(deleted)}})
+        'changed': fs.typed(changed), 'deleted': fs.typed(deleted), 'fingerprint': fs.typed(fp)}})
     print(f'::notice::D-Tools sync: {len(keep)} open opportunities, {changed} changed, {deleted} removed')
     # Nothing changed in D-Tools: skip the quote updates that depend on it (saves Firestore reads).
     # The job-report notifications below still run every time.
@@ -134,7 +140,11 @@ def main():
     # v8.20.2: D-Tools opportunity names change as deals evolve. Saved quotes and job reports keep the name they
     # were saved with, so bring every linked quote's name, client and D-Tools # up to date (only fields that changed).
     renamed = 0
-    for d in ([] if quiet else fs.list_docs('quotes')):
+    _quotes = []
+    def all_quotes():  # v8.22.1: the quotes list is read once per run and shared by every pass below
+        if not _quotes: _quotes.append(fs.list_docs('quotes'))
+        return _quotes[0]
+    for d in ([] if quiet else all_quotes()):
         f = fs.fields(d)
         if f.get('isTemplate'):
             continue
@@ -170,12 +180,13 @@ def main():
     won_ids = {o['id'] for o in opps if str(o.get('systemState', '')).lower() == 'won' or 'won' in str(o.get('stage', '')).lower()}
     marked = 0
     if won_ids and not quiet:
-        for d in fs.list_docs('quotes'):
+        for d in all_quotes():
             f = fs.fields(d)
             opp = (f.get('project') or {}).get('dtoolsOpportunityId')
             if opp in won_ids and (f.get('status') in (None, '', 'draft')) and not f.get('isTemplate'):
                 fs.call('quotes/' + urllib.parse.quote(fs.doc_id(d)), method='PATCH', body={'fields': {'status': fs.typed('won')}},
                         params={'updateMask.fieldPaths': 'status'})
+                d.setdefault('fields', {})['status'] = fs.typed('won')  # keep the shared list current for the next pass
                 marked += 1
     print(f'::notice::Quotes marked Won from D-Tools: {marked} (won opportunities seen: {len(won_ids)})')
 
@@ -200,7 +211,7 @@ def main():
     def day(v):
         return str(v)[:10] if v else None
     if tech_by_name and not quiet:
-        for d in fs.list_docs('quotes'):
+        for d in all_quotes():
             f = fs.fields(d)
             st = f.get('status') or 'draft'
             pid = (f.get('project') or {}).get('dtoolsOpportunityId')
@@ -260,7 +271,7 @@ def main():
             if sk.get('status'):
                 return {'status': sk['status'], 'reason': (sk.get('reason') or '')[:200]}
             return {'status': 'none'}
-        for d in fs.list_docs('quotes'):
+        for d in all_quotes():
             f = fs.fields(d); j = f.get('job') or {}
             if f.get('status') not in ('submitted', 'closed') or not j.get('submittedAt'):
                 continue
@@ -300,4 +311,21 @@ def main():
         print('UNMATCHED owners (not in rep list):', ', '.join(unmatched))
 
 if __name__ == '__main__':
-    main()
+    # v8.22.1: show the real error as a GitHub annotation (readable without opening the log).
+    try:
+        main()
+    except fs.FirestoreError as e:
+        tb = traceback.extract_tb(e.__traceback__)
+        mine = [f for f in tb if f.filename.endswith('sync_opportunities.py')][-1:]
+        at = ' <- '.join(f'{os.path.basename(f.filename)}:{f.lineno} {f.name}' for f in mine + tb[-1:])
+        if e.code == 429:
+            print(f'::warning::Firestore read/write limit reached (HTTP 429) at {at}. Skipping this run; it resumes when the quota resets (midnight Pacific). {e.detail[:200]}')
+            sys.exit(0)
+        print(f'::error::{e} at {at}')
+        sys.exit(1)
+    except Exception as e:
+        tb = traceback.extract_tb(e.__traceback__)[-3:]
+        at = ' <- '.join(f'{os.path.basename(f.filename)}:{f.lineno} {f.name}' for f in reversed(tb))
+        print(f'::error::{type(e).__name__}: {str(e)[:300]} at {at}')
+        traceback.print_exc()
+        sys.exit(1)
