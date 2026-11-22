@@ -53,7 +53,7 @@ def bump(v):
 
 def lint():
     bad = 0
-    for f in ("index.html", "log.html", "jobs.html", "signoff.html", "leaderboard.html", "calendar.html"):
+    for f in ("index.html", "log.html", "jobs.html", "signoff.html", "leaderboard.html", "calendar.html", "pipeline.html"):
         s = rd(f)
         for i, m in enumerate(re.finditer(r"<script>(.*?)</script>", s, re.S)):
             t = tempfile.NamedTemporaryFile("w", suffix=".js", delete=False); t.write(m.group(1)); t.close()

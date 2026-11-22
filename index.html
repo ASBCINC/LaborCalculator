@@ -282,6 +282,7 @@
                     <div class="hidden sm:block text-xs sm:text-sm text-[#666666] whitespace-nowrap" data-rate-display>$200/hr</div>
                     <div id="versionNumber" class="text-[9px] sm:text-[10px] text-[#999999] whitespace-nowrap cursor-pointer select-none"></div>
                     <a href="./leaderboard.html" class="text-[9px] sm:text-[10px] text-[#C7A66A] whitespace-nowrap underline print-hide">Leaderboard</a>
+                    <a id="pipeLink" href="./pipeline.html" class="hidden text-[9px] sm:text-[10px] text-[#C7A66A] whitespace-nowrap underline print-hide">Pipeline</a>
                     <a id="calLink" href="./calendar.html" class="hidden text-[9px] sm:text-[10px] text-[#C7A66A] whitespace-nowrap underline print-hide">Calendar</a>
                     <a id="jobsLink" href="./jobs.html" class="hidden text-[9px] sm:text-[10px] text-[#C7A66A] whitespace-nowrap underline print-hide">Jobs</a>
                     <button id="userBadge" type="button" onclick="signOutUser(true)" class="hidden text-[9px] sm:text-[10px] text-[#999999] whitespace-nowrap underline" title="Sign out"></button>
@@ -713,7 +714,7 @@
               }
           });
 
-        const APP_VERSION = '8.27.0';
+        const APP_VERSION = '8.28.0';
         const BUILD_DATE = '2026-11-22';
         let HOURLY_RATE = 200;
 
@@ -2042,6 +2043,7 @@
                 { const cl = document.getElementById('calLink'); if (cl) { cl.classList.remove('hidden'); cl.classList.add('block'); } }  // v8.26.0
                 if (currentUserProfile.role === 'tech') { const jl = document.getElementById('jobsLink'); jl.classList.remove('hidden'); jl.classList.add('block'); jl.textContent = 'My Jobs'; }
                 if (isAdminUser()) {
+                    { const pl = document.getElementById('pipeLink'); if (pl) { pl.classList.remove('hidden'); pl.classList.add('block'); } }  // v8.28.0 admin pipeline
                     const jl = document.getElementById('jobsLink'); jl.classList.remove('hidden'); jl.classList.add('block');
                     db.collection('quotes').where('status', '==', 'submitted').get().then(sn => { if (sn.size) jl.textContent = 'Jobs (' + sn.size + ' to review)'; }).catch(() => {});
                 }

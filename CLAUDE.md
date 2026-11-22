@@ -132,3 +132,10 @@ D-Tools handoff panel (paste-ready labor block); Quote Log search wording.
 - Email confirmation: index.html shows a "Confirm your email" gate (sendEmailVerification, continue URL = app) until the account email is verified; other pages treat unverified as signed out.
 - firestore.rules (in repo, deployed by pasting into Firebase console > Firestore > Rules): reads/writes only for verified + approved (config/users) accounts; config writes admin-only; opportunities read-only (sync service account writes); reports/<id> get-by-id public for the Friday sheet (no list); pipeline/** admin read; everything else closed. Undo = console Rules history.
 - Deploy order: app first (so people can confirm their email), then rules.
+- Rules PUBLISHED 2026-11-22 (were fully open: allow read, write: if true). Verified: unauthenticated REST reads of quotes/users/catalog/opportunities = 403, reports/<id> get = 200, reports list = 403; signed-in admin app pages load.
+
+## v8.28.0 (2026-11-22) admin pipeline
+- pipeline.html (admins only; link in calculator header for admins): projects where Anthony is PM in 5 stage columns (NEW, PLANNING, SCHEDULED, IN PROGRESS incl. Delayed, INSTALLED) + open opportunities he is a resource on. Tap a card for money, payments, change orders, dates and its own activity feed. No separate feed or calendar.
+- Data: Firestore pipeline/data, field json, written by scripts/sync_pipeline.py (workflow step after the opportunities sync, continue-on-error). Feed events built from diffs: stage, contract value, change orders, payments, new assignment, job reports (jobs.json). Detail calls only for records whose modifiedDate changed; GetOpportunity capped at 150 per run.
+- scripts/dtools_links.json: project name -> numeric D-Tools id (Open in D-Tools link) + seed stageAt from the Claude dashboard. Add new projects numbers there when needed.
+- Not yet: email/Teams/text items from the Claude tasks (would need a relay ingest endpoint).

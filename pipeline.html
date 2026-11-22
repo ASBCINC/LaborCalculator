@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#050505">
+<meta name="robots" content="noindex">
+<title>Pipeline | ASBC Labor Calculator</title>
+<link rel="icon" href="./favicon.svg">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+<script src="./update-check.js" defer></script>
+<style>
+:root { --gold:#C7A66A; --bg:#050505; --card:#111318; --line:#26292f; --muted:#8b8f98; --good:#7ee2a0; --warn:#ffd479; --bad:#ff8b8b; --blue:#8fb3ff; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:#fff; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; }
+.wrap { max-width:1500px; margin:0 auto; padding:14px 14px 40px; }
+header { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px; flex-wrap:wrap; }
+h1 { font-size:20px; margin:0; } h1 span { color:var(--gold); }
+.btn { display:inline-flex; align-items:center; justify-content:center; height:38px; padding:0 12px; border-radius:9px; border:1px solid var(--line); color:#fff; text-decoration:none; font-size:13px; font-weight:600; background:#1a1d23; cursor:pointer; }
+.muted { color:var(--muted); font-size:12px; }
+.tiles { display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); gap:8px; margin-bottom:12px; }
+.tile { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:10px 12px; }
+.tile .v { font-size:20px; font-weight:800; font-variant-numeric:tabular-nums; margin-top:2px; } .tile .l { color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.06em; font-weight:700; }
+.bar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:12px; }
+input, select { background:#101216; border:1px solid var(--line); color:#fff; border-radius:9px; height:38px; padding:0 10px; font-size:16px; }
+.chk { display:flex; gap:6px; align-items:center; font-size:13px; color:#d7d9de; }
+.chk input { height:auto; width:auto; }
+h2 { font-size:13px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin:18px 0 8px; }
+.board { display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); gap:10px; align-items:start; }
+.col { background:#0b0d11; border:1px solid var(--line); border-radius:12px; padding:8px; min-height:80px; }
+.colh { display:flex; justify-content:space-between; align-items:baseline; padding:2px 4px 8px; font-size:12px; font-weight:800; letter-spacing:.06em; }
+.colh .n { color:var(--muted); font-weight:600; font-variant-numeric:tabular-nums; }
+.pc { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:9px 10px; margin-bottom:8px; cursor:pointer; }
+.pc:hover { border-color:var(--gold); }
+.pc.newp { border-color:#8a6d2f; box-shadow:inset 3px 0 0 var(--warn); }
+.pc .nm { font-weight:700; font-size:14px; line-height:1.25; word-break:break-word; }
+.pc .sub { color:var(--muted); font-size:12px; margin-top:2px; }
+.money { display:flex; justify-content:space-between; font-size:12px; margin-top:6px; font-variant-numeric:tabular-nums; }
+.pbar { height:5px; background:#1d2027; border-radius:3px; margin-top:4px; overflow:hidden; } .pbar i { display:block; height:100%; background:var(--good); }
+.badges { display:flex; gap:4px; flex-wrap:wrap; margin-top:6px; }
+.bd { font-size:10px; font-weight:800; letter-spacing:.04em; padding:2px 6px; border-radius:999px; border:1px solid var(--line); color:var(--muted); white-space:nowrap; }
+.bd.w { color:var(--warn); border-color:#8a6d2f; } .bd.b { color:var(--bad); border-color:#8a2f2f; } .bd.g { color:var(--good); border-color:#2f7a4c; } .bd.u { color:var(--blue); border-color:#33518f; }
+.last { font-size:11px; color:#c9ccd2; margin-top:6px; border-top:1px solid #1d2027; padding-top:5px; line-height:1.3; }
+.last b { color:var(--muted); font-weight:600; }
+.opps { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:8px; }
+.empty { color:var(--muted); font-size:12px; padding:8px 4px; }
+.sheetbg { position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:50; display:flex; justify-content:flex-end; }
+.sheet { width:min(560px, 100%); height:100%; overflow:auto; background:#0e1014; border-left:1px solid var(--line); padding:16px 16px calc(24px + env(safe-area-inset-bottom)); }
+.sheet h3 { margin:0; font-size:18px; } .sect { margin:16px 0 6px; font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); font-weight:700; }
+table { width:100%; border-collapse:collapse; font-size:12px; } td, th { text-align:left; padding:5px 4px; border-bottom:1px solid #1d2027; font-variant-numeric:tabular-nums; } th { color:var(--muted); font-size:10px; text-transform:uppercase; }
+.r { text-align:right; }
+.ev { display:flex; gap:10px; padding:8px 0; border-bottom:1px solid #1d2027; font-size:13px; }
+.ev .k { flex:0 0 74px; font-size:10px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; padding-top:2px; }
+.ev .t { flex:1; min-width:0; line-height:1.35; } .ev .d { color:var(--muted); font-size:11px; margin-top:2px; }
+.k-stage { color:var(--blue); } .k-co { color:var(--warn); } .k-payment { color:var(--good); } .k-job { color:var(--gold); } .k-new { color:var(--warn); } .k-value { color:#c9a0ff; }
+@media (max-width:1100px) { .board { grid-template-columns:1fr; } .tiles { grid-template-columns:repeat(2, minmax(0,1fr)); } .col { min-height:0; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div><h1>ASBC <span>Pipeline</span></h1><div class="muted" id="synced"></div></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn" id="refresh">Refresh</button><a class="btn" href="./calendar.html">Calendar</a><a class="btn" href="./jobs.html">Jobs</a><a class="btn" href="./index.html">Calculator</a></div>
+  </header>
+  <div id="app"><div class="empty">Loading…</div></div>
+</div>
+<script>
+// v8.28.0 Admin pipeline: Anthony's D-Tools projects (he is PM) and the open opportunities he is a resource on.
+// Data = Firestore pipeline/data (admins only), written by scripts/sync_pipeline.py on every D-Tools sync.
+// Each project / opportunity carries its own activity feed (stage, value, change orders, payments, job reports).
+firebase.initializeApp({ apiKey: "AIzaSyCSf560VkBf2esIH5rC-_Vcx349o7iIC-0", authDomain: "asbc-calculator.firebaseapp.com", projectId: "asbc-calculator" });
+const db = firebase.firestore();
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const usd = v => '$' + (Number(v) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const usd0 = v => '$' + Math.round(Number(v) || 0).toLocaleString('en-US');
+const days = iso => iso ? Math.max(0, Math.floor((Date.now() - Date.parse(iso)) / 864e5)) : null;
+const ago = iso => { if (!iso) return ''; const m = Math.round((Date.now() - Date.parse(iso)) / 6e4); return m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' h ago' : Math.round(m / 1440) + ' d ago'; };
+const fmtD = iso => iso ? new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }) : '—';  // D-Tools dates are UTC midnight
+const COLS = [['NEW', ['new']], ['PLANNING', ['planning']], ['SCHEDULED', ['scheduled']], ['IN PROGRESS', ['in progress', 'delayed', 'on hold']], ['INSTALLED', ['installed']]];
+const colOf = p => { const s = String(p.stage || '').toLowerCase(); const c = COLS.find(([, l]) => l.includes(s)); return c ? c[0] : (s === 'completed' ? null : 'IN PROGRESS'); };
+const KIND = { stage: 'Stage', co: 'Change order', payment: 'Payment', job: 'Job report', new: 'Assigned', value: 'Value' };
+let DATA = null, F = { q: '', rep: '', attn: false };
+function flags(p) {
+  const out = [], col = colOf(p), d = days(p.stageAt);
+  if (/delayed/i.test(p.stage || '') && col !== 'INSTALLED') out.push(['DELAYED', 'b']);
+  if (col === 'INSTALLED' && d >= 30) out.push(['CLOSE OUT', 'w']);
+  const pend = (p.cos || []).filter(c => !/accept|approv|declin|reject|void|cancel/i.test(c.state || ''));
+  if (pend.length) out.push([pend.length + ' CO PENDING', 'w']);
+  const due = (p.payments || []).filter(x => x.paid < x.amount - 0.01 && /invoic|overdue|due/i.test(x.status || ''));
+  if (due.length) out.push(['INVOICE OPEN', 'u']);
+  if (col === 'INSTALLED' && (p.price || 0) - (p.paid || 0) > 1) out.push(['BALANCE ' + usd0((p.price || 0) - (p.paid || 0)), 'b']);
+  return out;
+}
+const isNew = p => days(p.created) !== null && days(p.created) <= 7;
+const attention = p => flags(p).length > 0;
+const lastEv = r => (r.feed || []).slice(-1)[0];
+function card(p) {
+  const pct = p.price ? Math.min(100, Math.round((p.paid || 0) / p.price * 100)) : 0, d = days(p.stageAt), ev = lastEv(p);
+  return `<div class="pc ${isNew(p) ? 'newp' : ''}" data-id="${esc(p.id)}" data-t="p"><div class="nm">${esc(p.name)}</div>
+    <div class="sub">${esc(p.client || '')}${p.rep ? ' · ' + esc(p.rep) : ''}</div>
+    <div class="money"><span>${usd0(p.price)}</span><span class="muted">${p.paid != null ? pct + '% paid' : ''}</span></div>${p.paid != null ? `<div class="pbar"><i style="width:${pct}%"></i></div>` : ''}
+    <div class="badges">${isNew(p) ? '<span class="bd w">NEW</span>' : ''}${d != null ? `<span class="bd">${d}d in stage</span>` : ''}${flags(p).map(([t, c]) => `<span class="bd ${c}">${esc(t)}</span>`).join('')}</div>
+    ${ev ? `<div class="last"><b>${esc(KIND[ev.kind] || ev.kind)} · ${esc(ago(ev.at))}</b><br>${esc(ev.text)}</div>` : ''}</div>`;
+}
+function oppCard(o) {
+  const ev = lastEv(o);
+  return `<div class="pc" data-id="${esc(o.id)}" data-t="o"><div class="nm">${esc(o.name)}</div>
+    <div class="sub">${esc(o.client || '')}${o.owner ? ' · ' + esc(o.owner) : ''}</div>
+    <div class="money"><span>${usd0(o.total)}</span><span class="muted">${esc(o.stage || '')}</span></div>
+    <div class="badges">${o.estClose ? `<span class="bd ${Date.parse(o.estClose) < Date.now() ? 'b' : ''}">Close ${fmtD(o.estClose)}</span>` : ''}${o.probability != null ? `<span class="bd">${esc(o.probability)}%</span>` : ''}${days(o.stageAt) != null ? `<span class="bd">${days(o.stageAt)}d in stage</span>` : ''}</div>
+    ${ev ? `<div class="last"><b>${esc(KIND[ev.kind] || ev.kind)} · ${esc(ago(ev.at))}</b><br>${esc(ev.text)}</div>` : ''}</div>`;
+}
+const match = r => (!F.q || `${r.name} ${r.client} ${r.number} ${r.rep || r.owner || ''}`.toLowerCase().includes(F.q)) && (!F.rep || (r.rep || r.owner) === F.rep);
+function render() {
+  const P = Object.values(DATA.projects || {}).filter(p => colOf(p)), O = Object.values(DATA.opps || {});
+  const reps = [...new Set(P.map(p => p.rep).concat(O.map(o => o.owner)).filter(Boolean))].sort();
+  const vis = P.filter(match).filter(p => !F.attn || attention(p));
+  const sum = (a, k) => a.reduce((x, r) => x + (Number(r[k]) || 0), 0);
+  const ov = O.filter(match);
+  document.getElementById('synced').textContent = DATA.generatedAt ? 'D-Tools data updated ' + ago(DATA.generatedAt) : '';
+  document.getElementById('app').innerHTML = `
+    <div class="tiles"><div class="tile"><div class="l">Active projects</div><div class="v">${vis.length}</div></div>
+      <div class="tile"><div class="l">Contract</div><div class="v">${usd0(sum(vis, 'price'))}</div></div>
+      <div class="tile"><div class="l">Paid</div><div class="v">${usd0(sum(vis, 'paid'))}</div></div>
+      <div class="tile"><div class="l">Open balance</div><div class="v">${usd0(sum(vis, 'price') - sum(vis, 'paid'))}</div></div>
+      <div class="tile"><div class="l">Opportunities</div><div class="v">${ov.length} · ${usd0(sum(ov, 'total'))}</div></div></div>
+    <div class="bar"><input id="q" placeholder="Search project, client, number" value="${esc(F.q)}" style="flex:1;min-width:200px">
+      <select id="rep"><option value="">All reps</option>${reps.map(r => `<option ${r === F.rep ? 'selected' : ''}>${esc(r)}</option>`).join('')}</select>
+      <label class="chk"><input type="checkbox" id="attn" ${F.attn ? 'checked' : ''}> Needs attention only</label></div>
+    <h2>Projects</h2>
+    <div class="board">${COLS.map(([c]) => { const l = vis.filter(p => colOf(p) === c).sort((a, b) => (b.price || 0) - (a.price || 0));
+      return `<div class="col"><div class="colh"><span>${c}</span><span class="n">${l.length} · ${usd0(sum(l, 'price'))}</span></div>${l.map(card).join('') || '<div class="empty">None</div>'}</div>`; }).join('')}</div>
+    <h2>Opportunities (you're a resource)</h2>
+    <div class="opps">${ov.sort((a, b) => String(a.estClose || '9').localeCompare(String(b.estClose || '9'))).map(oppCard).join('') || '<div class="empty">None</div>'}</div>`;
+  document.getElementById('q').oninput = e => { F.q = e.target.value.trim().toLowerCase(); const pos = e.target.selectionStart; render(); const q = document.getElementById('q'); q.focus(); q.setSelectionRange(pos, pos); };
+  document.getElementById('rep').onchange = e => { F.rep = e.target.value; render(); };
+  document.getElementById('attn').onchange = e => { F.attn = e.target.checked; render(); };
+}
+function detail(r, type) {
+  const bg = document.createElement('div'); bg.className = 'sheetbg';
+  const feed = (r.feed || []).slice().reverse();
+  bg.innerHTML = `<div class="sheet"><div style="display:flex;justify-content:space-between;gap:10px;align-items:start"><div><h3>${esc(r.name)}</h3>
+      <div class="muted">${esc(r.number || '')} · ${esc(r.client || '')}${(r.rep || r.owner) ? ' · ' + esc(r.rep || r.owner) : ''}</div></div><button class="btn" data-x>Close</button></div>
+    <div class="badges" style="margin-top:8px"><span class="bd u">${esc(r.stage || '')}</span>${days(r.stageAt) != null ? `<span class="bd">${days(r.stageAt)}d in stage</span>` : ''}${type === 'p' ? flags(r).map(([t, c]) => `<span class="bd ${c}">${esc(t)}</span>`).join('') : ''}</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">${type === 'p' ? `<a class="btn" href="${esc(r.url || 'https://d-tools.cloud/')}" target="_blank" rel="noopener">Open in D-Tools</a>` : ''}<a class="btn" href="./calendar.html">Calendar</a></div>
+    ${type === 'p' ? `<div class="sect">Money</div><table><tr><td>Contract</td><td class="r">${usd(r.price)}</td></tr><tr><td>Paid</td><td class="r">${r.paid != null ? usd(r.paid) : '—'}</td></tr><tr><td>Balance</td><td class="r">${r.paid != null ? usd((r.price || 0) - r.paid) : '—'}</td></tr></table>
+      ${(r.payments || []).length ? `<div class="sect">Payments</div><table><tr><th>Name</th><th>Status</th><th>Due</th><th class="r">Amount</th><th class="r">Paid</th></tr>${r.payments.map(x => `<tr><td>${esc(x.name)}</td><td>${esc(x.status)}</td><td>${fmtD(x.due)}</td><td class="r">${usd(x.amount)}</td><td class="r">${usd(x.paid)}</td></tr>`).join('')}</table>` : ''}
+      ${(r.cos || []).length ? `<div class="sect">Change orders</div><table><tr><th>CO</th><th>Name</th><th>State</th><th class="r">Price</th></tr>${r.cos.map(c => `<tr><td>${esc(c.number)}</td><td>${esc(c.name)}</td><td>${esc(c.state)}</td><td class="r">${usd(c.price)}</td></tr>`).join('')}</table>` : ''}
+      <div class="sect">Dates</div><table><tr><td>Won</td><td class="r">${fmtD(r.won)}</td></tr><tr><td>Start</td><td class="r">${fmtD(r.start)}</td></tr><tr><td>End</td><td class="r">${fmtD(r.end)}</td></tr><tr><td>Last D-Tools change</td><td class="r">${fmtD(r.modified)}</td></tr></table>`
+    : `<div class="sect">Deal</div><table><tr><td>Value</td><td class="r">${usd(r.total)}</td></tr><tr><td>Probability</td><td class="r">${r.probability != null ? esc(r.probability) + '%' : '—'}</td></tr><tr><td>Est. close</td><td class="r">${fmtD(r.estClose)}</td></tr><tr><td>Last D-Tools change</td><td class="r">${fmtD(r.modified)}</td></tr></table>`}
+    <div class="sect">Activity</div>${feed.map(e => `<div class="ev"><div class="k k-${esc(e.kind)}">${esc(KIND[e.kind] || e.kind)}</div><div class="t">${e.link ? `<a href="${esc(e.link)}" style="color:#fff">${esc(e.text)}</a>` : esc(e.text)}<div class="d">${esc(new Date(e.at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }))}</div></div></div>`).join('') || '<div class="empty">No activity recorded yet. New stage changes, change orders, payments and job reports will show here.</div>'}</div>`;
+  bg.addEventListener('click', e => { if (e.target === bg || e.target.closest('[data-x]')) bg.remove(); });
+  document.body.appendChild(bg);
+}
+document.getElementById('app').addEventListener('click', e => { const c = e.target.closest('.pc'); if (!c) return; const r = (c.dataset.t === 'p' ? DATA.projects : DATA.opps)[c.dataset.id]; if (r) detail(r, c.dataset.t); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.sheetbg').forEach(x => x.remove()); });
+async function load() {
+  const s = await db.collection('pipeline').doc('data').get();
+  if (!s.exists) { document.getElementById('app').innerHTML = '<div class="empty">No pipeline data yet. It appears after the next D-Tools sync (within about 10 minutes).</div>'; return; }
+  DATA = JSON.parse(s.data().json || '{}'); render();
+}
+document.getElementById('refresh').onclick = () => load().catch(err => alertBox(err));
+const alertBox = err => document.getElementById('app').innerHTML = '<div class="empty">Could not load: ' + esc(err.message || err) + '</div>';
+firebase.auth().onAuthStateChanged(async u => {
+  if (!u || !u.emailVerified) { document.getElementById('app').innerHTML = '<div class="empty">Sign in (and confirm your email) on the <a href="./" style="color:#C7A66A">calculator</a> first.</div>'; return; }
+  const us = await db.collection('config').doc('users').get().catch(() => null);
+  const users = (us && us.exists && us.data().users) || {}; const email = (u.email || '').toLowerCase();
+  const role = email === 'a.ward@asbc.us' ? 'admin' : ((users[email] || {}).role || '');
+  if (role !== 'admin') { document.getElementById('app').innerHTML = '<div class="empty">This page is for admins.</div>'; return; }
+  load().catch(alertBox);
+});
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
+</script>
+</body>
+</html>

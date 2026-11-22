@@ -1,0 +1,26 @@
+{
+  "_note": "Seed from the Claude dashboard (Nov 22, 2026): D-Tools project name -> numeric D-Tools id (for the 'Open in D-Tools' link; the API only returns uuids) and when it entered its current stage. New projects get a generic D-Tools link until their number is added here.",
+  "tenant": 11110,
+  "projects": {
+    "BC - 45 Mission Trail Rd": {"num": 52191, "stageAt": "2026-11-12T16:05:00Z"},
+    "BC-1918 Emerson St-01692": {"num": 51385, "stageAt": "2026-11-06T00:45:00Z"},
+    "GC-Brazier-01687": {"num": 51619, "stageAt": "2026-11-06T00:45:00Z"},
+    "JM-Petros-01745": {"num": 53052, "stageAt": "2026-11-18T19:17:00Z"},
+    "JS_4505 Paradise Dr_AV_NET_V1_Rev1": {"num": 50092, "stageAt": "2026-11-06T00:45:00Z"},
+    "JS_338 Main St_AV_V1_Rev0": {"num": 50504, "stageAt": "2026-11-10T18:10:00Z"},
+    "MS -1001 Kings Road": {"num": 52962, "stageAt": "2026-11-19T00:52:03Z"},
+    "MS-Aztech-01654-1476": {"num": 50793, "stageAt": "2026-11-06T00:45:00Z"},
+    "MS-Escalante-01670": {"num": 51687, "stageAt": "2026-11-10T18:10:00Z"},
+    "NG-Koh-01734": {"num": 52876, "stageAt": "2026-11-06T00:45:00Z"},
+    "NG-Tamura-01675": {"num": 51607, "stageAt": "2026-11-13T00:39:41Z"},
+    "NS-Gillis-Beolab-28": {"num": 53874, "stageAt": "2026-11-17T18:34:00Z"},
+    "NS-129LaCuestaDrive-AV-V1-Rev1": {"num": 53262, "stageAt": "2026-11-06T00:45:00Z"},
+    "NS-Zabriskie-01666": {"num": 51484, "stageAt": "2026-11-13T16:23:00Z"},
+    "RET-951 S12th st - AV": {"num": 53583, "stageAt": "2026-11-06T23:52:00Z"},
+    "SS-2630 Harlesden Court-AV": {"num": 53493, "stageAt": "2026-11-16T16:20:00Z"},
+    "SS-Kumar-01744": {"num": 48440, "stageAt": "2026-11-06T00:45:00Z"},
+    "TC-Rees-01725": {"num": 52587, "stageAt": "2026-11-06T00:45:00Z"},
+    "TP-14755 Pescadero Creek Rd-01698": {"num": 52113, "stageAt": "2026-11-11T00:38:55Z"},
+    "TP-781 W Knickerbocker Rd.-01671": {"num": 48537, "stageAt": "2026-11-20T23:40:00Z"}
+  }
+}

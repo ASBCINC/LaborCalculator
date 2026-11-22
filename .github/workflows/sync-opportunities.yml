@@ -25,6 +25,12 @@ jobs:
           DTS_API_KEY: ${{ secrets.DTS_API_KEY }}
           FIREBASE_SA: ${{ secrets.FIREBASE_SA }}
           REPORT_ID: ${{ secrets.REPORT_ID }}
+      - name: Admin pipeline data for pipeline.html (v8.28.0)
+        continue-on-error: true
+        run: python3 scripts/sync_pipeline.py
+        env:
+          DTS_API_KEY: ${{ secrets.DTS_API_KEY }}
+          FIREBASE_SA: ${{ secrets.FIREBASE_SA }}
       - name: Catch up skipped schedules (backup daily, weekly report Fridays)
         env:
           GH_TOKEN: ${{ github.token }}
