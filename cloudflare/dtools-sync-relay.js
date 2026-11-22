@@ -66,10 +66,11 @@ function buildCard(q, id, users) {
   else if (sk.status === 'declined') signoff = 'No client signature: client declined' + (sk.reason ? ' — ' + clip(sk.reason, 120) : '');
   else if (j.jobStatus === 'Complete') signoff = 'Client sign-off: not recorded';
   const body = [
-    { type: 'TextBlock', size: 'Medium', weight: 'Bolder', wrap: true, text: 'Job report submitted: ' + clip(job, 80) },
+    { type: 'TextBlock', size: 'Medium', weight: 'Bolder', wrap: true, text: (Number(j.revision) > 1 ? 'Job report updated (rev ' + j.revision + '): ' : 'Job report submitted: ') + clip(job, 80) },
     { type: 'FactSet', facts }
   ];
   const section = (label, text) => { if (String(text || '').trim()) body.push({ type: 'TextBlock', wrap: true, spacing: 'Small', text: '**' + label + ':** ' + clip(text, 400) }); };
+  if (Number(j.revision) > 1) section('What changed', j.changeSummary);  // v8.24.0: tech edited and resubmitted
   section('Work completed', rec.work);
   section('Problems', rec.issues);
   section('Open items / return visit', rec.followups);

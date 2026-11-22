@@ -109,3 +109,12 @@ D-Tools handoff panel (paste-ready labor block); Quote Log search wording.
 ## v8.21.0
 - index.html: estimate panel compact sticky footer (total + buttons), Pricing details toggle (#pricingDetails, remembered), collapsible rooms, 60/40 split at lg (1024+) with Expand to 50/50, slide-up estimate below 1024, phone header/More menu/swipe categories/List default, PDF file name = opportunity name (setPrintTitle), Saved Quotes opens in same window.
 - jobs.html: each item line and extra-work row records who did it (lines[].by / extras[].by: tech email, "*" = multiple); report shows a Who column.
+
+## v8.24.0 (2026-11-22) mobile tech recap
+- jobs.html recap is 4 steps (Time, Items/Extras, Recap, Photos & sign-off) with a sticky bottom bar, 16px fields, +/- quarter-hour steppers, autosave (1.2 s debounce).
+- Submit runs checkJob(): must-fix = time log, job status, Work completed, sign-off/skip reason when Complete; please-check = item hours, photos. Shown in a slide-up sheet (sheet()); tapping an item jumps to the field.
+- Edit & resubmit for the assigned tech or admin on Submitted AND Closed jobs. Edits autosave to quotes/<id>.jobDraft; Resubmit moves the old job into jobRevisions[], sets job.revision/changeSummary (diffJob), status back to submitted. Accuracy tally (ASBCBoard.recordAccuracy) only runs on the first approval (when quote.actuals is absent).
+- "Other visits on this project" card: quotes with the same project.dtoolsOpportunityId.
+- Relay Worker: Teams title "Job report updated (rev N)" + What changed (needs re-paste into Cloudflare).
+- No approval step (v8.24.0): Submit/Resubmit sets status 'closed' (shown as SUBMITTED), saves quote.actuals via actualsFrom() and tallies estimate accuracy once. Legacy 'submitted' jobs show as 'Awaiting approval' and keep the admin Approve/Send back buttons.
+- Duplicates allowed: the no-quote form no longer blocks a second report for the same opportunity; report view has '+ Another report for this project' (jobs.html?new=1&opp=&rep= prefills the form).
