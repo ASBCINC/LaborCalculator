@@ -113,7 +113,7 @@
         }
         @media (max-width: 639px) {
             #moreTools { display: none; }
-            #moreTools.open { display: flex; flex-direction: column; align-items: stretch; gap: 8px; position: fixed; top: 6rem; right: 8px; z-index: 60; background: #fff; border: 1px solid #ddd; border-radius: 12px; padding: 10px; box-shadow: 0 12px 30px rgba(0,0,0,.35); }
+            #moreTools.open { display: flex; flex-direction: column; align-items: stretch; gap: 8px; position: fixed; top: 6rem; right: 8px; z-index: 60; background: #111318; border: 1px solid #26292f; border-radius: 12px; padding: 10px; box-shadow: 0 12px 30px rgba(0,0,0,.35); }
             #moreTools.open > * { justify-content: flex-start; }
         }
         @media print {
@@ -252,6 +252,12 @@
     .qty-input::-webkit-outer-spin-button, .qty-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
         @keyframes asbcTicker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
         .asbc-ticker-wrap { overflow: hidden; white-space: nowrap; max-width: 100%; }
+        /* v8.30.0 header buttons, same look as the other pages */
+        #hdrNav .hnav { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px; border-radius: 9px; border: 1px solid #26292f; background: #1a1d23; color: #fff; font-size: 13px; font-weight: 600; text-decoration: none; white-space: nowrap; }
+        #hdrNav .hnav:hover { border-color: #C7A66A; }
+        #hdrNav .hnav.gold { background: #C7A66A; color: #050505; border-color: #C7A66A; }
+        #hdrNav .hnav.hidden { display: none !important; }
+        @media (max-width: 639px) { #hdrNav .navx { display: none !important; } #hdrNav .hnav { height: 34px; padding: 0 10px; font-size: 12px; } }
         .asbc-ticker-inner { display: inline-block; white-space: nowrap; animation: asbcTicker 26s linear infinite; will-change: transform; }
         .asbc-ticker-wrap:hover .asbc-ticker-inner { animation-play-state: paused; }
     </style>
@@ -259,41 +265,33 @@
 
 <body class="bg-bgDark text-white h-screen overflow-hidden font-sans">
     <div id="adminEditModeBanner" class="admin-edit-banner hidden">Admin Edit Mode Active: tap any product title to edit</div>
-    <header class="h-24 sm:h-28 bg-white text-black shadow-sm">
-        <div class="h-12 sm:h-16 px-3 sm:px-5 flex items-center justify-between">
-            <div class="flex items-center gap-3 sm:gap-5 min-w-0">
-                <img src="./bo-california-logo.png" alt="Bang &amp; Olufsen California" class="h-7 sm:h-11 w-auto max-w-[45vw] sm:max-w-none object-contain">
-                <div class="w-px h-7 sm:h-9 bg-[#D8D8D8] shrink-0"></div>
-                <img src="./asbc-logo.png" alt="ASBC" id="asbcLogo" class="h-5 sm:h-8 w-auto object-contain shrink-0">
-                <div class="hidden lg:block min-w-0 border-l border-[#E2E2E2] pl-5">
-                    <div class="text-[10px] uppercase tracking-[0.24em] text-[#777777]">Internal Project Tool</div>
-                    <div class="text-sm tracking-wide text-black">Labor Estimator</div>
-                </div>
+    <header class="h-24 sm:h-28 bg-[#050505] text-white border-b border-[#26292f]">
+        <!-- v8.30.0: same header style as Home, Calendar, Jobs, Pipeline and the other pages -->
+        <div class="h-12 sm:h-16 px-3 sm:px-5 flex items-center justify-between gap-3">
+            <div class="min-w-0 leading-tight">
+                <div class="text-lg sm:text-xl font-bold tracking-wide whitespace-nowrap"><span id="asbcLogo" class="cursor-pointer select-none">ASBC</span> <span class="text-[#C7A66A]">Labor Calculator</span></div>
+                <div class="text-[10px] sm:text-[11px] text-[#8b8f98] whitespace-nowrap"><span data-rate-display>$200/hr</span> · <span id="versionNumber" class="cursor-pointer select-none"></span></div>
             </div>
-            <div id="repTicker" onclick="location.href='./leaderboard.html'" class="flex-1 min-w-0 overflow-hidden px-3 hidden sm:block print-hide cursor-pointer" title="Open the leaderboard">
-                <div class="asbc-ticker-wrap"><div class="asbc-ticker-inner text-[10px] sm:text-xs text-[#777777] tracking-wide"><span id="repTickerText"></span><span id="repTickerTextDup"></span></div></div>
+            <div id="repTicker" onclick="location.href='./leaderboard.html'" class="flex-1 min-w-0 overflow-hidden px-3 hidden lg:block print-hide cursor-pointer" title="Open the leaderboard">
+                <div class="asbc-ticker-wrap"><div class="asbc-ticker-inner text-xs text-[#8b8f98] tracking-wide"><span id="repTickerText"></span><span id="repTickerTextDup"></span></div></div>
             </div>
-            <div class="flex items-center gap-2 ml-2 shrink-0">
-                <button id="installAppButton" type="button" class="hidden print-hide h-9 px-3 rounded-md bg-black text-white text-xs sm:text-sm font-medium hover:bg-[#C7A66A] hover:text-black transition-colors flex items-center gap-1.5">
+            <div id="hdrNav" class="flex items-center gap-1.5 shrink-0 print-hide">
+                <a id="homeLink" href="./home.html" class="hidden hnav">Home</a>
+                <a id="calLink" href="./calendar.html" class="hidden hnav navx">Calendar</a>
+                <a id="jobsLink" href="./jobs.html" class="hidden hnav navx">Jobs</a>
+                <a id="pipeLink" href="./pipeline.html" class="hidden hnav navx">Pipeline</a>
+                <a id="lbLink" href="./leaderboard.html" class="hidden hnav navx">Leaderboard</a>
+                <button id="installAppButton" type="button" class="hidden hnav navx gold">
                     <span id="installAppIcon" class="flex items-center"></span>
                     <span id="installAppText">Install App</span>
                 </button>
-                <div class="text-right leading-tight">
-                    <div class="hidden sm:block text-xs sm:text-sm text-[#666666] whitespace-nowrap" data-rate-display>$200/hr</div>
-                    <div id="versionNumber" class="text-[9px] sm:text-[10px] text-[#999999] whitespace-nowrap cursor-pointer select-none"></div>
-                    <a id="homeLink" href="./home.html" class="hidden text-[9px] sm:text-[10px] text-[#C7A66A] whitespace-nowrap underline print-hide">Home</a>
-                    <a id="lbLink" href="./leaderboard.html" class="hidden text-[9px] sm:text-[10px] text-[#C7A66A] whitespace-nowrap underline print-hide">Leaderboard</a>
-                    <a id="pipeLink" href="./pipeline.html" class="hidden text-[9px] sm:text-[10px] text-[#C7A66A] whitespace-nowrap underline print-hide">Pipeline</a>
-                    <a id="calLink" href="./calendar.html" class="hidden text-[9px] sm:text-[10px] text-[#C7A66A] whitespace-nowrap underline print-hide">Calendar</a>
-                    <a id="jobsLink" href="./jobs.html" class="hidden text-[9px] sm:text-[10px] text-[#C7A66A] whitespace-nowrap underline print-hide">Jobs</a>
-                    <button id="userBadge" type="button" onclick="signOutUser(true)" class="hidden text-[9px] sm:text-[10px] text-[#999999] whitespace-nowrap underline" title="Sign out"></button>
-                </div>
+                <button id="userBadge" type="button" onclick="signOutUser(true)" class="hidden hnav" title="Sign out"></button>
             </div>
         </div>
 
-        <div id="projectTools" class="h-12 px-2 sm:px-5 flex items-center gap-2 border-t border-[#EBEBEB] bg-[#F7F7F5] print-hide overflow-x-auto">
-            <input id="customerName" type="text" placeholder="Opportunity name" class="hidden h-9 w-40 sm:w-48 shrink-0 bg-white border border-[#D8D8D8] rounded-md px-3 text-sm text-black placeholder:text-[#888888]">
-            <select id="salesManagerName" class="h-9 w-36 sm:w-44 shrink-0 bg-white border border-[#D8D8D8] rounded-md px-2 text-sm text-black">
+        <div id="projectTools" class="h-12 px-2 sm:px-5 flex items-center gap-2 bg-[#0b0d11] print-hide overflow-x-auto">
+            <input id="customerName" type="text" placeholder="Opportunity name" class="hidden h-9 w-40 sm:w-48 shrink-0 bg-[#101216] border border-[#26292f] rounded-md px-3 text-sm text-white placeholder:text-[#8b8f98]">
+            <select id="salesManagerName" class="h-9 w-36 sm:w-44 shrink-0 bg-[#101216] border border-[#26292f] rounded-md px-2 text-sm text-white">
                 <option value="">Select sales rep</option>
                 <option value="Tom Virasak">Tom Virasak</option>
                 <option value="Timothy Parks">Timothy Parks</option>
@@ -311,27 +309,27 @@
                 <option value="Stefn Sandberg">Stefn Sandberg</option>
                 <option value="Enid Shor">Enid Shor</option>
             </select>
-            <select id="dtoolsOpportunity" class="h-9 w-40 sm:w-48 shrink-0 bg-white border border-[#D8D8D8] rounded-md px-2 text-sm text-black">
+            <select id="dtoolsOpportunity" class="h-9 w-40 sm:w-48 shrink-0 bg-[#101216] border border-[#26292f] rounded-md px-2 text-sm text-white">
                 <option value="">D-Tools opportunities</option>
             </select>
-            <button id="moreToolsButton" type="button" onclick="document.getElementById('moreTools').classList.toggle('open')" class="sm:hidden h-9 shrink-0 px-3 rounded-md bg-white border border-[#CFCFCF] text-black text-sm font-medium">More</button>
+            <button id="moreToolsButton" type="button" onclick="document.getElementById('moreTools').classList.toggle('open')" class="sm:hidden h-9 shrink-0 px-3 rounded-md bg-[#1a1d23] border border-[#26292f] text-white text-sm font-medium">More</button>
             <div id="moreTools" class="sm:contents">
-            <label class="flex items-center gap-1.5 shrink-0 bg-[#EAEAEA] border border-[#D0D0D0] rounded-md px-2.5 h-9 cursor-pointer hover:bg-[#E0E0E0] transition-colors">
-                <input type="checkbox" id="isTemplateCheckbox" class="w-3.5 h-3.5 rounded-sm border-gray-400 text-black focus:ring-black">
-                <span class="text-[11px] font-bold text-black uppercase tracking-wide mt-0.5">Template</span>
+            <label class="flex items-center gap-1.5 shrink-0 bg-[#1a1d23] border border-[#26292f] rounded-md px-2.5 h-9 cursor-pointer hover:bg-[#23262d] transition-colors">
+                <input type="checkbox" id="isTemplateCheckbox" class="w-3.5 h-3.5 rounded-sm border-gray-500 text-[#C7A66A] focus:ring-[#C7A66A]">
+                <span class="text-[11px] font-bold text-white uppercase tracking-wide mt-0.5">Template</span>
             </label>
 
-            <label class="flex items-center gap-1.5 shrink-0 bg-[#EAEAEA] border border-[#D0D0D0] rounded-md px-2.5 h-9 cursor-pointer hover:bg-[#E0E0E0] transition-colors" title="Locked quotes are never auto-purged after 60 days">
-                <input type="checkbox" id="isLockedCheckbox" class="w-3.5 h-3.5 rounded-sm border-gray-400 text-black focus:ring-black">
-                <span class="text-[11px] font-bold text-black uppercase tracking-wide mt-0.5">Lock</span>
+            <label class="flex items-center gap-1.5 shrink-0 bg-[#1a1d23] border border-[#26292f] rounded-md px-2.5 h-9 cursor-pointer hover:bg-[#23262d] transition-colors" title="Locked quotes are never auto-purged after 60 days">
+                <input type="checkbox" id="isLockedCheckbox" class="w-3.5 h-3.5 rounded-sm border-gray-500 text-[#C7A66A] focus:ring-[#C7A66A]">
+                <span class="text-[11px] font-bold text-white uppercase tracking-wide mt-0.5">Lock</span>
             </label>
 
-            <label class="flex items-center gap-1.5 shrink-0 bg-[#EAEAEA] border border-[#D0D0D0] rounded-md px-2.5 h-9 cursor-pointer hover:bg-[#E0E0E0] transition-colors" title="Check to show individual line-item hours on cards, quote list, and PDF printouts">
-                <input type="checkbox" id="showHoursCheckbox" class="w-3.5 h-3.5 rounded-sm border-gray-400 text-black focus:ring-black">
-                <span class="text-[11px] font-bold text-black uppercase tracking-wide mt-0.5">Show Hours</span>
+            <label class="flex items-center gap-1.5 shrink-0 bg-[#1a1d23] border border-[#26292f] rounded-md px-2.5 h-9 cursor-pointer hover:bg-[#23262d] transition-colors" title="Check to show individual line-item hours on cards, quote list, and PDF printouts">
+                <input type="checkbox" id="showHoursCheckbox" class="w-3.5 h-3.5 rounded-sm border-gray-500 text-[#C7A66A] focus:ring-[#C7A66A]">
+                <span class="text-[11px] font-bold text-white uppercase tracking-wide mt-0.5">Show Hours</span>
             </label>
 
-            <a href="./log.html" title="Browse every saved quote and labor calibration" class="h-9 shrink-0 inline-flex items-center bg-white border border-[#CFCFCF] text-black font-medium rounded-md px-4 text-sm">Saved Quotes</a>
+            <a href="./log.html" title="Browse every saved quote and labor calibration" class="h-9 shrink-0 inline-flex items-center bg-[#1a1d23] border border-[#26292f] text-white font-medium rounded-md px-4 text-sm">Saved Quotes</a>
             </div>
         </div>
     </header>
@@ -717,7 +715,7 @@
               }
           });
 
-        const APP_VERSION = '8.29.0';
+        const APP_VERSION = '8.30.0';
         const BUILD_DATE = '2026-11-22';
         let HOURLY_RATE = 200;
 
