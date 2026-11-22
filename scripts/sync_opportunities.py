@@ -244,7 +244,7 @@ def main():
                 'updatedAt': fs.typed(datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')),
                 'updatedBy': fs.typed('D-Tools sync')}}}}
             fs.call('quotes/' + urllib.parse.quote(fs.doc_id(d)), method='PATCH', body={'fields': body},
-                    params={'updateMask.fieldPaths': ['status', 'schedule']})
+                    params={'updateMask.fieldPaths': ['status', 'schedule.techs', 'schedule.dates', 'schedule.fromDtools', 'schedule.dtoolsStage', 'schedule.updatedAt', 'schedule.updatedBy']})  # v8.31.0: keep time window + D-Tools task import fields
             linked += 1
     print(f'::notice::Jobs updated from D-Tools projects: {linked}')
 

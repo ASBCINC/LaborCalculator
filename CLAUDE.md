@@ -145,3 +145,11 @@ D-Tools handoff panel (paste-ready labor block); Quote Log search wording.
 - roles.js: admin, director (Sales Director), manager (Sales Manager), lead (Team Lead), installer. config/users[email].access + legacy role/allQuotes kept in step (LEGACY map). Pages guard with ASBCRoles.can(access, page).
 - users.html (admin): set role + leaderboard store per person; writes config/users. Old Approved users textbox in the calculator admin panel is hidden in favor of it.
 - Rules: installers read/update only quotes whose schedule.techs has their email, create only with themselves on it, no delete, no stats read; pipeline readable by admin + sales director. Directors and managers have no job recaps (Teams "View report" links will show the no-access page for them).
+
+## v8.30.0 — calculator header
+- index.html uses the same dark header/nav as the other pages (#hdrNav .hnav; ids asbcLogo, versionNumber, data-rate-display, repTicker, installAppButton, userBadge kept).
+
+## v8.31.0 — D-Tools schedule -> Install Calendar
+- dtools-schedule.js exposes window.asbcImportSchedule(projects) (admin only), loaded by calendar.html. The hourly 'ASBC D-Tools pull (v2)' scheduled task runs it from the built-in browser with each PM project's D-Tools tasks.
+- Maps task assignees to lead/installer emails, merges with hand-added dates/techs (schedule.dtoolsImport), hash-skips unchanged (schedule.dtoolsHash); never reopens or creates jobs for Installed/Completed projects; new jobs are job-dt-<dtoolsId>.
+- sync_opportunities.py patches schedule with a per-field updateMask so the time window and import fields survive.
