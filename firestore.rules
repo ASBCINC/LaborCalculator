@@ -1,5 +1,5 @@
 rules_version = '2';
-// ASBC Labor Calculator: Firestore security rules (v8.27.0).
+// ASBC Labor Calculator: Firestore security rules (v8.29.0: roles).
 // Deployed by pasting into Firebase console > Firestore Database > Rules (project asbc-calculator).
 // Only signed-in accounts whose email is CONFIRMED and that are on the Approved users list (config/users)
 // can read or write. The GitHub Actions sync/backup/report jobs use a service account and are not affected.
@@ -11,7 +11,11 @@ service cloud.firestore {
     function users() { return get(/databases/$(database)/documents/config/users).data.users; }
     function isOwner() { return verified() && em() == 'a.ward@asbc.us'; }
     function approved() { return isOwner() || (verified() && em() in users()); }
-    function admin() { return isOwner() || (approved() && users()[em()].role == 'admin'); }
+    function admin() { return isOwner() || (approved() && users()[em()].get('role', 'rep') == 'admin'); }
+    // v8.29.0 roles (roles.js): installers (role tech without allQuotes) only see and edit jobs assigned to them.
+    function me() { return users()[em()]; }
+    function installer() { return !isOwner() && me().get('role', 'rep') == 'tech' && me().get('allQuotes', false) != true; }
+    function director() { return approved() && !isOwner() && (me().get('access', '') == 'director' || (me().get('access', '') == '' && me().get('role', 'rep') == 'rep' && me().get('allQuotes', false) == true)); }
 
     // Approved users list: an approved person can read it (the app needs names and roles); only admins change it.
     match /config/users {
@@ -25,8 +29,9 @@ service cloud.firestore {
     }
     // Quotes and job reports: the whole team works on these.
     match /quotes/{id} {
-      allow read, create, update: if approved();
-      allow delete: if approved();
+      allow read, update: if approved() && (!installer() || em() in resource.data.schedule.techs);
+      allow create: if approved() && (!installer() || em() in request.resource.data.schedule.techs);
+      allow delete: if approved() && !installer();
     }
     // D-Tools opportunities: read by the app, written only by the GitHub sync (service account).
     match /opportunities/{id} {
@@ -35,7 +40,8 @@ service cloud.firestore {
     }
     // Leaderboard tallies.
     match /stats/{id} {
-      allow read, write: if approved();
+      allow read: if approved() && !installer();
+      allow write: if approved();
     }
     // Weekly labor report: fetched by its secret id for the Friday meeting sheet; never listable, never writable here.
     match /reports/{id} {
@@ -44,7 +50,7 @@ service cloud.firestore {
     }
     // Admin-only data (future pipeline page).
     match /pipeline/{doc=**} {
-      allow read: if admin();
+      allow read: if admin() || director();
       allow write: if false;
     }
     // Everything else: closed.

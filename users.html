@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#050505">
+<meta name="robots" content="noindex">
+<title>User Roles | ASBC</title>
+<link rel="icon" href="./favicon.svg">
+<link rel="manifest" href="./manifest.json">
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+<script src="./roles.js"></script>
+<script src="./update-check.js" defer></script>
+<style>
+:root { --gold:#C7A66A; --bg:#050505; --card:#111318; --line:#26292f; --muted:#8b8f98; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:#fff; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; }
+.wrap { max-width:1000px; margin:0 auto; padding:14px 14px 60px; }
+header { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px; flex-wrap:wrap; }
+h1 { font-size:20px; margin:0; } h1 span { color:var(--gold); }
+.btn { display:inline-flex; align-items:center; justify-content:center; height:38px; padding:0 12px; border-radius:9px; border:1px solid var(--line); color:#fff; text-decoration:none; font-size:13px; font-weight:600; background:#1a1d23; cursor:pointer; }
+.gold { background:var(--gold); color:#050505; border-color:var(--gold); }
+.card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin-bottom:12px; }
+.sect { font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); font-weight:700; margin:0 0 8px; }
+input, select { background:#101216; border:1px solid var(--line); color:#fff; border-radius:9px; height:38px; padding:0 10px; font-size:16px; width:100%; }
+table { width:100%; border-collapse:collapse; } th, td { text-align:left; padding:6px 5px; border-bottom:1px solid #1d2026; vertical-align:middle; font-size:13px; }
+th { color:var(--muted); font-size:10px; text-transform:uppercase; letter-spacing:.05em; }
+.matrix td, .matrix th { text-align:center; } .matrix td:first-child, .matrix th:first-child { text-align:left; }
+.y { color:#7ee2a0; font-weight:800; } .n { color:#454a53; }
+.muted { color:var(--muted); font-size:12px; }
+.del { background:none; border:1px solid #5a2b2b; color:#ff8b8b; border-radius:8px; height:34px; padding:0 10px; cursor:pointer; }
+.chg td { background:rgba(199,166,106,.08); }
+#bar { position:sticky; bottom:0; background:rgba(5,5,5,.96); border-top:1px solid var(--line); padding:10px 0 calc(10px + env(safe-area-inset-bottom)); display:flex; gap:8px; align-items:center; margin-top:12px; }
+@media (max-width:720px) { .ulist thead { display:none; } .ulist tr { display:grid; grid-template-columns:1fr 1fr; gap:6px; padding:10px 0; border-bottom:1px solid #1d2026; } .ulist td { border:0; padding:0; } .ulist td.full { grid-column:1 / -1; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><h1>ASBC <span>User Roles</span></h1><div style="display:flex;gap:6px"><a class="btn" href="./home.html">Home</a></div></header>
+  <div id="app"><div class="muted">Loading…</div></div>
+</div>
+<script>
+// v8.29.0 User Roles (admins only). Each person on the approved list gets one role; the role decides which pages
+// they can open and which quotes / job recaps they see (roles.js). Saved to config/users (admin-only in the rules).
+firebase.initializeApp({ apiKey: "AIzaSyCSf560VkBf2esIH5rC-_Vcx349o7iIC-0", authDomain: "asbc-calculator.firebaseapp.com", projectId: "asbc-calculator" });
+const db = firebase.firestore(), R = ASBCRoles;
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const STORES = ['', 'San Francisco', 'Palo Alto', 'West Hollywood', 'Costa Mesa', 'none'];
+let USERS = {}, ROWS = [], ME = '';
+const QTXT = { all: 'All quotes', own: 'Own quotes', none: '—' }, RTXT = { all: 'All', assigned: 'Assigned', none: '—' };
+function matrix() {
+  const cols = ['calendar', 'calculator', 'recaps', 'pipeline', 'leaderboard', 'users'];
+  return `<div class="card"><div class="sect">What each role can open</div><div style="overflow-x:auto"><table class="matrix"><tr><th>Role</th>${cols.map(c => `<th>${esc(R.PAGES[c].label)}</th>`).join('')}<th>Quotes</th><th>Job recaps</th></tr>
+    ${R.ORDER.map(k => `<tr><td><b>${esc(R.DEFS[k].label)}</b></td>${cols.map(c => R.can(k, c) ? '<td class="y">✓</td>' : '<td class="n">—</td>').join('')}<td>${QTXT[R.DEFS[k].quotes]}</td><td>${RTXT[R.DEFS[k].recaps]}</td></tr>`).join('')}</table></div>
+    <div class="muted" style="margin-top:6px">Sales Managers only see and edit their own quotes. Team Leads and Installers only see job recaps they're assigned to.</div></div>`;
+}
+function rowHtml(r, i) {
+  const owner = r.email === R.OWNER;
+  return `<tr data-i="${i}" class="${r.dirty ? 'chg' : ''}"><td><input class="f-name" value="${esc(r.name)}" placeholder="Full name (as in D-Tools)"></td>
+    <td>${r.isNew ? `<input class="f-email" value="${esc(r.email)}" placeholder="name@asbc.us" type="email">` : `<span style="font-size:13px">${esc(r.email)}</span>`}</td>
+    <td><select class="f-role" ${owner ? 'disabled' : ''}>${R.ORDER.map(k => `<option value="${k}" ${k === r.access ? 'selected' : ''}>${esc(R.DEFS[k].label)}</option>`).join('')}</select></td>
+    <td><select class="f-store">${STORES.map(s => `<option value="${s}" ${s === (r.store || '') ? 'selected' : ''}>${s === '' ? '—' : s === 'none' ? 'Not ranked' : s}</option>`).join('')}</select></td>
+    <td class="full" style="text-align:right">${owner ? '<span class="muted">Owner</span>' : `<button class="del" data-del="${i}">Remove</button>`}</td></tr>`;
+}
+function render(msg) {
+  const order = k => R.ORDER.indexOf(k);
+  document.getElementById('app').innerHTML = matrix() + `<div class="card"><div class="sect">People (${ROWS.filter(r => !r.removed).length})</div>
+    <div class="muted" style="margin-bottom:8px">Names must match how the person appears in D-Tools, so their quotes and jobs line up. New people sign in with their ASBC email, create a PIN and confirm their email.</div>
+    <table class="ulist"><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Store (leaderboard)</th><th></th></tr></thead><tbody>
+    ${ROWS.map((r, i) => r.removed ? '' : rowHtml(r, i)).join('')}</tbody></table>
+    <button class="btn" id="add" style="margin-top:10px">+ Add person</button></div>
+    <div id="bar"><button class="btn gold" id="save">Save changes</button><span class="muted" id="msg">${esc(msg || '')}</span></div>`;
+  document.getElementById('add').onclick = () => { ROWS.push({ email: '', name: '', access: 'manager', store: '', isNew: true, dirty: true }); render(); };
+  document.getElementById('save').onclick = save;
+}
+document.addEventListener('input', e => upd(e)); document.addEventListener('change', e => upd(e));
+function upd(e) {
+  const tr = e.target.closest('tr[data-i]'); if (!tr) return; const r = ROWS[Number(tr.dataset.i)];
+  if (e.target.classList.contains('f-name')) r.name = e.target.value;
+  if (e.target.classList.contains('f-email')) r.email = e.target.value.trim().toLowerCase();
+  if (e.target.classList.contains('f-role')) r.access = e.target.value;
+  if (e.target.classList.contains('f-store')) r.store = e.target.value;
+  r.dirty = true; tr.classList.add('chg');
+}
+document.addEventListener('click', e => { const b = e.target.closest('[data-del]'); if (!b) return; const r = ROWS[Number(b.dataset.del)];
+  if (confirm(`Remove ${r.name || r.email}? They won't be able to see anything until they're added again.`)) { r.removed = true; render('Not saved yet'); } });
+async function save() {
+  const msg = t => document.getElementById('msg').textContent = t;
+  const out = {}, bad = [];
+  for (const r of ROWS) {
+    if (r.removed) continue;
+    const email = (r.email || '').trim().toLowerCase(), name = (r.name || '').trim();
+    if (!/^[^@\s]+@asbc\.us$/.test(email) || !name) { bad.push(r.name || r.email || 'new row'); continue; }
+    if (out[email]) { bad.push(email + ' (twice)'); continue; }
+    const access = email === R.OWNER ? 'admin' : r.access;
+    out[email] = Object.assign({}, USERS[email] || {}, { name, access, store: r.store || '' }, R.LEGACY[access]);
+  }
+  if (bad.length) return msg('Fix these first (name and an @asbc.us email): ' + bad.join(', '));
+  if (!out[R.OWNER]) out[R.OWNER] = Object.assign({ name: 'Anthony Ward', store: '' }, USERS[R.OWNER] || {}, { access: 'admin' }, R.LEGACY.admin);
+  msg('Saving…');
+  try {
+    await db.collection('config').doc('users').set({ users: out, updatedAt: new Date(), updatedBy: ME });
+    await load('Saved. Changes apply the next time each person opens a page.');
+  } catch (e) { msg('Could not save: ' + (e.code || e.message)); }
+}
+async function load(msg) {
+  const s = await db.collection('config').doc('users').get();
+  USERS = (s.exists && s.data().users) || {};
+  ROWS = Object.entries(USERS).map(([email, p]) => ({ email, name: p.name || '', access: R.accessOf(p, email), store: p.store || '' }))
+    .sort((a, b) => R.ORDER.indexOf(a.access) - R.ORDER.indexOf(b.access) || a.name.localeCompare(b.name));
+  render(msg);
+}
+firebase.auth().onAuthStateChanged(async u => {
+  if (!u || !u.emailVerified) { location.replace('./index.html'); return; }
+  try { if (!(await u.getIdTokenResult()).claims.email_verified) { await u.reload(); await u.getIdToken(true); } } catch (e) {}
+  ME = (u.email || '').toLowerCase();
+  const s = await db.collection('config').doc('users').get().catch(() => null);
+  const access = R.accessOf(((s && s.exists && s.data().users) || {})[ME], ME);
+  if (!R.can(access, 'users')) return R.deny('users', document.getElementById('app'));
+  load().catch(e => document.getElementById('app').innerHTML = '<div class="muted">Could not load: ' + esc(e.message) + '</div>');
+});
+</script>
+</body>
+</html>

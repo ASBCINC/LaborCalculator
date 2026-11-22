@@ -12,6 +12,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+<script src="./roles.js"></script>
 <script src="./update-check.js" defer></script>
 <style>
 :root { --gold:#C7A66A; --bg:#050505; --card:#111318; --line:#26292f; --muted:#8b8f98; --sf:#f59e0b; --la:#3b82f6; --none:#6b7280; }
@@ -63,7 +64,7 @@ select { background:#101216; border:1px solid var(--line); color:#fff; border-ra
 <div class="wrap">
   <header>
     <h1>ASBC <span>Calendar</span></h1>
-    <div style="display:flex;gap:6px"><a class="btn" href="./jobs.html">Jobs</a><a class="btn" href="./index.html">Calculator</a></div>
+    <div style="display:flex;gap:6px"><a class="btn" href="./home.html">Home</a><a class="btn" href="./index.html?calc=1">Calculator</a></div>
   </header>
   <div class="bar">
     <button class="btn" id="prev" aria-label="Previous month">‹</button>
@@ -141,9 +142,10 @@ firebase.auth().onAuthStateChanged(async u => {
   const email = (u.email || '').toLowerCase();
   const p = USERS[email] || (email === 'a.ward@asbc.us' ? { name: 'Anthony Ward', role: 'admin' } : null);
   if (!p) { document.getElementById('cal').innerHTML = '<div class="empty">' + esc(email) + ' is not approved yet. Ask Anthony.</div>'; return; }
-  ME = { email, name: p.name, role: p.role || 'rep', allQuotes: !!p.allQuotes };
+  ME = { email, name: p.name, role: p.role || 'rep', allQuotes: !!p.allQuotes, access: ASBCRoles.accessOf(p, email) };
+  if (!ASBCRoles.can(ME.access, 'calendar')) return ASBCRoles.deny('calendar', document.getElementById('cal'));
   let docs;
-  if (ME.role === 'tech') docs = (await db.collection('quotes').where('schedule.techs', 'array-contains', ME.email).get()).docs;
+  if (ME.role === 'tech' && !ME.allQuotes) docs = (await db.collection('quotes').where('schedule.techs', 'array-contains', ME.email).get()).docs;
   else if (ME.role === 'rep' && !ME.allQuotes) docs = (await db.collection('quotes').where('project.salesManagerName', '==', ME.name).get()).docs;
   else docs = (await db.collection('quotes').where('status', 'in', ['won', 'scheduled', 'submitted', 'closed']).get()).docs;
   JOBS = docs.map(d => ({ _id: d.id, ...d.data() })).filter(q => !q.jobDeleted && !q.isTemplate && ((q.schedule || {}).dates || []).length);

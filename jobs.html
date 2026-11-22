@@ -13,6 +13,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
 <script src="./leaderboard-core.js"></script>
+<script src="./roles.js"></script>
 <script src="./update-check.js" defer></script>
 <style>
 :root { --gold:#C7A66A; --bg:#050505; --card:#111318; --line:#26292f; --muted:#8b8f98; }
@@ -116,7 +117,7 @@ input, select, textarea { font-size:16px; }
 <div class="wrap">
   <header>
     <h1>ASBC <span id="pageTitle">Jobs</span></h1>
-    <div style="display:flex;gap:6px" class="no-print"><a class="btn" href="./jobs.html">All jobs</a><a class="btn" href="./calendar.html">Calendar</a><a class="btn" id="calcLink" href="./index.html">Calculator</a><button class="btn" id="installBtn" style="display:none;border-color:#C7A66A;color:#C7A66A">Install app</button><button class="btn" id="signOutBtn" style="display:none" onclick="if(confirm('Sign out on this device?'))firebase.auth().signOut().then(()=>location.href='./index.html')">Sign out</button></div>
+    <div style="display:flex;gap:6px" class="no-print"><a class="btn" href="./home.html">Home</a><a class="btn" href="./jobs.html">All jobs</a><a class="btn" href="./calendar.html">Calendar</a><a class="btn" id="calcLink" href="./index.html?calc=1">Calculator</a><button class="btn" id="installBtn" style="display:none;border-color:#C7A66A;color:#C7A66A">Install app</button><button class="btn" id="signOutBtn" style="display:none" onclick="if(confirm('Sign out on this device?'))firebase.auth().signOut().then(()=>location.href='./index.html')">Sign out</button></div>
   </header>
   <div id="app"><div class="empty">Loading…</div></div>
 </div>
@@ -626,7 +627,7 @@ function showNew() {
     const po = NEW.opps.find(o => o.id === e.target.value), pl = document.getElementById('photoOpen');
     if (pl) pl.href = PHOTO_FORM + encodeURIComponent(photoJob({ label: po ? po.name : 'Pick the opportunity first', id: NEW.id }));
     if (!e.target.value) return;
-    const ex = (await db.collection('quotes').where('project.dtoolsOpportunityId', '==', e.target.value).get()).docs.map(d => ({ _id: d.id, ...d.data() })).filter(q => !q.isTemplate);
+    let ex = []; try { ex = (await db.collection('quotes').where('project.dtoolsOpportunityId', '==', e.target.value).get()).docs.map(d => ({ _id: d.id, ...d.data() })).filter(q => !q.isTemplate); } catch (err) { ex = []; }  // v8.29.0: installers only read their own jobs
     NEW.closed = ex.length && !ex.some(q => ['draft', 'won', 'scheduled', undefined].includes(q.status));
     NEW.open = ex.find(q => ['draft', 'won', 'scheduled', undefined].includes(q.status)) || null;
     if (NEW.open) box.innerHTML = `<span style="color:#ffd479">This opportunity already has a labor quote (${esc(label(NEW.open))}).</span> <button class="qbtn gold" onclick="attachToQuote()">Log hours on that quote instead</button>`;
@@ -732,7 +733,8 @@ firebase.auth().onAuthStateChanged(async (u) => {
   const email = (u.email || '').toLowerCase();
   const p = USERS[email] || (email === 'a.ward@asbc.us' ? { name: 'Anthony Ward', role: 'admin' } : null);
   if (!p) { app().innerHTML = '<div class="empty">' + esc(email) + ' is not approved yet. Ask Anthony.</div>'; return; }
-  ME = { email, name: p.name, role: p.role || 'rep', allQuotes: !!p.allQuotes };
+  ME = { email, name: p.name, role: p.role || 'rep', allQuotes: !!p.allQuotes, access: ASBCRoles.accessOf(p, email) };
+  if (!ASBCRoles.can(ME.access, 'recaps')) return ASBCRoles.deny('recaps', app());  // v8.29.0 roles
   document.getElementById('signOutBtn').style.display = '';
   document.getElementById('signOutBtn').textContent = 'Sign out (' + ME.name.split(' ')[0] + ')';
   try { if (qid) await showJob(qid); else if (new URLSearchParams(location.search).get('new') && ME.role !== 'rep') showNew(); else await showList(); } catch (e) { app().innerHTML = '<div class="empty">Could not load: ' + esc(e.message) + '</div>'; }

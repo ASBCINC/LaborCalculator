@@ -11,6 +11,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
 <script src="./pricing.js"></script>
 <script src="./leaderboard-core.js"></script>
+<script src="./roles.js"></script>
 <style>
 :root { --gold:#C7A66A; --bg:#050505; --card:#111318; --line:#26292f; --muted:#8b8f98; }
 * { box-sizing:border-box; }
@@ -69,7 +70,7 @@ details[open] summary { margin-bottom:8px; }
 <div class="wrap">
   <header>
     <h1>ASBC <span>Leaderboard</span></h1>
-    <div style="display:flex;gap:6px"><a class="btn" href="./log.html">Quote Log</a><a class="btn" href="./index.html">Calculator</a></div>
+    <div style="display:flex;gap:6px"><a class="btn" href="./home.html">Home</a><a class="btn" href="./log.html">Quote Log</a><a class="btn" href="./index.html?calc=1">Calculator</a></div>
   </header>
   <div class="tabs"><button class="tab on" data-p="month">This month</button><button class="tab" data-p="last">Last month</button><button class="tab" data-p="quarter">Quarter</button></div>
   <div id="me"></div>
@@ -166,12 +167,13 @@ async function load() {
 document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => { document.querySelectorAll('.tab').forEach(x => x.classList.remove('on')); t.classList.add('on'); period = t.dataset.p; render(); }));
 firebase.auth().onAuthStateChanged(async (user) => {
   if (!user || !user.emailVerified) { document.getElementById('stores').innerHTML = '<div class="empty">Sign in on the <a href="./" style="text-decoration:underline">calculator</a> first, then reopen the leaderboard.</div>'; return; }
+ try { if (!(await user.getIdTokenResult()).claims.email_verified) { await user.reload(); await user.getIdToken(true); } } catch (e) {}  // v8.28.1: refresh a sign-in token issued before the email was confirmed
   const us = await db.collection('config').doc('users').get().catch(() => null);
   const map = (us && us.exists && us.data().users) || {}; const email = (user.email || '').toLowerCase();
   const p = map[email] || (email === 'a.ward@asbc.us' ? { name: 'Anthony Ward', role: 'admin' } : null);
   if (!p) { document.getElementById('stores').innerHTML = '<div class="empty">' + esc(email) + ' is not approved yet.</div>'; return; }
-  ME = { email, name: p.name, role: p.role || 'rep' };
- try { if (!(await user.getIdTokenResult()).claims.email_verified) { await user.reload(); await user.getIdToken(true); } } catch (e) {}  // v8.28.1: refresh a sign-in token issued before the email was confirmed
+  ME = { email, name: p.name, role: p.role || 'rep', access: ASBCRoles.accessOf(p, email) };
+  if (!ASBCRoles.can(ME.access, 'leaderboard')) return ASBCRoles.deny('leaderboard', document.getElementById('stores'));
   if (ME.role === 'admin') document.getElementById('admin').innerHTML = '<div class="sect">Admin</div><button id="rebuildBtn" class="btn" onclick="rebuild()">Rebuild tallies from saved quotes</button> <span class="small">Use once to backfill quotes saved before the leaderboard update.</span>';
   try { await load(); } catch (e) { document.getElementById('stores').innerHTML = '<div class="empty">Could not load: ' + esc(e.message) + '</div>'; }
 });

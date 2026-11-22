@@ -281,7 +281,8 @@
                 <div class="text-right leading-tight">
                     <div class="hidden sm:block text-xs sm:text-sm text-[#666666] whitespace-nowrap" data-rate-display>$200/hr</div>
                     <div id="versionNumber" class="text-[9px] sm:text-[10px] text-[#999999] whitespace-nowrap cursor-pointer select-none"></div>
-                    <a href="./leaderboard.html" class="text-[9px] sm:text-[10px] text-[#C7A66A] whitespace-nowrap underline print-hide">Leaderboard</a>
+                    <a id="homeLink" href="./home.html" class="hidden text-[9px] sm:text-[10px] text-[#C7A66A] whitespace-nowrap underline print-hide">Home</a>
+                    <a id="lbLink" href="./leaderboard.html" class="hidden text-[9px] sm:text-[10px] text-[#C7A66A] whitespace-nowrap underline print-hide">Leaderboard</a>
                     <a id="pipeLink" href="./pipeline.html" class="hidden text-[9px] sm:text-[10px] text-[#C7A66A] whitespace-nowrap underline print-hide">Pipeline</a>
                     <a id="calLink" href="./calendar.html" class="hidden text-[9px] sm:text-[10px] text-[#C7A66A] whitespace-nowrap underline print-hide">Calendar</a>
                     <a id="jobsLink" href="./jobs.html" class="hidden text-[9px] sm:text-[10px] text-[#C7A66A] whitespace-nowrap underline print-hide">Jobs</a>
@@ -625,7 +626,8 @@
                         <button id="saveSettingsButton" type="button" onclick="saveGlobalSettings()" class="w-full text-xs bg-brandGold text-bgDark font-bold py-2 rounded-lg">Save Global Settings</button>
                     </div>
                 </details>
-                <details class="mt-3">
+                <a href="./users.html" class="mt-3 block text-center text-xs border border-brandGold text-brandGold font-bold py-2 rounded-lg">User Roles: add people and set what they can see</a>
+                <details class="mt-3 hidden">
                     <summary class="text-xs text-brandGold cursor-pointer">Approved users</summary>
                     <p class="text-[11px] text-textMuted mt-2">One per line: <b>email, Name, role, store</b>, plus <b>, all</b> at the end to let a non-admin see every quote (role = rep, tech or admin; store = San Francisco, Palo Alto, West Hollywood, or none to leave someone off the leaderboard). Name must match the sales rep dropdown. Only these people can create a PIN and use the calculator.</p>
                     <textarea id="approvedUsersText" rows="8" class="mt-2 w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-[11px] text-white font-mono"></textarea>
@@ -653,6 +655,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
     <script src="./pricing.js"></script>
     <script src="./leaderboard-core.js"></script>
+    <script src="./roles.js"></script>
     <script src="./update-check.js" defer></script>
 
     <div id="authGate" class="fixed inset-0 bg-bgDark z-[60] flex items-center justify-center p-4">
@@ -714,7 +717,7 @@
               }
           });
 
-        const APP_VERSION = '8.28.1';
+        const APP_VERSION = '8.29.0';
         const BUILD_DATE = '2026-11-22';
         let HOURLY_RATE = 200;
 
@@ -2038,13 +2041,17 @@
                 const users = await loadApprovedUsers();
                 const p = users[email];
                 if (!p) { showAuthGate(true, email + ' is not on the approved list yet. Ask Anthony to add you, then reload.'); return; }
-                currentUserProfile = { email, name: p.name, role: p.role || 'rep', allQuotes: !!p.allQuotes };
+                currentUserProfile = { email, name: p.name, role: p.role || 'rep', allQuotes: !!p.allQuotes, access: ASBCRoles.accessOf(p, email) };
+                // v8.29.0: sign-in lands on the Home page; the calculator opens from there (?calc=1) or with a saved quote (?quote=)
+                { const qs = new URLSearchParams(location.search);
+                  if (!ASBCRoles.can(currentUserProfile.access, 'calculator') || (!qs.has('quote') && !qs.has('calc'))) { location.replace('./home.html'); return; } }
                 // v8.16.0: techs use the calculator too (no admin); Jobs link in the header
                 showAuthGate(false);
                 { const cl = document.getElementById('calLink'); if (cl) { cl.classList.remove('hidden'); cl.classList.add('block'); } }  // v8.26.0
+                { const A = currentUserProfile.access, show = (id, ok) => { const el = document.getElementById(id); if (el) { el.classList.toggle('hidden', !ok); el.classList.toggle('block', !!ok); } };  // v8.29.0 links by role
+                  show('homeLink', true); show('lbLink', ASBCRoles.can(A, 'leaderboard')); show('pipeLink', ASBCRoles.can(A, 'pipeline')); }
                 if (currentUserProfile.role === 'tech') { const jl = document.getElementById('jobsLink'); jl.classList.remove('hidden'); jl.classList.add('block'); jl.textContent = 'My Jobs'; }
                 if (isAdminUser()) {
-                    { const pl = document.getElementById('pipeLink'); if (pl) { pl.classList.remove('hidden'); pl.classList.add('block'); } }  // v8.28.0 admin pipeline
                     const jl = document.getElementById('jobsLink'); jl.classList.remove('hidden'); jl.classList.add('block');
                     db.collection('quotes').where('status', '==', 'submitted').get().then(sn => { if (sn.size) jl.textContent = 'Jobs (' + sn.size + ' to review)'; }).catch(() => {});
                 }

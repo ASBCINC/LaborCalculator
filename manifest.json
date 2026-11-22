@@ -1,7 +1,7 @@
 {
 "name": "ASBC Labor Calculator",
 "short_name": "LaborCalc",
-"start_url": "./",
+"start_url": "./home.html",
 "display": "standalone",
 "background_color": "#0a0a0a",
 "theme_color": "#b08d57",

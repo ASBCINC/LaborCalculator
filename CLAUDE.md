@@ -139,3 +139,9 @@ D-Tools handoff panel (paste-ready labor block); Quote Log search wording.
 - Data: Firestore pipeline/data, field json, written by scripts/sync_pipeline.py (workflow step after the opportunities sync, continue-on-error). Feed events built from diffs: stage, contract value, change orders, payments, new assignment, job reports (jobs.json). Detail calls only for records whose modifiedDate changed; GetOpportunity capped at 150 per run.
 - scripts/dtools_links.json: project name -> numeric D-Tools id (Open in D-Tools link) + seed stageAt from the Claude dashboard. Add new projects numbers there when needed.
 - Not yet: email/Teams/text items from the Claude tasks (would need a relay ingest endpoint).
+
+## v8.29.0 (2026-11-22) navigation + roles
+- home.html = landing page after sign-in (manifest start_url). index.html (sign-in lives there) redirects to home unless ?calc=1 or ?quote=. Tiles by role.
+- roles.js: admin, director (Sales Director), manager (Sales Manager), lead (Team Lead), installer. config/users[email].access + legacy role/allQuotes kept in step (LEGACY map). Pages guard with ASBCRoles.can(access, page).
+- users.html (admin): set role + leaderboard store per person; writes config/users. Old Approved users textbox in the calculator admin panel is hidden in favor of it.
+- Rules: installers read/update only quotes whose schedule.techs has their email, create only with themselves on it, no delete, no stats read; pipeline readable by admin + sales director. Directors and managers have no job recaps (Teams "View report" links will show the no-access page for them).

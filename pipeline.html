@@ -13,6 +13,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+<script src="./roles.js"></script>
 <script src="./update-check.js" defer></script>
 <style>
 :root { --gold:#C7A66A; --bg:#050505; --card:#111318; --line:#26292f; --muted:#8b8f98; --good:#7ee2a0; --warn:#ffd479; --bad:#ff8b8b; --blue:#8fb3ff; }
@@ -65,7 +66,7 @@ table { width:100%; border-collapse:collapse; font-size:12px; } td, th { text-al
 <div class="wrap">
   <header>
     <div><h1>ASBC <span>Pipeline</span></h1><div class="muted" id="synced"></div></div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn" id="refresh">Refresh</button><a class="btn" href="./calendar.html">Calendar</a><a class="btn" href="./jobs.html">Jobs</a><a class="btn" href="./index.html">Calculator</a></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn" id="refresh">Refresh</button><a class="btn" href="./home.html">Home</a><a class="btn" href="./calendar.html">Calendar</a><a class="btn" href="./index.html?calc=1">Calculator</a></div>
   </header>
   <div id="app"><div class="empty">Loading…</div></div>
 </div>
@@ -171,8 +172,7 @@ firebase.auth().onAuthStateChanged(async u => {
  try { if (!(await u.getIdTokenResult()).claims.email_verified) { await u.reload(); await u.getIdToken(true); } } catch (e) {}  // v8.28.1: refresh a sign-in token issued before the email was confirmed
   const us = await db.collection('config').doc('users').get().catch(() => null);
   const users = (us && us.exists && us.data().users) || {}; const email = (u.email || '').toLowerCase();
-  const role = email === 'a.ward@asbc.us' ? 'admin' : ((users[email] || {}).role || '');
-  if (role !== 'admin') { document.getElementById('app').innerHTML = '<div class="empty">This page is for admins.</div>'; return; }
+  if (!ASBCRoles.can(ASBCRoles.accessOf(users[email], email), 'pipeline')) return ASBCRoles.deny('pipeline', document.getElementById('app'));  // v8.29.0: admin + sales director
   load().catch(alertBox);
 });
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
