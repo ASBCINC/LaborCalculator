@@ -592,6 +592,7 @@ function wire() {
 // ---------- job report without a quote (v8.15.0) ----------
 let NEW = { opps: [] };
 function showNew() {
+  NEW.id = 'job-' + Date.now();  // v8.24.1: id picked up front so the photo upload and the report share it
   document.getElementById('pageTitle').textContent = 'New job report';
   const reps = Object.values(USERS).filter(u => (u.role || 'rep') === 'rep').map(u => u.name).sort();
   const cat = [...CATALOG.values()].filter(i => i.category !== 'Project Management').sort((a, b) => (a.category + a.name).localeCompare(b.category + b.name));
@@ -604,6 +605,7 @@ function showNew() {
     <button type="button" class="qbtn" id="addLog" style="margin-top:6px">+ Add day / tech</button></div>
     <div class="card"><div class="sect" style="margin-top:0">Job recap</div>${jsSelect(((typeof Q !== 'undefined' && Q && Q.job) || {}).jobStatus || '')}
     ${[['work', 'Work completed'], ['issues', 'Problems / what took longer'], ['followups', 'Open items / return visit needed'], ['client', 'Client feedback']].map(([k, t]) => `<div class="qmeta" style="margin-top:8px;display:flex;justify-content:space-between;align-items:center">${t}<button type="button" class="qbtn bl" data-k="${k}" style="height:24px;padding:0 8px">• Bullet</button></div><textarea class="rc" data-k="${k}" rows="3"></textarea>`).join('')}
+    ${photoBox({ label: 'Pick the opportunity first', id: NEW.id })}
     ${signoffBox(null)}
     <div class="qactions"><button class="qbtn gold" id="nSubmit">Submit to PM</button></div><div id="nMsg" class="qmeta"></div></div>`;
   document.getElementById('addLog').onclick = () => { const tr = document.querySelector('#logT tr:last-child').cloneNode(true); tr.querySelector('.lh').value = ''; document.getElementById('logT').appendChild(tr); };
@@ -616,6 +618,8 @@ function showNew() {
   };
   document.getElementById('nOpp').onchange = async (e) => {
     const box = document.getElementById('nOppMsg'); box.innerHTML = ''; NEW.open = null;
+    const po = NEW.opps.find(o => o.id === e.target.value), pl = document.getElementById('photoOpen');
+    if (pl) pl.href = PHOTO_FORM + encodeURIComponent(photoJob({ label: po ? po.name : 'Pick the opportunity first', id: NEW.id }));
     if (!e.target.value) return;
     const ex = (await db.collection('quotes').where('project.dtoolsOpportunityId', '==', e.target.value).get()).docs.map(d => ({ _id: d.id, ...d.data() })).filter(q => !q.isTemplate);
     NEW.closed = ex.length && !ex.some(q => ['draft', 'won', 'scheduled', undefined].includes(q.status));
@@ -625,6 +629,7 @@ function showNew() {
     else if (NEW.closed) box.innerHTML = '<span class="qmeta">This project already has a job report. You can submit another one (e.g. another day or visit).</span>';
   };
   document.getElementById('nSubmit').onclick = () => submitNew(false); steppers();
+  document.getElementById('photoOpen').addEventListener('click', ev => { if (!document.getElementById('nOpp').value) { ev.preventDefault(); markMissing([['', '#nOpp']]); sheet({ title: 'Pick the project first', sub: 'Choose the sales rep and D-Tools opportunity at the top, then tap Upload photos so the photos are filed under the right job.', must: [['Pick the D-Tools opportunity', '#nOpp']] }); } });
   const pre = new URLSearchParams(location.search);
   if (pre.get('new') && pre.get('rep')) (async () => { const r = document.getElementById('nRep'); r.value = pre.get('rep'); if (r.value) { await r.onchange({ target: r }); const o = document.getElementById('nOpp'); o.value = pre.get('opp') || ''; if (o.value) o.onchange({ target: o }); } })();
   document.getElementById('soOpen').onclick = () => submitNew(true);
@@ -655,11 +660,11 @@ async function submitNew(toSign) {  // toSign: save as an open job and go to the
   if (!toSign) { const soP = signoffProblem(null, jobStatus, skip); if (soP) must.push([soP.replace(/\.$/, ''), '#soCard']); }
   if (must.length) { markMissing(must); return sheet({ title: 'A few things are missing', sub: 'Tap an item to jump to it.', must }); }
   const items = [], lines = [];
-  const job = { jobStatus, lines, log, totalHours: Math.round(log.reduce((a, r) => a + r.hours, 0) * 100) / 100, recap, signoffSkip: skip, savedAt: new Date().toISOString(), savedBy: ME.email, submittedAt: new Date().toISOString(), submittedBy: ME.email, reviewNote: '', revision: 1 };
+  const job = { jobStatus, lines, log, totalHours: Math.round(log.reduce((a, r) => a + r.hours, 0) * 100) / 100, recap, signoffSkip: skip, savedAt: new Date().toISOString(), savedBy: ME.email, submittedAt: new Date().toISOString(), submittedBy: ME.email, reviewNote: '', revision: 1, photos: photosVal() || null };
   if (toSign) { delete job.submittedAt; delete job.submittedBy; }
   const dates = [...new Set(log.map(r => r.date))].sort();
   const techList = [...new Set(log.map(r => r.who).filter(Boolean).concat(ME.role === 'tech' ? [ME.email] : []))];
-  const id = 'job-' + Date.now();
+  const id = NEW.id || ('job-' + Date.now());
   await db.collection('quotes').doc(id).set({
     id, label: opp.name, noQuote: true, status: toSign ? 'scheduled' : 'closed', items,
     project: { customerName: opp.name, salesManagerName: rep, dtoolsOpportunityId: oppId, dtoolsOppNumber: opp.number || '', dtoolsClientName: opp.clientName || '' },
