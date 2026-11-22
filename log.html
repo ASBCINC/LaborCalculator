@@ -94,7 +94,7 @@ async function quotesForUser() {
   return db.collection('quotes').where('project.salesManagerName', '==', ME.name).get();
 }
 firebase.auth().onAuthStateChanged(async (u) => {
-  if (!u) {
+  if (!u || !u.emailVerified) {
     document.getElementById('list').innerHTML = '<div class="empty">Sign in on the <a href="./" style="text-decoration:underline">calculator</a> first, then reopen the Quote Log.</div>';
     return;
   }

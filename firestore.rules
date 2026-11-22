@@ -1,0 +1,55 @@
+rules_version = '2';
+// ASBC Labor Calculator: Firestore security rules (v8.27.0).
+// Deployed by pasting into Firebase console > Firestore Database > Rules (project asbc-calculator).
+// Only signed-in accounts whose email is CONFIRMED and that are on the Approved users list (config/users)
+// can read or write. The GitHub Actions sync/backup/report jobs use a service account and are not affected.
+// Undo: paste the previous rules from the console's Rules history.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function em() { return request.auth.token.email.lower(); }
+    function verified() { return request.auth != null && request.auth.token.email != null && request.auth.token.email_verified == true; }
+    function users() { return get(/databases/$(database)/documents/config/users).data.users; }
+    function isOwner() { return verified() && em() == 'a.ward@asbc.us'; }
+    function approved() { return isOwner() || (verified() && em() in users()); }
+    function admin() { return isOwner() || (approved() && users()[em()].role == 'admin'); }
+
+    // Approved users list: an approved person can read it (the app needs names and roles); only admins change it.
+    match /config/users {
+      allow get: if isOwner() || (verified() && em() in resource.data.users);
+      allow write: if admin();
+    }
+    // Catalog, settings, sync status: everyone approved reads; admins change catalog/settings.
+    match /config/{doc} {
+      allow read: if approved();
+      allow write: if admin();
+    }
+    // Quotes and job reports: the whole team works on these.
+    match /quotes/{id} {
+      allow read, create, update: if approved();
+      allow delete: if approved();
+    }
+    // D-Tools opportunities: read by the app, written only by the GitHub sync (service account).
+    match /opportunities/{id} {
+      allow read: if approved();
+      allow write: if false;
+    }
+    // Leaderboard tallies.
+    match /stats/{id} {
+      allow read, write: if approved();
+    }
+    // Weekly labor report: fetched by its secret id for the Friday meeting sheet; never listable, never writable here.
+    match /reports/{id} {
+      allow get: if true;
+      allow list, write: if false;
+    }
+    // Admin-only data (future pipeline page).
+    match /pipeline/{doc=**} {
+      allow read: if admin();
+      allow write: if false;
+    }
+    // Everything else: closed.
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}

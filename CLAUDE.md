@@ -127,3 +127,8 @@ D-Tools handoff panel (paste-ready labor block); Quote Log search wording.
 ## v8.26.0 (2026-11-22) calendar
 - calendar.html: month view of quotes with schedule.dates (role-filtered like the Jobs list). Team color from assigned techs first names: SF Team = Joseph, Eugene (orange); LA Team = Ivan, Mina (blue); both = split; else gray. Phones show color bars, tap a day for the list.
 - Jobs > Schedule & assign has a time window (schedule.start / schedule.end, HH:MM) shown on the calendar and job header. Calendar links in the calculator header and Jobs header.
+
+## v8.27.0 (2026-11-22) security
+- Email confirmation: index.html shows a "Confirm your email" gate (sendEmailVerification, continue URL = app) until the account email is verified; other pages treat unverified as signed out.
+- firestore.rules (in repo, deployed by pasting into Firebase console > Firestore > Rules): reads/writes only for verified + approved (config/users) accounts; config writes admin-only; opportunities read-only (sync service account writes); reports/<id> get-by-id public for the Friday sheet (no list); pipeline/** admin read; everything else closed. Undo = console Rules history.
+- Deploy order: app first (so people can confirm their email), then rules.

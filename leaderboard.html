@@ -165,7 +165,7 @@ async function load() {
 }
 document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => { document.querySelectorAll('.tab').forEach(x => x.classList.remove('on')); t.classList.add('on'); period = t.dataset.p; render(); }));
 firebase.auth().onAuthStateChanged(async (user) => {
-  if (!user) { document.getElementById('stores').innerHTML = '<div class="empty">Sign in on the <a href="./" style="text-decoration:underline">calculator</a> first, then reopen the leaderboard.</div>'; return; }
+  if (!user || !user.emailVerified) { document.getElementById('stores').innerHTML = '<div class="empty">Sign in on the <a href="./" style="text-decoration:underline">calculator</a> first, then reopen the leaderboard.</div>'; return; }
   const us = await db.collection('config').doc('users').get().catch(() => null);
   const map = (us && us.exists && us.data().users) || {}; const email = (user.email || '').toLowerCase();
   const p = map[email] || (email === 'a.ward@asbc.us' ? { name: 'Anthony Ward', role: 'admin' } : null);

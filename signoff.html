@@ -132,7 +132,7 @@ async function submit() {
 }
 
 firebase.auth().onAuthStateChanged(async (u) => {
-  if (!u) { app.innerHTML = '<div class="muted" style="text-align:center;padding:40px 0">The technician needs to be signed in on this device. <a href="./" style="color:#C7A66A">Sign in</a></div>'; return; }
+  if (!u || !u.emailVerified) { app.innerHTML = '<div class="muted" style="text-align:center;padding:40px 0">The technician needs to be signed in (email confirmed) on this device. <a href="./" style="color:#C7A66A">Sign in</a></div>'; return; }
   if (!qid) { app.innerHTML = '<div class="muted" style="text-align:center;padding:40px 0">No job selected.</div>'; return; }
   const email = (u.email || '').toLowerCase();
   const us = await db.collection('config').doc('users').get().catch(() => null);

@@ -134,7 +134,7 @@ document.getElementById('today').onclick = () => { VIEW = new Date(); VIEW.setDa
 document.getElementById('teamF').onchange = render;
 document.getElementById('cal').addEventListener('click', e => { if (e.target.closest('.ev') && window.innerWidth > 700) return; const d = e.target.closest('.day'); if (!d) return; e.preventDefault(); SEL = d.dataset.day === SEL ? null : d.dataset.day; render(); if (SEL) document.getElementById('agenda').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
 firebase.auth().onAuthStateChanged(async u => {
-  if (!u) { document.getElementById('cal').innerHTML = '<div class="empty">Sign in on the <a href="./" style="color:#C7A66A">calculator</a> first, then reopen the Calendar.</div>'; return; }
+  if (!u || !u.emailVerified) { document.getElementById('cal').innerHTML = '<div class="empty">Sign in (and confirm your email) on the <a href="./" style="color:#C7A66A">calculator</a> first, then reopen the Calendar.</div>'; return; }
   const us = await db.collection('config').doc('users').get().catch(() => null);
   USERS = (us && us.exists && us.data().users) || {};
   const email = (u.email || '').toLowerCase();

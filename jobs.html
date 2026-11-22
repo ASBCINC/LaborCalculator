@@ -724,7 +724,7 @@ document.addEventListener('keydown', e => {
 })();
 
 firebase.auth().onAuthStateChanged(async (u) => {
-  if (!u) { app().innerHTML = '<div class="empty">Sign in on the <a href="./" style="text-decoration:underline">calculator</a> first, then reopen Jobs.</div>'; return; }
+  if (!u || !u.emailVerified) { app().innerHTML = '<div class="empty">Sign in (and confirm your email) on the <a href="./" style="text-decoration:underline">calculator</a> first, then reopen Jobs.</div>'; return; }
   const [us, cs] = await Promise.all([db.collection('config').doc('users').get().catch(() => null), db.collection('config').doc('catalog').get().catch(() => null)]);
   USERS = (us && us.exists && us.data().users) || {};
   if (cs && cs.exists) (cs.data().items || []).forEach(i => CATALOG.set(i.id, i));

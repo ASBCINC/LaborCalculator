@@ -713,7 +713,7 @@
               }
           });
 
-        const APP_VERSION = '8.26.0';
+        const APP_VERSION = '8.27.0';
         const BUILD_DATE = '2026-11-22';
         let HOURLY_RATE = 200;
 
@@ -1962,6 +1962,40 @@
             try { await fbAuth.sendPasswordResetEmail(email); authMsg('Reset email sent. It can take a few minutes (check Junk). Choose a new 6+ digit PIN there.'); }
             catch (e) { authMsg('Could not send reset: ' + (e.code || e.message)); }
         }
+        // v8.27.0: email confirmation. The database only answers accounts whose email is confirmed, so nobody can
+        // claim an approved person's address before they do. One-time step per person.
+        async function sendVerify(u, force) {
+            const last = Number(localStorage.getItem('asbcVerifySent') || 0);
+            if (!force && Date.now() - last < 10 * 60 * 1000) return false;
+            await u.sendEmailVerification({ url: 'https://asbcinc.github.io/LaborCalculator/' });
+            localStorage.setItem('asbcVerifySent', String(Date.now())); return true;
+        }
+        function showVerifyGate(u) {
+            let g = document.getElementById('verifyGate');
+            if (!g) {
+                g = document.createElement('div'); g.id = 'verifyGate';
+                g.className = 'fixed inset-0 bg-bgDark z-[61] flex items-center justify-center p-4';
+                g.innerHTML = `<div class="bg-bgPanel border border-brandGold/40 p-6 rounded-2xl shadow-2xl w-full max-w-sm space-y-3 text-center">
+                    <h2 class="text-xl font-bold text-brandGold">Confirm your email</h2>
+                    <p class="text-sm text-gray-300">We sent a link to <b id="vgEmail" class="text-white"></b>. Open it (check Junk), tap the link, then come back and tap <b>I confirmed it</b>.</p>
+                    <p class="text-xs text-textMuted">One-time step. It keeps job and pricing data limited to ASBC staff.</p>
+                    <button id="vgDone" type="button" class="w-full bg-brandGold text-bgDark font-bold py-3 rounded-xl">I confirmed it</button>
+                    <button id="vgResend" type="button" class="w-full border border-gray-700 text-white py-3 rounded-xl text-sm">Send the email again</button>
+                    <button id="vgOut" type="button" class="w-full text-textMuted py-2 text-xs underline">Sign out</button>
+                    <div id="vgMsg" class="text-xs text-textMuted min-h-[1rem]"></div></div>`;
+                document.body.appendChild(g);
+                const msg = t => document.getElementById('vgMsg').textContent = t;
+                document.getElementById('vgDone').onclick = async () => {
+                    msg('Checking…');
+                    try { await fbAuth.currentUser.reload(); if (fbAuth.currentUser.emailVerified) { await fbAuth.currentUser.getIdToken(true); location.reload(); } else msg('Not confirmed yet. Tap the link in the email first (check Junk).'); }
+                    catch (e) { msg('Could not check: ' + (e.code || e.message)); }
+                };
+                document.getElementById('vgResend').onclick = async () => { try { await sendVerify(fbAuth.currentUser, true); msg('Sent. It can take a few minutes.'); } catch (e) { msg(String(e.code || e.message).includes('too-many') ? 'Too many emails. Wait a few minutes.' : 'Could not send: ' + (e.code || e.message)); } };
+                document.getElementById('vgOut').onclick = () => fbAuth.signOut().then(() => location.reload());
+            }
+            document.getElementById('vgEmail').textContent = u.email || '';
+            sendVerify(u).catch(() => {});
+        }
         async function signOutUser(ask) {
             if (ask && !window.confirm('Sign out ' + (currentUserProfile ? currentUserProfile.name : '') + ' on this device?')) return;
             if (fbAuth) await fbAuth.signOut();
@@ -1996,6 +2030,8 @@
                     document.getElementById('userBadge').classList.add('hidden');
                     setAuthMode('signin'); showAuthGate(true, ''); return;
                 }
+                if (!u.emailVerified) { showAuthGate(false); showVerifyGate(u); return; }  // v8.27.0: confirm the email before any data loads
+                { const vg = document.getElementById('verifyGate'); if (vg) vg.remove(); }
                 const email = (u.email || '').toLowerCase();
                 const users = await loadApprovedUsers();
                 const p = users[email];
