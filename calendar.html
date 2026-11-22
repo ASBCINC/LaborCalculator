@@ -135,6 +135,7 @@ document.getElementById('teamF').onchange = render;
 document.getElementById('cal').addEventListener('click', e => { if (e.target.closest('.ev') && window.innerWidth > 700) return; const d = e.target.closest('.day'); if (!d) return; e.preventDefault(); SEL = d.dataset.day === SEL ? null : d.dataset.day; render(); if (SEL) document.getElementById('agenda').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
 firebase.auth().onAuthStateChanged(async u => {
   if (!u || !u.emailVerified) { document.getElementById('cal').innerHTML = '<div class="empty">Sign in (and confirm your email) on the <a href="./" style="color:#C7A66A">calculator</a> first, then reopen the Calendar.</div>'; return; }
+ try { if (!(await u.getIdTokenResult()).claims.email_verified) { await u.reload(); await u.getIdToken(true); } } catch (e) {}  // v8.28.1: refresh a sign-in token issued before the email was confirmed
   const us = await db.collection('config').doc('users').get().catch(() => null);
   USERS = (us && us.exists && us.data().users) || {};
   const email = (u.email || '').toLowerCase();

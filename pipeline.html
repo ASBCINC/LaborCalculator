@@ -168,6 +168,7 @@ document.getElementById('refresh').onclick = () => load().catch(err => alertBox(
 const alertBox = err => document.getElementById('app').innerHTML = '<div class="empty">Could not load: ' + esc(err.message || err) + '</div>';
 firebase.auth().onAuthStateChanged(async u => {
   if (!u || !u.emailVerified) { document.getElementById('app').innerHTML = '<div class="empty">Sign in (and confirm your email) on the <a href="./" style="color:#C7A66A">calculator</a> first.</div>'; return; }
+ try { if (!(await u.getIdTokenResult()).claims.email_verified) { await u.reload(); await u.getIdToken(true); } } catch (e) {}  // v8.28.1: refresh a sign-in token issued before the email was confirmed
   const us = await db.collection('config').doc('users').get().catch(() => null);
   const users = (us && us.exists && us.data().users) || {}; const email = (u.email || '').toLowerCase();
   const role = email === 'a.ward@asbc.us' ? 'admin' : ((users[email] || {}).role || '');

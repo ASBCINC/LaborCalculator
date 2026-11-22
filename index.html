@@ -714,7 +714,7 @@
               }
           });
 
-        const APP_VERSION = '8.28.0';
+        const APP_VERSION = '8.28.1';
         const BUILD_DATE = '2026-11-22';
         let HOURLY_RATE = 200;
 
@@ -2033,6 +2033,7 @@
                 }
                 if (!u.emailVerified) { showAuthGate(false); showVerifyGate(u); return; }  // v8.27.0: confirm the email before any data loads
                 { const vg = document.getElementById('verifyGate'); if (vg) vg.remove(); }
+                try { if (!(await u.getIdTokenResult()).claims.email_verified) { await u.reload(); await u.getIdToken(true); } } catch (e) {}  // v8.28.1: refresh a sign-in token issued before the email was confirmed
                 const email = (u.email || '').toLowerCase();
                 const users = await loadApprovedUsers();
                 const p = users[email];

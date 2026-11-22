@@ -725,6 +725,7 @@ document.addEventListener('keydown', e => {
 
 firebase.auth().onAuthStateChanged(async (u) => {
   if (!u || !u.emailVerified) { app().innerHTML = '<div class="empty">Sign in (and confirm your email) on the <a href="./" style="text-decoration:underline">calculator</a> first, then reopen Jobs.</div>'; return; }
+ try { if (!(await u.getIdTokenResult()).claims.email_verified) { await u.reload(); await u.getIdToken(true); } } catch (e) {}  // v8.28.1: refresh a sign-in token issued before the email was confirmed
   const [us, cs] = await Promise.all([db.collection('config').doc('users').get().catch(() => null), db.collection('config').doc('catalog').get().catch(() => null)]);
   USERS = (us && us.exists && us.data().users) || {};
   if (cs && cs.exists) (cs.data().items || []).forEach(i => CATALOG.set(i.id, i));

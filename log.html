@@ -98,6 +98,7 @@ firebase.auth().onAuthStateChanged(async (u) => {
     document.getElementById('list').innerHTML = '<div class="empty">Sign in on the <a href="./" style="text-decoration:underline">calculator</a> first, then reopen the Quote Log.</div>';
     return;
   }
+ try { if (!(await u.getIdTokenResult()).claims.email_verified) { await u.reload(); await u.getIdToken(true); } } catch (e) {}  // v8.28.1: refresh a sign-in token issued before the email was confirmed
   const us = await db.collection('config').doc('users').get().catch(() => null);
   const map = (us && us.exists && us.data().users) || {};
   const email = (u.email || '').toLowerCase();
