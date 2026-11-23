@@ -9,6 +9,11 @@ Cowork cannot push to GitHub, so **Anthony pushes with GitHub Desktop**. If Clau
 access later, the same routine applies, except Claude commits and pushes itself.
 
 ## Release routine (every change)
+Version numbers (Anthony's rule, Nov 22, 2026): MAJOR.MINOR.PATCH.
+- MAJOR (1st digit): major changes — new sections/pages that change how people use the app, security or sign-in changes, data model changes, anything that changes everyday workflow.
+- MINOR (2nd): new features and upgrades within the existing app (reset PATCH to 0).
+- PATCH (3rd): bug fixes and logic corrections only.
+
 1. `python3 scripts/release.py check`: confirms local = GitHub `main` and shows live version. If not in sync,
    Anthony clicks **Fetch origin → Pull** first. Never edit a stale copy.
 2. Locate code with `grep -n`, then read only the needed line ranges. **Never read the whole index.html** (~2,550 lines).
@@ -178,7 +183,7 @@ D-Tools handoff panel (paste-ready labor block); Quote Log search wording.
 - Data fix Nov 22: quote rep names Matt -> Matthew Stachnik, Josh Silva Bang & Olufsen SF -> Josh Silva, Stephen Sandberg -> Stefn Sandberg.
 - v8.33.1: schedule-change alert compares days/times/techs as plain text (Firestore map key order made the first v8.33.0 run send 'schedule changed' to Mina, Eugene and Joseph for Harlesden and Gillis though nothing changed).
 
-## v8.34.0 — D-Tools Calendar (left menu) + holidays
+## v9.0.0 — D-Tools Calendar (left menu) + holidays (first release under the MAJOR.MINOR.PATCH rule; marks the v8.27–v8.33 sign-in/security, roles and navigation overhaul)
 - The pull reads the next 60 days (from 7 days back) with GetEvents3 (project installs: times, techs, address, notes, task status) and Catalog GlobalCalendar/getGlobalCalendar {typeIds:[1,2]} (the left-menu Calendar's Event + Project Task; 'meetings' = scheduled events like store work, pickups, holds), plus Settings/GetCompanyHolidays?year= (empty in D-Tools today). Same captured page headers work for both APIs.
 - asbcImportSchedule(projects, {meetings, holidays}): meetings become config/dtoolsEvents events with kind 'event' (one per day, crew/techs from assignees); holidays saved as config/dtoolsEvents.holidays.
 - calendar.html: US holidays built in (usHolidays: New Year's, MLK, Presidents', Memorial, Juneteenth, July 4, Labor, Veterans, Thanksgiving + day after, Christmas Eve/Day, NYE) plus D-Tools company holidays, teal label on the day; D-Tools scheduled events tagged EVT.
