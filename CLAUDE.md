@@ -226,3 +226,8 @@ D-Tools handoff panel (paste-ready labor block); Quote Log search wording.
 
 ## v9.10.0 Completion alerts to store managers (Nov 23, 2026)
 - Relay /recap: when a submitted job report has jobStatus "Complete", the same Teams card also goes to the store manager from config/settings.completionNotify (store -> email): San Francisco + Palo Alto -> Adam Ravenkamp (Planning & Operations Manager), West Hollywood -> Kristina Adamiya. Store = the rep's store in config/users; reps without one fall back to the crew (Joseph/Eugene = SF, Ivan/Mina = WeHo). Costa Mesa -> Kristina Adamiya (set Nov 23). Relay deployed dda495c7.
+
+## v9.11.0 Job status -> D-Tools project stage (Nov 23, 2026)
+- jobs.html queueStage() on every submitted report: quote.dtoolsStage {want, from, done:false}. Complete -> Completed (Anthony chose Completed, not Installed); In Progress -> In Progress; Sales/PM Follow up, Cancelled -> Delayed.
+- dtools-schedule.js: asbcPendingStages() (skips already-at-stage, already Completed, not found) and asbcStagesDone(results) (3 tries).
+- Applied by the D-Tools pull step 7f on the 7:37/12:37/5:37 runs from the signed-in D-Tools page: Completed = PUT Project/api/v1/Projects/MarkProjectAsCompleted?id=; others = POST Projects/UpdateProjectsOpenStage?ids=&stageId= (ids from Catalog/api/v1/Stages/GetProjectStages: In Progress 3072, Delayed 3302). Not test-written yet; first real run will confirm. Step 6a no longer uses recaps.

@@ -722,7 +722,11 @@ async function attachToQuote() {
 }
 // v8.22.0: instant Teams message to Anthony and the sales rep when a job report is submitted (relay Worker; never blocks the submit).
 const RECAP_URL = 'https://yellow-cloud-830a.a-ward-612.workers.dev/recap';
-async function notifyRecap(id, test) { try { const token = await firebase.auth().currentUser.getIdToken(); const r = await fetch(RECAP_URL, { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify({ quote: id, test: !!test }) }); return r.ok ? r.json() : { error: r.status }; } catch (e) { console.warn('recap notify', e); return { error: String(e) }; } }
+// v9.11.0 job status -> D-Tools project stage, applied by the D-Tools pull (7:37 / 12:37 / 5:37) in Anthony's D-Tools session
+const STAGE_FOR = { 'Complete': 'Completed', 'In Progress': 'In Progress', 'Sales Follow up': 'Delayed', 'PM Follow up': 'Delayed', 'Cancelled': 'Delayed' };
+async function queueStage(id) { try { const ref = db.collection('quotes').doc(id), s = await ref.get(), js = ((s.data() || {}).job || {}).jobStatus, want = STAGE_FOR[js];
+  if (want) await ref.set({ dtoolsStage: { want, from: js, at: new Date().toISOString(), by: ME.email, done: false, tries: 0, result: '' } }, { merge: true }); } catch (e) { console.warn('stage queue', e); } }
+async function notifyRecap(id, test) { if (!test) await queueStage(id); try { const token = await firebase.auth().currentUser.getIdToken(); const r = await fetch(RECAP_URL, { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify({ quote: id, test: !!test }) }); return r.ok ? r.json() : { error: r.status }; } catch (e) { console.warn('recap notify', e); return { error: String(e) }; } }
 async function submitNew(toSign) {  // toSign: save as an open job and go to the customer sign-off page
   const msg = t => document.getElementById('nMsg').textContent = t;
   const rep = document.getElementById('nRep').value, oppId = document.getElementById('nOpp').value;

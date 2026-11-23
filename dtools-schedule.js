@@ -229,6 +229,32 @@
     if (Object.keys(upd).length || first) await ref.set({ seen: upd, at: new Date().toISOString() }, { merge: true });
     return out;
   }
+  // v9.11.0 D-Tools project stage from the latest job report's status (jobs.html queues quote.dtoolsStage).
+  // Step 1 (calculator tab): asbcPendingStages() -> [{quote, project, name, want, from}]
+  // Step 2 (d-tools.cloud tab, signed in): change each project's stage; Step 3 (calculator tab): asbcStagesDone(results)
+  async function pendingStages() {
+    const db = firebase.firestore(); let pipe = {};
+    try { const s = await db.collection('pipeline').doc('data').get(); if (s.exists) pipe = JSON.parse(s.data().json || '{}').projects || {}; } catch (e) {}
+    const P = Object.values(pipe), out = [];
+    for (const s of (await db.collection('quotes').where('dtoolsStage.done', '==', false).get()).docs) {
+      const q = s.data(), w = q.dtoolsStage || {}, pr = q.project || {};
+      const p = P.find(x => x.id === pr.dtoolsOpportunityId) || P.find(x => fold(x.name) === fold(pr.dtoolsProjectName || q.label));
+      const close = result => s.ref.set({ dtoolsStage: { done: true, result, appliedAt: new Date().toISOString() } }, { merge: true });
+      if (!p) { await close('no open D-Tools project found'); continue; }
+      if (String(p.stage || '').toLowerCase() === String(w.want).toLowerCase()) { await close('already ' + w.want); continue; }
+      if (/completed/i.test(p.stage || '')) { await close('project already Completed; not reopened'); continue; }
+      out.push({ quote: s.id, project: p.id, name: p.name, want: w.want, from: p.stage || '' });
+    }
+    return out;
+  }
+  async function stagesDone(results) {
+    const db = firebase.firestore();
+    for (const r of results || []) { const ref = db.collection('quotes').doc(r.quote), t = (((await ref.get()).data() || {}).dtoolsStage || {}).tries || 0;
+      await ref.set({ dtoolsStage: r.ok ? { done: true, result: r.from + ' → ' + r.want, appliedAt: new Date().toISOString() } : { done: t + 1 >= 3, tries: t + 1, result: 'failed: ' + (r.err || '') } }, { merge: true }); }
+    return (results || []).map(r => r.name + ': ' + (r.ok ? r.from + ' → ' + r.want : 'FAILED ' + r.err));
+  }
+  window.asbcPendingStages = pendingStages;
+  window.asbcStagesDone = stagesDone;
   window.asbcPrepReminders = prepReminders;
   window.asbcOppLaborCheck = oppLaborCheck;
   window.asbcImportSchedule = importSchedule;
