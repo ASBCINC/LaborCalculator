@@ -164,3 +164,15 @@ D-Tools handoff panel (paste-ready labor block); Quote Log search wording.
 - schedule.times[date] = {start,end} per day; schedule.notes (event descriptions), schedule.address, schedule.dtoolsEventIds. Calendar shows per-day windows ('All day' for D-Tools all-day events); hand-saving a different window in Schedule & assign deletes times.
 - Events with no calculator job (other PMs, finished, no quote) go to config/dtoolsEvents {events, at}; calendar.html shows them dashed with a D-T tag, team color from assigned names, description in the agenda.
 - jobs.html: header shows per-day windows, address (maps link) and D-Tools notes; a new report's time log starts with one row per scheduled day per assigned tech.
+
+## v8.32.1 / v8.33.0 — QC pass + navigation, health, notifications
+- nav.js: shared role-aware header nav (<nav id="asbcNav" data-page=…>; children with data-keep stay). Used on home, calendar, jobs, pipeline, leaderboard, log, users. index.html keeps its built-in #hdrNav.
+- roles.js: window.ASBCTeams {ofNames, ofEmails} (SF = Joseph/Eugene, LA = Ivan/Mina).
+- health.js: window.asbcHealth() -> {issues[]} (passed install days w/o report, scheduled w/o date, complete w/o sign-off, unlinked won jobs, rep names not in User Roles, reps w/o store, stale calendar sync / pipeline data). Home shows it to admins; the D-Tools pull posts it to the dashboard on Mondays.
+- Home tiles show counts (installs next 7 days, reports due/upcoming, saved quotes, active projects, people).
+- dtools-schedule.js: config/dtoolsEvents now holds ALL events (job id + crew names); project.dtoolsProjectName is the job title (calendar/jobs label); schedule changes POST relay /notify {kind:'schedule'}; window.asbcRecapNudge() POSTs {kind:'nudge'} for today's jobs with no report (once per day, quote.nudged).
+- Relay /notify: admin-only (Firestore read with the caller's token + config/users role), Teams card to each tech in schedule.techs via TEAMS_HOOK.
+- Pipeline: 'Next install' line + install rows in the detail sheet from config/dtoolsEvents; NOT SCHEDULED flag on In Progress/Scheduled projects with no future event.
+- Jobs: titles by D-Tools project name (Quote: <label> underneath), per-day windows + team color in the list, Archive (?archive=1) for reports whose last day is 30+ days old.
+- index.html: loading splash instead of the sign-in flash (#authGate.ready); sales rep dropdown adds Admin/Director/Manager names from config/users.
+- Data fix Nov 22: quote rep names Matt -> Matthew Stachnik, Josh Silva Bang & Olufsen SF -> Josh Silva, Stephen Sandberg -> Stefn Sandberg.

@@ -10,6 +10,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
 <script src="./roles.js"></script>
+<script src="./nav.js" defer></script>
+<script src="./update-check.js" defer></script>
 <script src="./pricing.js"></script>
 <style>
 :root { --gold:#C7A66A; --bg:#050505; --card:#111318; --line:#26292f; --muted:#8b8f98; }
@@ -53,9 +55,7 @@ details[open] summary { margin-bottom:8px; }
 <body>
 <div class="wrap">
   <header>
-    <h1>ASBC <span>Saved Quotes</span></h1>
-    <a class="btn" href="./home.html">Home</a>
-    <a class="btn" href="./index.html?calc=1">Open Calculator</a>
+    <h1>ASBC <span>Saved Quotes</span></h1><nav id="asbcNav" data-page="quotes"></nav>
   </header>
   <div class="controls">
     <input id="search" type="search" placeholder="Search opportunity or sales manager...">

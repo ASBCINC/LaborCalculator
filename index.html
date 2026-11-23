@@ -656,7 +656,9 @@
     <script src="./roles.js"></script>
     <script src="./update-check.js" defer></script>
 
+    <style>#authGate:not(.ready) #authForm{display:none} #authGate.ready #authLoading{display:none}</style>
     <div id="authGate" class="fixed inset-0 bg-bgDark z-[60] flex items-center justify-center p-4">
+        <div id="authLoading" class="text-center"><div class="text-xl font-bold text-brandGold">ASBC</div><div class="text-sm text-textMuted mt-2">Loading…</div></div>
         <form id="authForm" class="bg-bgPanel border border-brandGold/40 p-6 rounded-2xl shadow-2xl w-full max-w-sm space-y-3" autocomplete="on">
             <div class="text-center">
                 <h2 class="text-xl font-bold text-brandGold">ASBC Labor Calculator</h2>
@@ -715,7 +717,7 @@
               }
           });
 
-        const APP_VERSION = '8.32.0';
+        const APP_VERSION = '8.33.0';
         const BUILD_DATE = '2026-11-22';
         let HOURLY_RATE = 200;
 
@@ -1929,6 +1931,7 @@
         function showAuthGate(show, msg) {
             const g = document.getElementById('authGate');
             g.classList.toggle('hidden', !show); g.classList.toggle('flex', show);
+            if (show) g.classList.add('ready');  // v8.33.0: the sign-in form only appears once we know nobody is signed in (no flash)
             document.getElementById('authSignOutBtn').classList.toggle('hidden', !(fbAuth && fbAuth.currentUser));
             if (msg !== undefined) authMsg(msg);
         }
@@ -2002,6 +2005,12 @@
             if (ask && !window.confirm('Sign out ' + (currentUserProfile ? currentUserProfile.name : '') + ' on this device?')) return;
             if (fbAuth) await fbAuth.signOut();
         }
+        // v8.33.0: the sales rep list follows User Roles (Admin, Sales Director, Sales Manager), so new reps appear without a code change
+        function syncRepOptions(users) {
+            try { const sel = document.getElementById('salesManagerName'); const have = new Set(Array.from(sel.options).map(o => o.value));
+                Object.entries(users || {}).filter(([e, u]) => u && u.name && ['admin', 'director', 'manager'].includes(ASBCRoles.accessOf(u, e)) && !have.has(u.name)).map(([, u]) => u.name).sort()
+                    .forEach(n => { const o = document.createElement('option'); o.value = n; o.textContent = n; sel.appendChild(o); }); } catch (e) {}
+        }
         async function loadApprovedUsers() {
             try {
                 const snap = await db.collection('config').doc('users').get();
@@ -2025,6 +2034,7 @@
         }
         if (fbAuth) {
             document.getElementById('authEmail').value = localStorage.getItem('asbcLastEmail') || '';
+            setTimeout(() => document.getElementById('authGate').classList.add('ready'), 8000);
             fbAuth.onAuthStateChanged(async (u) => {
                 if (!u) {
                     currentUserProfile = null; salesManagerName.disabled = false;
@@ -2037,6 +2047,7 @@
                 try { if (!(await u.getIdTokenResult()).claims.email_verified) { await u.reload(); await u.getIdToken(true); } } catch (e) {}  // v8.28.1: refresh a sign-in token issued before the email was confirmed
                 const email = (u.email || '').toLowerCase();
                 const users = await loadApprovedUsers();
+                syncRepOptions(users);  // v8.33.0
                 const p = users[email];
                 if (!p) { showAuthGate(true, email + ' is not on the approved list yet. Ask Anthony to add you, then reload.'); return; }
                 currentUserProfile = { email, name: p.name, role: p.role || 'rep', allQuotes: !!p.allQuotes, access: ASBCRoles.accessOf(p, email) };

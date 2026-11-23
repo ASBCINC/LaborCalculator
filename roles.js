@@ -41,4 +41,10 @@
       <a href="./home.html" style="display:inline-block;margin-top:16px;padding:10px 16px;border-radius:10px;background:#C7A66A;color:#050505;font-weight:700;text-decoration:none">Back to Home</a></div>`;
   }
   window.ASBCRoles = { DEFS, ORDER, PAGES, LEGACY, OWNER, accessOf, can, deny };
+  // v8.33.0 install teams by the assigned techs' first names: SF Team = Joseph, Eugene (orange); LA Team = Ivan, Mina (blue)
+  const TEAMS = { SF: ['joseph', 'eugene'], LA: ['ivan', 'mina'] };
+  function ofNames(names) { const f = (names || []).map(n => String(n || '').trim().split(/[\s@.]+/)[0].toLowerCase());
+    const sf = f.some(n => TEAMS.SF.includes(n)), la = f.some(n => TEAMS.LA.includes(n)); return sf && la ? 'BOTH' : sf ? 'SF' : la ? 'LA' : ''; }
+  const ofEmails = (emails, users) => ofNames((emails || []).map(e => ((users || {})[e] || {}).name || e));
+  window.ASBCTeams = { TEAMS, ofNames, ofEmails };
 })();

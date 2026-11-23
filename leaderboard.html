@@ -12,6 +12,8 @@
 <script src="./pricing.js"></script>
 <script src="./leaderboard-core.js"></script>
 <script src="./roles.js"></script>
+<script src="./nav.js" defer></script>
+<script src="./update-check.js" defer></script>
 <style>
 :root { --gold:#C7A66A; --bg:#050505; --card:#111318; --line:#26292f; --muted:#8b8f98; }
 * { box-sizing:border-box; }
@@ -70,7 +72,7 @@ details[open] summary { margin-bottom:8px; }
 <div class="wrap">
   <header>
     <h1>ASBC <span>Leaderboard</span></h1>
-    <div style="display:flex;gap:6px"><a class="btn" href="./home.html">Home</a><a class="btn" href="./log.html">Quote Log</a><a class="btn" href="./index.html?calc=1">Calculator</a></div>
+    <nav id="asbcNav" data-page="leaderboard"></nav>
   </header>
   <div class="tabs"><button class="tab on" data-p="month">This month</button><button class="tab" data-p="last">Last month</button><button class="tab" data-p="quarter">Quarter</button></div>
   <div id="me"></div>

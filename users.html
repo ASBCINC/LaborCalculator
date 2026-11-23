@@ -12,6 +12,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
 <script src="./roles.js"></script>
+<script src="./nav.js" defer></script>
 <script src="./update-check.js" defer></script>
 <style>
 :root { --gold:#C7A66A; --bg:#050505; --card:#111318; --line:#26292f; --muted:#8b8f98; }
@@ -38,7 +39,7 @@ th { color:var(--muted); font-size:10px; text-transform:uppercase; letter-spacin
 </head>
 <body>
 <div class="wrap">
-  <header><h1>ASBC <span>User Roles</span></h1><div style="display:flex;gap:6px"><a class="btn" href="./home.html">Home</a></div></header>
+  <header><h1>ASBC <span>User Roles</span></h1><nav id="asbcNav" data-page="users"></nav></header>
   <div id="app"><div class="muted">Loading…</div></div>
 </div>
 <script>
@@ -52,7 +53,7 @@ let USERS = {}, ROWS = [], ME = '';
 const QTXT = { all: 'All quotes', own: 'Own quotes', none: '—' }, RTXT = { all: 'All', assigned: 'Assigned', none: '—' };
 function matrix() {
   const cols = ['calendar', 'calculator', 'recaps', 'pipeline', 'leaderboard', 'users'];
-  return `<div class="card"><div class="sect">What each role can open</div><div style="overflow-x:auto"><table class="matrix"><tr><th>Role</th>${cols.map(c => `<th>${esc(R.PAGES[c].label)}</th>`).join('')}<th>Quotes</th><th>Job recaps</th></tr>
+  return `<div class="card"><div class="sect">What each role can open</div><div style="overflow-x:auto"><table class="matrix"><tr><th>Role</th>${cols.map(c => `<th>${esc(R.PAGES[c].label)}</th>`).join('')}<th>Quotes they see</th><th>Recaps they see</th></tr>
     ${R.ORDER.map(k => `<tr><td><b>${esc(R.DEFS[k].label)}</b></td>${cols.map(c => R.can(k, c) ? '<td class="y">✓</td>' : '<td class="n">—</td>').join('')}<td>${QTXT[R.DEFS[k].quotes]}</td><td>${RTXT[R.DEFS[k].recaps]}</td></tr>`).join('')}</table></div>
     <div class="muted" style="margin-top:6px">Sales Managers only see and edit their own quotes. Team Leads and Installers only see job recaps they're assigned to.</div></div>`;
 }

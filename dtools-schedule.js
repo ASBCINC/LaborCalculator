@@ -13,6 +13,10 @@
 //   - no quote, Anthony's project, install not done: a job without a quote is created (as before).
 //   - anything else is shown on the Calendar as a D-Tools event (config/dtoolsEvents), with its team color and notes.
 // A job only changes when its calendar events changed (schedule.dtoolsHash). Dates and techs Anthony added by hand are kept.
+// v8.33.0: every event is kept in config/dtoolsEvents (with the job it belongs to, so the Pipeline can show the next install);
+// the D-Tools project name is stored on the job (project.dtoolsProjectName) and shown as its title; when an install is added
+// or its days, times or techs change, the assigned techs get a Teams message (relay /notify); window.asbcRecapNudge() reminds
+// techs about today's jobs with no report (run by the D-Tools pull at its 5:37 PM run).
 (function () {
   const pad = n => String(n).padStart(2, '0');
   function parse(v) {  // -> { date: 'YYYY-MM-DD', time: 'HH:MM' | '' }
@@ -26,6 +30,13 @@
   }
   const fold = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
   function hash(o) { const s = JSON.stringify(o); let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return String(h); }
+  const RELAY = 'https://yellow-cloud-830a.a-ward-612.workers.dev';
+  async function notify(body) {
+    try { const t = await firebase.auth().currentUser.getIdToken();
+      const r = await fetch(RELAY + '/notify', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + t }, body: JSON.stringify(body) });
+      return r.status; } catch (e) { return 'error'; }
+  }
+  const todayPT = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
   const cleanAddr = a => String(a || '').replace(/\r?\n/g, ', ').replace(/,\s*United States$/i, '').trim();
 
   async function importSchedule(projects) {
@@ -40,7 +51,8 @@
     try { const s = await db.collection('pipeline').doc('data').get(); if (s.exists) pipe = (JSON.parse(s.data().json || '{}').projects) || {}; } catch (e) {}
     const idByName = {}, stageOf = {}; Object.values(pipe).forEach(p => { idByName[fold(p.name)] = p.id; stageOf[p.id] = p.stage || ''; });
     const all = (await db.collection('quotes').get()).docs.filter(d => { const q = d.data(); return !q.isTemplate && !q.jobDeleted; });
-    const out = { updated: [], created: [], linked: [], removed: [], unchanged: 0, events: 0, skipped: [] };
+    const out = { updated: [], created: [], linked: [], removed: [], unchanged: 0, events: 0, notified: [], skipped: [] };
+    const toNotify = [];
     const events = [];
     for (const p of projects || []) {
       const tasks = (p.tasks || []).map(t => ({ ...t, techs: (t.assignees || []).map(n => techByName[fold(n)]).filter(Boolean), when: parse(t.start) || parse(t.due), until: parse(t.end) }))
@@ -60,7 +72,9 @@
       let doc = real[0] || holders[0] || null;
       const evBase = t => ({ id: t.id, date: t.when.date, start: t.when.time, end: t.until && t.until.time > t.when.time ? t.until.time : '', name: p.name, client: p.client || '', number: p.number || '',
         techs: t.techs, people: t.assignees || [], desc: String(t.desc || '').trim(), address: cleanAddr(t.address), status: t.status || '', stage: p.stage || '' });
-      if (!crew.length) { tasks.forEach(t => events.push(Object.assign(evBase(t), { job: doc ? doc.id : '' }))); continue; }
+      const crewNames = t => (t.assignees || []).filter(n => techByName[fold(n)]);
+      const pushEv = (t, job) => events.push(Object.assign(evBase(t), { job: job || '', crew: crewNames(t) }));
+      if (!crew.length) { tasks.forEach(t => pushEv(t, doc ? doc.id : '')); continue; }
       const dates = [...new Set(crew.map(t => t.when.date))].sort();
       const techs = [...new Set(crew.flatMap(t => t.techs))].sort();
       const times = {}; crew.filter(t => t.when.time).forEach(t => { const e = evBase(t); if (!times[e.date] || e.start < times[e.date].start) times[e.date] = { start: e.start, end: e.end }; });
@@ -80,7 +94,8 @@
         if (p.number && !pr.dtoolsOppNumber) link['dtoolsOppNumber'] = p.number;
         if (p.client && !pr.dtoolsClientName) link['dtoolsClientName'] = p.client;
         if (p.rep && !pr.salesManagerName) link['salesManagerName'] = p.rep;
-        if (Object.keys(link).length) out.linked.push(p.name);
+        if (p.name && pr.dtoolsProjectName !== p.name) link['dtoolsProjectName'] = p.name;
+        if (Object.keys(link).some(k => k !== 'dtoolsProjectName')) out.linked.push(p.name);
         if (sc.dtoolsHash === sig && !Object.keys(link).length) { out.unchanged++; }
         else {
           const prevImport = sc.dtoolsImport || { dates: [], techs: [] };
@@ -93,24 +108,44 @@
           const st = open && ['draft', 'won', undefined, ''].includes(q.status) ? 'scheduled' : q.status;
           await ref.set(Object.assign({ schedule, status: st, project: Object.assign({}, pr, link) }, open ? { jobHidden: false } : {}), { merge: true });
           out.updated.push(p.name);
+          // tell the techs when the install itself changed (not on a link-only or first-time refresh with the same days/times/techs)
+          const was = JSON.stringify([(sc.dates || []).slice().sort(), sc.times || (sc.start ? { all: [sc.start, sc.end || ''] } : {}), (sc.techs || []).slice().sort()]);
+          const now2 = JSON.stringify([schedule.dates, Object.keys(times).length ? times : (schedule.start ? { all: [schedule.start, schedule.end || ''] } : {}), schedule.techs.slice().sort()]);
+          if (open && was !== now2 && schedule.dates.some(d => d >= todayPT())) toNotify.push({ quote: ref.id, change: (sc.dates || []).length ? 'updated' : 'new', name: p.name });
         }
-        tasks.filter(t => !t.techs.length).forEach(t => events.push(Object.assign(evBase(t), { job: doc.id })));
+        tasks.forEach(t => pushEv(t, doc.id));
       } else if (p.mine && open) {
         const id = 'job-dt-' + (dtoolsId || fold(p.name).replace(/[^a-z0-9]+/g, '-')).slice(0, 60);
         await db.collection('quotes').doc(id).set({
           id, label: p.name, noQuote: true, status: 'scheduled', items: [], isTemplate: false, counted: 'dtools-schedule', updatedAt: new Date(),
-          project: { customerName: p.name, salesManagerName: p.rep || '', dtoolsOpportunityId: dtoolsId, dtoolsOppNumber: p.number || '', dtoolsClientName: p.client || '' },
+          project: { customerName: p.name, dtoolsProjectName: p.name, salesManagerName: p.rep || '', dtoolsOpportunityId: dtoolsId, dtoolsOppNumber: p.number || '', dtoolsClientName: p.client || '' },
           schedule: { dates, techs, start, end, times, notes, address, dtoolsHash: sig, dtoolsImport: { dates, techs, at: now }, dtoolsEventIds: crew.map(t => t.id), fromDtools: true, updatedAt: now, updatedBy: 'D-Tools calendar' }
         }, { merge: true });
         out.created.push(p.name);
+        tasks.forEach(t => pushEv(t, id));
+        if (dates.some(d => d >= todayPT())) toNotify.push({ quote: id, change: 'new', name: p.name });
       } else {
-        tasks.forEach(t => events.push(Object.assign(evBase(t), { job: '' })));   // not ours / install done: show on the Calendar only
+        tasks.forEach(t => pushEv(t, ''));   // not ours / install done: show on the Calendar only
         out.skipped.push(p.name + (finished ? ' (install done)' : ' (no quote, not your project)') + ': shown as calendar event');
       }
     }
     out.events = events.filter(e => !e.job).length;
     await db.collection('config').doc('dtoolsEvents').set({ events, at: new Date().toISOString() });
+    for (const n of toNotify) out.notified.push(n.name + ': ' + await notify({ kind: 'schedule', quote: n.quote, change: n.change }));
+    return out;
+  }
+  // Today's jobs (Pacific date) still waiting on a report: one Teams reminder to the assigned techs.
+  async function recapNudge() {
+    const db = firebase.firestore(), d = todayPT(), out = [];
+    const docs = (await db.collection('quotes').where('status', '==', 'scheduled').get()).docs;
+    for (const s of docs) { const q = s.data(), sc = q.schedule || {};
+      if (q.isTemplate || q.jobDeleted || !(sc.dates || []).includes(d) || !(sc.techs || []).length || (q.job || {}).submittedAt) continue;
+      if ((q.nudged || '') === d) continue;
+      const st = await notify({ kind: 'nudge', quote: s.id });
+      if (st === 200) await s.ref.set({ nudged: d }, { merge: true });
+      out.push((((q.project || {}).dtoolsProjectName) || q.label) + ': ' + st); }
     return out;
   }
   window.asbcImportSchedule = importSchedule;
+  window.asbcRecapNudge = recapNudge;
 })();

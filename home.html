@@ -13,6 +13,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
 <script src="./roles.js"></script>
+<script src="./nav.js" defer></script>
+<script src="./health.js"></script>
 <script src="./update-check.js" defer></script>
 <style>
 :root { --gold:#C7A66A; --bg:#050505; --card:#111318; --line:#26292f; --muted:#8b8f98; }
@@ -30,12 +32,19 @@ h1 { margin:0; font-size:20px; } h1 span { color:var(--gold); }
 .tile svg { width:28px; height:28px; stroke:var(--gold); fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
 .tile b { font-size:16px; display:block; margin-top:12px; } .tile span { color:var(--muted); font-size:12px; margin-top:3px; display:block; }
 .empty { color:var(--muted); text-align:center; padding:40px 0; }
+.tile .cnt { display:block; color:var(--gold); font-size:12px; font-weight:700; margin-top:6px; min-height:15px; }
+.attn { background:var(--card); border:1px solid #5a4a2a; border-radius:16px; padding:14px 16px; margin-bottom:16px; }
+.attn h2 { margin:0 0 8px; font-size:14px; color:var(--gold); letter-spacing:.04em; text-transform:uppercase; }
+.attn a.it { display:block; color:#fff; text-decoration:none; padding:8px 0; border-top:1px solid var(--line); font-size:14px; } .attn a.it:first-of-type { border-top:0; }
+.attn .lv { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:8px; } .lv.high { background:#ef4444; } .lv.medium { background:#f59e0b; } .lv.low { background:#8b8f98; }
+.attn .its { color:var(--muted); font-size:12px; margin:2px 0 0 16px; }
+.top { flex-wrap:wrap; }
 @media (min-width:720px) { .grid { grid-template-columns:repeat(3, minmax(0, 1fr)); } }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="top"><div class="brand"><div><h1>ASBC <span>Home</span></h1><div class="who" id="who"></div></div></div><button class="out" id="out" style="display:none">Sign out</button></div>
+  <div class="top"><div class="brand"><div><h1>ASBC <span>Home</span></h1><div class="who" id="who"></div></div></div><nav id="asbcNav" data-page="home"></nav></div>
   <div id="app"><div class="empty">Loading…</div></div>
 </div>
 <script>
@@ -55,7 +64,6 @@ const ICON = {
 const SUB = { calendar: 'Scheduled installs by month', calculator: 'Build and save labor quotes', recaps: 'Time, recap, photos and sign-off',
   pipeline: 'Projects and opportunities', leaderboard: 'Quotes and accuracy by rep', quotes: 'Saved quotes', users: 'Who can see and edit what' };
 const SHOW = ['calendar', 'calculator', 'recaps', 'pipeline', 'leaderboard', 'quotes', 'users'];
-document.getElementById('out').onclick = () => { if (confirm('Sign out on this device?')) firebase.auth().signOut().then(() => location.replace('./index.html')); };
 firebase.auth().onAuthStateChanged(async u => {
   if (!u || !u.emailVerified) { location.replace('./index.html'); return; }  // the calculator page holds the sign-in and email confirmation
   try { if (!(await u.getIdTokenResult()).claims.email_verified) { await u.reload(); await u.getIdToken(true); } } catch (e) {}
@@ -63,12 +71,44 @@ firebase.auth().onAuthStateChanged(async u => {
   const us = await db.collection('config').doc('users').get().catch(() => null);
   const p = ((us && us.exists && us.data().users) || {})[email] || (email === ASBCRoles.OWNER ? { name: 'Anthony Ward', role: 'admin' } : null);
   const access = ASBCRoles.accessOf(p, email);
-  document.getElementById('out').style.display = '';
   if (!access) { document.getElementById('app').innerHTML = `<div class="empty">${esc(email)} isn't on the approved list yet. Ask Anthony to add you.</div>`; return; }
   document.getElementById('who').textContent = (p && p.name ? p.name + ' · ' : '') + ASBCRoles.DEFS[access].label;
   const pages = SHOW.filter(k => ASBCRoles.can(access, k));
-  document.getElementById('app').innerHTML = '<div class="grid">' + pages.map(k => `<a class="tile" href="${ASBCRoles.PAGES[k].href}">${ICON[k]}<div><b>${esc(ASBCRoles.PAGES[k].label)}</b><span>${esc(SUB[k])}</span></div></a>`).join('') + '</div>';
+  document.getElementById('app').innerHTML = '<div id="attn"></div><div class="grid">' + pages.map(k => `<a class="tile" href="${ASBCRoles.PAGES[k].href}">${ICON[k]}<div><b>${esc(ASBCRoles.PAGES[k].label)}</b><span>${esc(SUB[k])}</span><span class="cnt" id="cnt-${k}"></span></div></a>`).join('') + '</div>';
+  counts(access, p, email).catch(() => {});
+  if (access === 'admin') asbcHealth().then(showHealth).catch(() => {});
 });
+// v8.33.0 tile counts (O) and the admin "Needs attention" list (E, health.js)
+const todayPT = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
+const plusDays = (d, n) => { const x = new Date(d + 'T12:00:00Z'); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
+const setCnt = (k, t) => { const el = document.getElementById('cnt-' + k); if (el) el.textContent = t; };
+const plural = (n, w) => n + ' ' + w + (n === 1 ? '' : 's');
+async function counts(access, p, email) {
+  const L = ASBCRoles.LEGACY[access] || {};
+  let docs;
+  if (L.role === 'tech' && !L.allQuotes) docs = (await db.collection('quotes').where('schedule.techs', 'array-contains', email).get()).docs;
+  else if (L.role === 'rep' && !L.allQuotes) docs = (await db.collection('quotes').where('project.salesManagerName', '==', (p && p.name) || '').get()).docs;
+  else docs = (await db.collection('quotes').get()).docs;
+  const qs = docs.map(d => d.data()).filter(q => !q.isTemplate && !q.jobDeleted);
+  const t = todayPT(), wk = plusDays(t, 6);
+  const dates = q => (q.schedule || {}).dates || [];
+  const jobs = qs.filter(q => ['won', 'scheduled', 'submitted', 'closed'].includes(q.status));
+  const thisWeek = jobs.filter(q => dates(q).some(d => d >= t && d <= wk)).length;
+  setCnt('calendar', thisWeek ? plural(thisWeek, 'install') + ' in the next 7 days' : 'Nothing in the next 7 days');
+  const mine = L.role === 'tech' ? jobs.filter(q => (dates(q) || []).length && ((q.schedule || {}).techs || []).includes(email)) : jobs;
+  const due = mine.filter(q => q.status === 'scheduled' && dates(q).some(d => d <= t) && !(q.job || {}).submittedAt).length;
+  const upcoming = mine.filter(q => q.status === 'scheduled' && dates(q).some(d => d >= t)).length;
+  setCnt('recaps', [due ? plural(due, 'report') + ' due' : '', upcoming ? upcoming + ' upcoming' : ''].filter(Boolean).join(' · ') || 'All caught up');
+  setCnt('quotes', plural(qs.filter(q => !q.noQuote).length, 'saved quote'));
+  try { const s = await db.collection('config').doc('users').get(); setCnt('users', plural(Object.keys((s.data() || {}).users || {}).length, 'person') .replace('persons', 'people')); } catch (e) {}
+  if (ASBCRoles.can(access, 'pipeline')) try { const s = await db.collection('pipeline').doc('data').get(); if (s.exists) { const d = JSON.parse(s.data().json || '{}');
+    const act = Object.values(d.projects || {}).filter(x => !/completed/i.test(x.stage || '')).length; setCnt('pipeline', plural(act, 'active project') + ' · ' + plural(Object.keys(d.opps || {}).length, 'opportunity').replace('opportunitys', 'opportunities')); } } catch (e) {}
+}
+function showHealth(h) {
+  const box = document.getElementById('attn'); if (!box) return;
+  if (!h.issues.length) { box.innerHTML = '<div class="attn" style="border-color:var(--line)"><h2>Needs attention</h2><div style="color:var(--muted);font-size:14px">Nothing right now. Data checks all pass.</div></div>'; return; }
+  box.innerHTML = '<div class="attn"><h2>Needs attention (' + h.issues.length + ')</h2>' + h.issues.map(i => `<a class="it" href="${esc(i.href)}"><span class="lv ${i.level}"></span>${esc(i.text)}${i.items.length ? `<div class="its">${esc(i.items.join(' · '))}</div>` : ''}</a>`).join('') + '</div>';
+}
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
 </script>
 </body>

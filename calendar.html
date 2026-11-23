@@ -13,7 +13,9 @@
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
 <script src="./roles.js"></script>
+<script src="./nav.js" defer></script>
 <script src="./dtools-schedule.js"></script>
+<script src="./health.js"></script>
 <script src="./update-check.js" defer></script>
 <style>
 :root { --gold:#C7A66A; --bg:#050505; --card:#111318; --line:#26292f; --muted:#8b8f98; --sf:#f59e0b; --la:#3b82f6; --none:#6b7280; }
@@ -66,7 +68,7 @@ select { background:#101216; border:1px solid var(--line); color:#fff; border-ra
 <div class="wrap">
   <header>
     <h1>ASBC <span>Calendar</span></h1>
-    <div style="display:flex;gap:6px"><a class="btn" href="./home.html">Home</a><a class="btn" href="./index.html?calc=1">Calculator</a></div>
+    <nav id="asbcNav" data-page="calendar"></nav>
   </header>
   <div class="bar">
     <button class="btn" id="prev" aria-label="Previous month">‹</button>
@@ -102,7 +104,7 @@ const teamTag = t => t === 'BOTH' ? '<span class="tag SF">SF Team</span> <span c
 const t12 = v => { if (!v) return ''; const [h, m] = v.split(':').map(Number); return ((h % 12) || 12) + (m ? ':' + String(m).padStart(2, '0') : '') + (h < 12 ? 'a' : 'p'); };
 // v8.32.0: per-day windows from the D-Tools calendar (schedule.times[date]); D-Tools all-day events show "All day"
 const windowOf = (s, d) => { s = s || {}; const w = (d && s.times && s.times[d]) || (s.times && Object.keys(s.times).length ? null : s); return w && w.start ? t12(w.start) + (w.end ? '–' + t12(w.end) : '') : s.fromDtools ? 'All day' : 'Time TBD'; };
-const label = q => q.label || (q.project && q.project.customerName) || 'Untitled';
+const label = q => (q.project && q.project.dtoolsProjectName) || q.label || (q.project && q.project.customerName) || 'Untitled';  // v8.33.0 D-Tools project name first
 function render() {
   const teamF = document.getElementById('teamF').value;
   const y = VIEW.getFullYear(), m = VIEW.getMonth();

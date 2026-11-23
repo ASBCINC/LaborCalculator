@@ -14,6 +14,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
 <script src="./roles.js"></script>
+<script src="./nav.js" defer></script>
 <script src="./update-check.js" defer></script>
 <style>
 :root { --gold:#C7A66A; --bg:#050505; --card:#111318; --line:#26292f; --muted:#8b8f98; --good:#7ee2a0; --warn:#ffd479; --bad:#ff8b8b; --blue:#8fb3ff; }
@@ -66,7 +67,7 @@ table { width:100%; border-collapse:collapse; font-size:12px; } td, th { text-al
 <div class="wrap">
   <header>
     <div><h1>ASBC <span>Pipeline</span></h1><div class="muted" id="synced"></div></div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn" id="refresh">Refresh</button><a class="btn" href="./home.html">Home</a><a class="btn" href="./calendar.html">Calendar</a><a class="btn" href="./index.html?calc=1">Calculator</a></div>
+    <nav id="asbcNav" data-page="pipeline"><button class="hnav" data-keep id="refresh">Refresh</button></nav>
   </header>
   <div id="app"><div class="empty">Loading…</div></div>
 </div>
@@ -86,10 +87,17 @@ const COLS = [['NEW', ['new']], ['PLANNING', ['planning']], ['SCHEDULED', ['sche
 const colOf = p => { const s = String(p.stage || '').toLowerCase(); const c = COLS.find(([, l]) => l.includes(s)); return c ? c[0] : (s === 'completed' ? null : 'IN PROGRESS'); };
 const KIND = { stage: 'Stage', co: 'Change order', payment: 'Payment', job: 'Job report', new: 'Assigned', value: 'Value' };
 let DATA = null, F = { q: '', rep: '', attn: false };
+// v8.33.0: next install from the D-Tools calendar (config/dtoolsEvents, refreshed by the D-Tools pull)
+let EVENTS = [];
+const todayISO = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
+const t12 = v => { if (!v) return ''; const [h, m] = v.split(':').map(Number); return ((h % 12) || 12) + (m ? ':' + String(m).padStart(2, '0') : '') + (h < 12 ? 'a' : 'p'); };
+function nextInstall(p) { const t = todayISO(); const l = EVENTS.filter(e => e.name === p.name && e.date >= t).sort((a, b) => (a.date + (a.start || '')).localeCompare(b.date + (b.start || ''))); return l[0] || null; }
+const instTxt = e => fmtD(e.date) + (e.start ? ' ' + t12(e.start) + (e.end ? '–' + t12(e.end) : '') : '') + ((e.crew || []).length ? ' · ' + e.crew.map(n => n.split(' ')[0]).join(', ') : '');
 function flags(p) {
   const out = [], col = colOf(p), d = days(p.stageAt);
   if (/delayed/i.test(p.stage || '') && col !== 'INSTALLED') out.push(['DELAYED', 'b']);
   if (col === 'INSTALLED' && d >= 30) out.push(['CLOSE OUT', 'w']);
+  if (EVENTS.length && ['IN PROGRESS', 'SCHEDULED'].includes(col) && !/delayed/i.test(p.stage || '') && !nextInstall(p)) out.push(['NOT SCHEDULED', 'w']);
   const pend = (p.cos || []).filter(c => !/accept|approv|declin|reject|void|cancel/i.test(c.state || ''));
   if (pend.length) out.push([pend.length + ' CO PENDING', 'w']);
   const due = (p.payments || []).filter(x => x.paid < x.amount - 0.01 && /invoic|overdue|due/i.test(x.status || ''));
@@ -105,6 +113,7 @@ function card(p) {
   return `<div class="pc ${isNew(p) ? 'newp' : ''}" data-id="${esc(p.id)}" data-t="p"><div class="nm">${esc(p.name)}</div>
     <div class="sub">${esc(p.client || '')}${p.rep ? ' · ' + esc(p.rep) : ''}</div>
     <div class="money"><span>${usd0(p.price)}</span><span class="muted">${p.paid != null ? pct + '% paid' : ''}</span></div>${p.paid != null ? `<div class="pbar"><i style="width:${pct}%"></i></div>` : ''}
+    ${nextInstall(p) ? `<div class="sub" style="color:#C7A66A;margin-top:4px">Next install: ${esc(instTxt(nextInstall(p)))}</div>` : ''}
     <div class="badges">${isNew(p) ? '<span class="bd w">NEW</span>' : ''}${d != null ? `<span class="bd">${d}d in stage</span>` : ''}${flags(p).map(([t, c]) => `<span class="bd ${c}">${esc(t)}</span>`).join('')}</div>
     ${ev ? `<div class="last"><b>${esc(KIND[ev.kind] || ev.kind)} · ${esc(ago(ev.at))}</b><br>${esc(ev.text)}</div>` : ''}</div>`;
 }
@@ -152,7 +161,7 @@ function detail(r, type) {
     ${type === 'p' ? `<div class="sect">Money</div><table><tr><td>Contract</td><td class="r">${usd(r.price)}</td></tr><tr><td>Paid</td><td class="r">${r.paid != null ? usd(r.paid) : '—'}</td></tr><tr><td>Balance</td><td class="r">${r.paid != null ? usd((r.price || 0) - r.paid) : '—'}</td></tr></table>
       ${(r.payments || []).length ? `<div class="sect">Payments</div><table><tr><th>Name</th><th>Status</th><th>Due</th><th class="r">Amount</th><th class="r">Paid</th></tr>${r.payments.map(x => `<tr><td>${esc(x.name)}</td><td>${esc(x.status)}</td><td>${fmtD(x.due)}</td><td class="r">${usd(x.amount)}</td><td class="r">${usd(x.paid)}</td></tr>`).join('')}</table>` : ''}
       ${(r.cos || []).length ? `<div class="sect">Change orders</div><table><tr><th>CO</th><th>Name</th><th>State</th><th class="r">Price</th></tr>${r.cos.map(c => `<tr><td>${esc(c.number)}</td><td>${esc(c.name)}</td><td>${esc(c.state)}</td><td class="r">${usd(c.price)}</td></tr>`).join('')}</table>` : ''}
-      <div class="sect">Dates</div><table><tr><td>Won</td><td class="r">${fmtD(r.won)}</td></tr><tr><td>Start</td><td class="r">${fmtD(r.start)}</td></tr><tr><td>End</td><td class="r">${fmtD(r.end)}</td></tr><tr><td>Last D-Tools change</td><td class="r">${fmtD(r.modified)}</td></tr></table>`
+      <div class="sect">Dates</div><table>${EVENTS.filter(e => e.name === r.name && e.date >= todayISO()).sort((a, b) => a.date.localeCompare(b.date)).map(e => `<tr><td>Install</td><td class="r">${esc(instTxt(e))}</td></tr>`).join('')}<tr><td>Won</td><td class="r">${fmtD(r.won)}</td></tr><tr><td>Start</td><td class="r">${fmtD(r.start)}</td></tr><tr><td>End</td><td class="r">${fmtD(r.end)}</td></tr><tr><td>Last D-Tools change</td><td class="r">${fmtD(r.modified)}</td></tr></table>`
     : `<div class="sect">Deal</div><table><tr><td>Value</td><td class="r">${usd(r.total)}</td></tr><tr><td>Probability</td><td class="r">${r.probability != null ? esc(r.probability) + '%' : '—'}</td></tr><tr><td>Est. close</td><td class="r">${fmtD(r.estClose)}</td></tr><tr><td>Last D-Tools change</td><td class="r">${fmtD(r.modified)}</td></tr></table>`}
     <div class="sect">Activity</div>${feed.map(e => `<div class="ev"><div class="k k-${esc(e.kind)}">${esc(KIND[e.kind] || e.kind)}</div><div class="t">${e.link ? `<a href="${esc(e.link)}" style="color:#fff">${esc(e.text)}</a>` : esc(e.text)}<div class="d">${esc(new Date(e.at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }))}</div></div></div>`).join('') || '<div class="empty">No activity recorded yet. New stage changes, change orders, payments and job reports will show here.</div>'}</div>`;
   bg.addEventListener('click', e => { if (e.target === bg || e.target.closest('[data-x]')) bg.remove(); });
@@ -163,7 +172,9 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') document.que
 async function load() {
   const s = await db.collection('pipeline').doc('data').get();
   if (!s.exists) { document.getElementById('app').innerHTML = '<div class="empty">No pipeline data yet. It appears after the next D-Tools sync (within about 10 minutes).</div>'; return; }
-  DATA = JSON.parse(s.data().json || '{}'); render();
+  DATA = JSON.parse(s.data().json || '{}');
+  try { const ev = await db.collection('config').doc('dtoolsEvents').get(); EVENTS = (ev.exists && ev.data().events) || []; } catch (e) { EVENTS = []; }
+  render();
 }
 document.getElementById('refresh').onclick = () => load().catch(err => alertBox(err));
 const alertBox = err => document.getElementById('app').innerHTML = '<div class="empty">Could not load: ' + esc(err.message || err) + '</div>';

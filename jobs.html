@@ -14,6 +14,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
 <script src="./leaderboard-core.js"></script>
 <script src="./roles.js"></script>
+<script src="./nav.js" defer></script>
 <script src="./update-check.js" defer></script>
 <style>
 :root { --gold:#C7A66A; --bg:#050505; --card:#111318; --line:#26292f; --muted:#8b8f98; }
@@ -32,6 +33,8 @@ input, select { background:#101216; border:1px solid var(--line); color:#fff; bo
 .b-a { color:#7ee2a0; border-color:#2f7a4c; }
 .qrow { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin-bottom:8px; cursor:pointer; }
 .qrow:hover { border-color:var(--gold); }
+.qrow.SF { border-left:4px solid #f59e0b; } .qrow.LA { border-left:4px solid #3b82f6; } .qrow.BOTH { border-left:4px solid #f59e0b; box-shadow:inset 4px 0 0 0 #3b82f6; }
+.tm { font-size:10px; font-weight:800; padding:1px 6px; border-radius:999px; border:1px solid; margin-left:4px; } .tm.SF { color:#f59e0b; } .tm.LA { color:#3b82f6; }
 .qtop { display:flex; justify-content:space-between; gap:10px; align-items:baseline; }
 .qname { font-weight:700; font-size:15px; }
 .qmeta { color:var(--muted); font-size:11px; margin-top:2px; }
@@ -117,7 +120,7 @@ input, select, textarea { font-size:16px; }
 <div class="wrap">
   <header>
     <h1>ASBC <span id="pageTitle">Jobs</span></h1>
-    <div style="display:flex;gap:6px" class="no-print"><a class="btn" href="./home.html">Home</a><a class="btn" href="./jobs.html">All jobs</a><a class="btn" href="./calendar.html">Calendar</a><a class="btn" id="calcLink" href="./index.html?calc=1">Calculator</a><button class="btn" id="installBtn" style="display:none;border-color:#C7A66A;color:#C7A66A">Install app</button><button class="btn" id="signOutBtn" style="display:none" onclick="if(confirm('Sign out on this device?'))firebase.auth().signOut().then(()=>location.href='./index.html')">Sign out</button></div>
+    <nav id="asbcNav" data-page="recaps" class="no-print"><button class="hnav" data-keep id="installBtn" style="display:none;border-color:#C7A66A;color:#C7A66A">Install app</button></nav>
   </header>
   <div id="app"><div class="empty">Loading…</div></div>
 </div>
@@ -205,9 +208,12 @@ const techs = () => Object.entries(USERS).filter(([e, u]) => u.role === 'tech').
 const nameOf = e => (USERS[e] && USERS[e].name) || e;
 const tWin = sc => { const f = v => { if (!v) return ''; const [h, m] = v.split(':').map(Number); return ((h % 12) || 12) + ':' + String(m).padStart(2, '0') + (h < 12 ? ' AM' : ' PM'); }; return f(sc.start) + (sc.end ? '–' + f(sc.end) : ''); };  // v8.26.0 time window
 // v8.32.0: install days with their own D-Tools time window, e.g. "Mon, Nov 23 11:00 AM–4:00 PM"
-const dayWins = sc => (sc.dates || []).map(d => fmtDate(d) + (sc.times && sc.times[d] ? ' ' + tWin(sc.times[d]) : (!sc.times || !Object.keys(sc.times).length) && sc.start ? ' ' + tWin(sc) : sc.fromDtools ? ' (all day)' : '')).join(', ');
+const dayWins = (sc, sep) => (sc.dates || []).map(d => fmtDate(d) + (sc.times && sc.times[d] ? ' ' + tWin(sc.times[d]) : (!sc.times || !Object.keys(sc.times).length) && sc.start ? ' ' + tWin(sc) : sc.fromDtools ? ' (all day)' : '')).join(sep || ', ');
 const fmtDate = d => d ? new Date(d + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : '';
-const label = q => q.label || (q.project && q.project.customerName) || 'Untitled';
+// v8.33.0: jobs linked to D-Tools are titled by the D-Tools project name; the quote's own name shows underneath when different
+const label = q => (q.project && q.project.dtoolsProjectName) || q.label || (q.project && q.project.customerName) || 'Untitled';
+const subLabel = q => { const a = q.label || (q.project && q.project.customerName) || ''; return a && a !== label(q) ? 'Quote: ' + a : ''; };
+const teamCls = q => ASBCTeams.ofEmails((q.schedule || {}).techs, USERS);
 function lineEst(it) {
   const c = it.isCustom ? it : (CATALOG.get(it.id) || {});
   const per = (Number(c.installHours) || 0) + (Number(c.programmingHours) || 0) + (it.addon ? (Number(it.addon.installHours) || 0) + (Number(it.addon.programmingHours) || 0) : 0);
@@ -225,17 +231,25 @@ async function showList() {
   const dated = q => ((q.schedule || {}).dates || []).length > 0;
   const jobs = docs.map(d => ({ _id: d.id, ...d.data() })).filter(q => q.status && q.status !== 'draft' && !q.jobDeleted && !(q.jobHidden && !dated(q)));  // removed undated jobs come back once they get dates; deleted jobs come back only if re-scheduled from the Quote Log
   const first = q => ((q.schedule && q.schedule.dates) || []).slice().sort()[0] || '';
+  // v8.33.0: submitted reports whose last install day (or submission) is 30+ days old move to the Archive
+  const cut = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10);
+  const lastDay = q => ((q.schedule || {}).dates || []).slice().sort().pop() || String((q.job || {}).submittedAt || '').slice(0, 10) || '';
+  const old = q => ['submitted', 'closed'].includes(q.status) && lastDay(q) && lastDay(q) < cut;
+  const ARCH = new URLSearchParams(location.search).has('archive');
+  const archived = jobs.filter(old);
+  if (ARCH) { jobs.length = 0; archived.forEach(q => jobs.push(q)); } else { const keep = jobs.filter(q => !old(q)); jobs.length = 0; keep.forEach(q => jobs.push(q)); }
   const groups = ME.role === 'rep' ? [['Job reports', jobs.filter(q => ['submitted', 'closed'].includes(q.status))], ['Scheduled', jobs.filter(q => q.status === 'scheduled')]]
     : ME.role === 'tech'
     ? [['Assigned to you', jobs.filter(q => q.status === 'scheduled')], ['Submitted reports', jobs.filter(q => ['submitted', 'closed'].includes(q.status))]]
     : [['Older reports awaiting approval', jobs.filter(q => q.status === 'submitted')], ['Won: needs scheduling', jobs.filter(q => q.status === 'won')], ['Scheduled', jobs.filter(q => q.status === 'scheduled' && dated(q))], ['Not on the calendar', jobs.filter(q => q.status === 'scheduled' && !dated(q))], ['Submitted reports', jobs.filter(q => q.status === 'closed')]];
-  app().innerHTML = (ME.role === 'rep' ? '' : `<div class="qactions" style="margin:0 0 6px"><button class="qbtn gold" onclick="showNew()">+ Job report without a quote</button></div>`) + groups.filter(g => g[1].length || !['Not on the calendar', 'Older reports awaiting approval'].includes(g[0])).map(([t, list]) => `<div class="sect">${esc(t)} (${list.length})</div>` + (t === 'Not on the calendar' ? '<div class="qmeta" style="margin:-4px 0 8px">Marked scheduled but no install date. Open one to add dates, or Delete it.</div>' : '') +
-    (list.length ? list.sort((a, b) => first(a).localeCompare(first(b))).map(q => `<a href="?quote=${encodeURIComponent(q._id)}" style="text-decoration:none;color:inherit"><div class="qrow">
+  app().innerHTML = (ARCH ? `<div class="qactions" style="margin:0 0 6px"><a class="qbtn" href="./jobs.html">‹ Back to current jobs</a></div><div class="sect">Archive: reports older than 30 days (${archived.length})</div>` : ME.role === 'rep' ? '' : `<div class="qactions" style="margin:0 0 6px"><button class="qbtn gold" onclick="showNew()">+ Job report without a quote</button></div>`) + groups.filter(g => g[1].length || !['Not on the calendar', 'Older reports awaiting approval'].includes(g[0])).map(([t, list]) => `<div class="sect">${esc(t)} (${list.length})</div>` + (t === 'Not on the calendar' ? '<div class="qmeta" style="margin:-4px 0 8px">Marked scheduled but no install date. Open one to add dates, or Delete it.</div>' : '') +
+    (list.length ? list.sort((a, b) => first(a).localeCompare(first(b))).map(q => `<a href="?quote=${encodeURIComponent(q._id)}" style="text-decoration:none;color:inherit"><div class="qrow ${teamCls(q)}">
       <div class="qtop"><div><div class="qname">${esc(label(q))} ${stBadge(q.status)} ${jsBadge((q.job || {}).jobStatus)}${isSigned(q) ? ' <span class="st st-closed">' + (q.signoff.concerns ? 'SIGNED · CONCERNS' : 'SIGNED') + '</span>' : ''}</div>
-      <div class="qmeta">${esc((q.project || {}).dtoolsClientName || '')}${(q.project || {}).dtoolsOppNumber ? ' · #' + esc(q.project.dtoolsOppNumber) : ''} · Rep: ${esc((q.project || {}).salesManagerName || '—')}</div></div>
-      <div class="qnums"><div class="qnum-b">${esc(((q.schedule || {}).dates || []).map(fmtDate).join(', ') || 'Not scheduled')}</div>
-      <div class="qmeta">${esc(((q.schedule || {}).techs || []).map(nameOf).join(', '))}</div>${ME.role === 'admin' ? `<button class="qbtn qbtn-del" style="margin-top:6px" onclick="event.preventDefault();event.stopPropagation();deleteJob('${esc(q._id)}')">Delete</button>` : ''}</div></div></div></a>`).join('') : '<div class="empty" style="padding:10px 0">None</div>')).join('')
-    + (ME.role === 'admin' ? '<p class="qmeta" style="margin-top:14px">To schedule any quote (even one not yet Won), open it from the Quote Log and tap Job.</p>' : '');
+      <div class="qmeta">${esc((q.project || {}).dtoolsClientName || '')}${(q.project || {}).dtoolsOppNumber ? ' · #' + esc(q.project.dtoolsOppNumber) : ''} · Rep: ${esc((q.project || {}).salesManagerName || '—')}</div>${subLabel(q) ? `<div class="qmeta">${esc(subLabel(q))}</div>` : ''}</div>
+      <div class="qnums"><div class="qnum-b" style="white-space:pre-line">${esc(dayWins(q.schedule || {}, '\n') || 'Not scheduled')}</div>
+      <div class="qmeta">${esc(((q.schedule || {}).techs || []).map(nameOf).join(', '))}${teamCls(q) && teamCls(q) !== 'BOTH' ? ` <span class="tm ${teamCls(q)}">${teamCls(q)} Team</span>` : ''}</div>${ME.role === 'admin' ? `<button class="qbtn qbtn-del" style="margin-top:6px" onclick="event.preventDefault();event.stopPropagation();deleteJob('${esc(q._id)}')">Delete</button>` : ''}</div></div></div></a>`).join('') : '<div class="empty" style="padding:10px 0">None</div>')).join('')
+    + (!ARCH && archived.length ? `<p class="qmeta" style="margin-top:14px"><a href="./jobs.html?archive=1" style="color:#C7A66A">Archive: ${archived.length} report${archived.length === 1 ? '' : 's'} older than 30 days ›</a></p>` : '')
+    + (ME.role === 'admin' && !ARCH ? '<p class="qmeta" style="margin-top:14px">To schedule any quote (even one not yet Won), open it from the Quote Log and tap Job.</p>' : '');
 }
 
 // v8.20.2: admin Delete on every job in the lists. A job report made without a quote (or a return visit) is deleted for good;
@@ -408,7 +422,7 @@ async function showJob(id) {
   const st = Q.status || 'draft';
   let html = `<div class="card"><div class="qtop"><div><div class="qname">${esc(label(Q))} ${stBadge(st)} ${jsBadge((Q.job || {}).jobStatus)}</div>
     <div class="qmeta">${esc((Q.project || {}).dtoolsClientName || '')}${(Q.project || {}).dtoolsOppNumber ? ' · D-Tools #' + esc(Q.project.dtoolsOppNumber) : ''} · Rep: ${esc((Q.project || {}).salesManagerName || '—')}</div>
-    ${Q.noQuote ? '<div class="qmeta" style="color:#ff9f6b">Job report without a labor quote</div>' : ''}<div class="qmeta">Dates: ${esc(dayWins(Q.schedule || {}) || '—')} · Techs: ${esc(((Q.schedule || {}).techs || []).map(nameOf).join(', ') || '—')}</div>${(Q.schedule || {}).address ? `<div class="qmeta">Address: <a href="https://maps.google.com/?q=${encodeURIComponent(Q.schedule.address)}" target="_blank" rel="noopener" style="color:#C7A66A">${esc(Q.schedule.address)}</a></div>` : ''}${((Q.schedule || {}).notes || []).length ? `<div class="qmeta" style="white-space:pre-wrap;color:#e9dcc0">D-Tools notes: ${esc(Q.schedule.notes.join('\n'))}</div>` : ''}</div></div>
+    ${subLabel(Q) ? `<div class="qmeta">${esc(subLabel(Q))}</div>` : ''}${Q.noQuote ? '<div class="qmeta" style="color:#ff9f6b">Job report without a labor quote</div>' : ''}<div class="qmeta">Dates: ${esc(dayWins(Q.schedule || {}) || '—')} · Techs: ${esc(((Q.schedule || {}).techs || []).map(nameOf).join(', ') || '—')}</div>${(Q.schedule || {}).address ? `<div class="qmeta">Address: <a href="https://maps.google.com/?q=${encodeURIComponent(Q.schedule.address)}" target="_blank" rel="noopener" style="color:#C7A66A">${esc(Q.schedule.address)}</a></div>` : ''}${((Q.schedule || {}).notes || []).length ? `<div class="qmeta" style="white-space:pre-wrap;color:#e9dcc0">D-Tools notes: ${esc(Q.schedule.notes.join('\n'))}</div>` : ''}</div></div>
     ${Q.job && Q.job.reviewNote && st === 'scheduled' ? `<div class="qmeta" style="color:#ff9f6b;margin-top:6px">Sent back by ${esc(nameOf(Q.job.reviewedBy))}: ${esc(Q.job.reviewNote)}</div>` : ''}</div>`;
   if (ME.role === 'admin') html += scheduleCard(st);
   html += '<div id="visits"></div>';
@@ -743,9 +757,7 @@ firebase.auth().onAuthStateChanged(async (u) => {
   if (!p) { app().innerHTML = '<div class="empty">' + esc(email) + ' is not approved yet. Ask Anthony.</div>'; return; }
   ME = { email, name: p.name, role: p.role || 'rep', allQuotes: !!p.allQuotes, access: ASBCRoles.accessOf(p, email) };
   if (!ASBCRoles.can(ME.access, 'recaps')) return ASBCRoles.deny('recaps', app());  // v8.29.0 roles
-  document.getElementById('signOutBtn').style.display = '';
-  document.getElementById('signOutBtn').textContent = 'Sign out (' + ME.name.split(' ')[0] + ')';
-  try { if (qid) await showJob(qid); else if (new URLSearchParams(location.search).get('new') && ME.role !== 'rep') showNew(); else await showList(); } catch (e) { app().innerHTML = '<div class="empty">Could not load: ' + esc(e.message) + '</div>'; }
+    try { if (qid) await showJob(qid); else if (new URLSearchParams(location.search).get('new') && ME.role !== 'rep') showNew(); else await showList(); } catch (e) { app().innerHTML = '<div class="empty">Could not load: ' + esc(e.message) + '</div>'; }
 });
 </script>
 </body>
