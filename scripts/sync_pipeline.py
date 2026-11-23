@@ -20,6 +20,12 @@ import fs
 PM = 'Anthony Ward'
 API_KEY = os.environ['DTS_API_KEY']
 BASE = 'https://dtcloudapi.d-tools.cloud/api/v1'
+
+def file_list(d):
+    # v9.4.0: all attached files (proposal PDFs first), name + public url
+    fs = [f for f in (d.get('files') or []) if f.get('url')]
+    fs.sort(key=lambda f: (0 if str(f.get('name') or '').lower().endswith('.pdf') else 1, 0 if 'accepted' in str(f.get('name') or '').lower() else 1, str(f.get('name') or '')))
+    return [{'name': f.get('name') or 'File', 'url': f['url']} for f in fs[:15]]
 AUTH_BASIC = 'Basic RFRDbG91ZEFQSVVzZXI6MyNRdVkrMkR1QCV3Kk15JTU8Yi1aZzlV'  # public header from the D-Tools API docs
 HEADERS = {'X-API-Key': API_KEY, 'Authorization': AUTH_BASIC, 'Accept': 'application/json'}
 FEED_MAX, OPP_DETAIL_CAP = 30, 150
@@ -90,7 +96,7 @@ def main():
                 push(rec, 'stage', f"Stage: {old.get('stage') or '—'} → {p.get('stage')}")
             if old.get('price') is not None and abs(money(old.get('price')) - rec['price']) >= 0.01:
                 push(rec, 'value', f"Contract value ${old['price']:,.2f} → ${rec['price']:,.2f}")
-        if not old or old.get('modified') != rec['modified'] or not old.get('detailAt') or 'parts' not in old:  # v9.3.0: one-time refetch for parts + proposal PDF
+        if not old or old.get('modified') != rec['modified'] or not old.get('detailAt') or 'parts' not in old or 'files' not in old:  # v9.3.0/9.4.0: one-time refetch for parts, proposal PDF, all files
             try:
                 d = api('Projects/GetProject', {'id': pid})
                 rec.update({'rep': d.get('salesperson'), 'start': utc(d.get('startDate')), 'end': utc(d.get('endDate')),
@@ -109,7 +115,8 @@ def main():
                 pdfs.sort(key=lambda f: (0 if 'accepted' in f['name'].lower() else 1, 0 if re.search(r'\bQ-\d+', f['name']) else 1))
                 rec['pdfs'] = [{'name': f['name'], 'url': f['url']} for f in pdfs[:6]]
                 rec['proposalPdf'] = rec['pdfs'][0]['url'] if rec['pdfs'] else None
-                prods = [i for i in (d.get('items') or []) if i.get('type') == 'Product' and not i.get('isClientSupplied')]
+                rec['files'] = file_list(d)  # v9.4.0: every file attached to the project/opportunity
+                prods = [i for i in (d.get('items') or []) if i.get('type') == 'Product' and not i.get('isClientSupplied') and str(i.get('category') or '') != 'Installation Supplies' and not str(i.get('partNumber') or '').upper().startswith('INSTALL')]  # v9.3.1: skip materials/consumables fee lines
                 ready = lambda i: str(i.get('installStatus') or '').lower() in ('staged', 'delivered', 'installed', 'received') or str(i.get('orderStatus') or '').lower() in ('received', 'in stock', 'delivered', 'installed')
                 rec['parts'] = {'total': sum(int(i.get('quantity') or 1) for i in prods), 'ready': sum(int(i.get('quantity') or 1) for i in prods if ready(i)), 'known': bool(d.get('items') is not None),
                                 'notReady': [{'name': i.get('model') or i.get('name') or 'Item', 'qty': i.get('quantity') or 1, 'order': i.get('orderStatus') or '', 'install': i.get('installStatus') or ''} for i in prods if not ready(i)][:10],
@@ -159,6 +166,7 @@ def main():
             mine = PM.lower() in names
             checked[oid] = mod
             if not mine: continue
+            if d and d.get('files') is not None: o['_files'] = file_list(d)
         rec = dict(old or {})
         src = d or o
         rec.update({'id': oid, 'name': o.get('name'), 'number': o.get('number'), 'client': o.get('clientName'),
@@ -171,6 +179,7 @@ def main():
         elif old.get('stage') != o.get('stage'):
             rec['stageAt'] = NOW
             push(rec, 'stage', f"Stage: {old.get('stage') or '—'} → {o.get('stage')}")
+        if o.get('_files') is not None: rec['files'] = o['_files']
         opps[oid] = rec
     live = {o['id'] for o in open_opps}
     checked = {k: v for k, v in checked.items() if k in live}

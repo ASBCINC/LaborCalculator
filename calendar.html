@@ -172,7 +172,7 @@ function renderAgenda(byDay) {
 }
 // v9.2.0 tapping a job opens a customer card (name, address, appointment days and times, crew, sales rep) instead of the full job page
 document.getElementById('agenda').addEventListener('click', e => { const c = e.target.closest('[data-q],[data-ev]'); if (!c) return; e.preventDefault(); c.dataset.q ? infoJob(c.dataset.q) : infoEv(c.dataset.ev); });
-function infoCard({ title, client, address, when, crew, team, rep, notes, href, pdf, parts }) {
+function infoCard({ title, client, address, when, crew, team, rep, notes, href, pdf, files, parts }) {
   document.querySelectorAll('.icbg').forEach(x => x.remove());
   const bg = document.createElement('div'); bg.className = 'icbg';
   const row = (k, v) => v ? `<div class="icr"><div class="ick">${k}</div><div class="icv">${v}</div></div>` : '';
@@ -184,6 +184,7 @@ function infoCard({ title, client, address, when, crew, team, rep, notes, href, 
     ${row('Sales rep', esc(rep || '—'))}
     ${parts ? row('Parts', parts) : ''}
     ${pdf ? row('Proposal', `<a href="${esc(pdf)}" target="_blank" rel="noopener">Open proposal PDF</a>`) : ''}
+    ${(files || []).filter(f => f.url !== pdf).length ? row('Files', files.filter(f => f.url !== pdf).map(f => `<a href="${esc(f.url)}" target="_blank" rel="noopener">${esc(f.name)}</a>`).join('<br>')) : ''}
     ${notes ? row('Notes', esc(notes)) : ''}
     ${href && ME && ASBCRoles.can(ME.access, 'recaps') ? `<div style="margin-top:12px;text-align:right"><a class="btn" href="${href}">Open job report</a></div>` : ''}</div>`;
   bg.addEventListener('click', e => { if (e.target === bg || e.target.closest('[data-x]')) bg.remove(); });
@@ -194,7 +195,7 @@ function infoJob(id) {
   const q = JOBS.find(x => x._id === id); if (!q) return; const sc = q.schedule || {}, p = q.project || {};
   infoCard({ title: label(q), client: p.dtoolsClientName || p.customerName || q.label, address: sc.address, when: (sc.dates || []).map(d => dayLbl(d) + ' · ' + windowOf(sc, d)),
     crew: (sc.techs || []).map(nameOf).join(', '), team: teamOf(sc.techs), rep: p.salesManagerName, notes: (sc.notes || []).join(' · '), href: './jobs.html?quote=' + encodeURIComponent(id),
-    pdf: p.proposalPdf, parts: partsTxt(q.parts) });
+    pdf: p.proposalPdf, files: p.files || [], parts: partsTxt(q.parts) });
 }
 // v9.3.0 parts readiness from D-Tools item statuses
 function partsTxt(pt) { if (!pt || !pt.total) return ''; if (pt.ready >= pt.total) return `<span style="color:#7ee2a0">All ${pt.total} items received or staged</span>`;

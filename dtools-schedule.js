@@ -101,6 +101,7 @@
         if (p.name && pr.dtoolsProjectName !== p.name) link['dtoolsProjectName'] = p.name;
         const pp = pipeByName[fold(p.name)] || {};  // v9.3.0 proposal PDF + parts readiness from the pipeline sync
         if (pp.proposalPdf && pr.proposalPdf !== pp.proposalPdf) link['proposalPdf'] = pp.proposalPdf;
+        if ((pp.files || []).length && JSON.stringify(pp.files) !== JSON.stringify(pr.files || [])) link['files'] = pp.files;  // v9.4.0 all project files
         const partsNow = pp.parts && pp.parts.known ? { total: pp.parts.total, ready: pp.parts.ready, notReady: (pp.parts.notReady || []).map(x => x.name + (x.qty > 1 ? ' ×' + x.qty : '')) } : null;
         const partsChanged = partsNow && JSON.stringify(partsNow) !== JSON.stringify(q.parts || null);
         if (Object.keys(link).some(k => k !== 'dtoolsProjectName')) out.linked.push(p.name);
@@ -129,7 +130,7 @@
         const id = 'job-dt-' + (dtoolsId || fold(p.name).replace(/[^a-z0-9]+/g, '-')).slice(0, 60);
         await db.collection('quotes').doc(id).set({
           id, label: p.name, noQuote: true, status: 'scheduled', items: [], isTemplate: false, counted: 'dtools-schedule', updatedAt: new Date(),
-          project: { customerName: p.name, dtoolsProjectName: p.name, salesManagerName: p.rep || '', dtoolsOpportunityId: dtoolsId, dtoolsOppNumber: p.number || '', dtoolsClientName: p.client || '', proposalPdf: (pipeByName[fold(p.name)] || {}).proposalPdf || '' },
+          project: { customerName: p.name, dtoolsProjectName: p.name, salesManagerName: p.rep || '', dtoolsOpportunityId: dtoolsId, dtoolsOppNumber: p.number || '', dtoolsClientName: p.client || '', proposalPdf: (pipeByName[fold(p.name)] || {}).proposalPdf || '', files: (pipeByName[fold(p.name)] || {}).files || [] },
           schedule: { dates, techs, start, end, times, notes, address, dtoolsHash: sig, dtoolsImport: { dates, techs, at: now }, dtoolsEventIds: crew.map(t => t.id), fromDtools: true, updatedAt: now, updatedBy: 'D-Tools calendar' }
         }, { merge: true });
         out.created.push(p.name);
