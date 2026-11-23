@@ -223,3 +223,6 @@ D-Tools handoff panel (paste-ready labor block); Quote Log search wording.
 - sync_pipeline.py: parts.notStaged = products whose D-Tools installStatus isn't Staged/Delivered/Installed (one-time refetch adds it).
 - asbcPrepReminders (7:37 pull, 2 days before the first install day) passes `unstaged`; relay prep card then titles "Products not staged in D-Tools — upcoming install" with a "Not staged" list and an ask to stage or tell Anthony. Relay deployed e4baab83.
 - Sent by hand Nov 23: Tamura (Nawel Girma, 10 lines) and La Cuesta (Noel Salinas, 3 lines). Harlesden all Staged; Gillis installing today.
+
+## v9.10.0 Completion alerts to store managers (Nov 23, 2026)
+- Relay /recap: when a submitted job report has jobStatus "Complete", the same Teams card also goes to the store manager from config/settings.completionNotify (store -> email): San Francisco + Palo Alto -> Adam Ravenkamp (Planning & Operations Manager), West Hollywood -> Kristina Adamiya. Store = the rep's store in config/users; reps without one fall back to the crew (Joseph/Eugene = SF, Ivan/Mina = WeHo). Costa Mesa -> Kristina Adamiya (set Nov 23). Relay deployed dda495c7.

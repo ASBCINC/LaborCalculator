@@ -121,6 +121,12 @@ async function recap(request, env) {
   for (const a of admins) sent['admin' + (admins.length > 1 ? admins.indexOf(a) + 1 : '')] = await postTeams(env, a, card);
   if (!b.test && work(repEmail) && !admins.includes(repEmail)) sent.rep = await postTeams(env, repEmail, card);
   else if (!b.test) sent.rep = repEmail ? 'skipped (same as admin or not a work address)' : 'skipped (rep not found in users list)';
+  // v9.10.0 completed jobs also go to the store's manager (config/settings.completionNotify: store name -> work email)
+  if (!b.test && (q.job || {}).jobStatus === 'Complete') { let cn = {}; try { cn = (await getDoc('config/settings', token)).completionNotify || {}; } catch (e) {}
+    const tn = ((q.schedule || {}).techs || []).map(e => String((users[e] || {}).name || e).split(/[\s@.]/)[0].toLowerCase());
+    let store = (users[repEmail] || {}).store || ''; if (!store || store === 'none') store = tn.some(n => ['joseph', 'eugene'].includes(n)) ? 'San Francisco' : tn.some(n => ['ivan', 'mina'].includes(n)) ? 'West Hollywood' : '';
+    const to = String(cn[store] || '').trim().toLowerCase();
+    if (work(to) && !admins.includes(to) && to !== repEmail) sent.store = await postTeams(env, to, card); else sent.store = to ? 'skipped (same person)' : 'no store manager for ' + (store || 'unknown store'); }
   console.log('recap', id, JSON.stringify(sent));
   return json({ ok: true, sent });
 }
