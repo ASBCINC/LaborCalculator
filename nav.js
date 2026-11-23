@@ -3,9 +3,9 @@
 // (e.g. Refresh, Install app) stays in front of the links. Links follow the signed-in person's role (roles.js).
 (function () {
   const LINKS = [['home', 'Home', './home.html'], ['calendar', 'Calendar', './calendar.html'], ['calculator', 'Calculator', './index.html?calc=1'],
-    ['recaps', 'Jobs', './jobs.html'], ['pipeline', 'Pipeline', './pipeline.html'], ['leaderboard', 'Leaderboard', './leaderboard.html'],
+    ['recaps', 'Jobs', './jobs.html'], ['pipeline', 'Pipeline', './pipeline.html'], ['expenses', 'Expenses', './expenses.html'], ['leaderboard', 'Leaderboard', './leaderboard.html'],
     ['quotes', 'Quotes', './log.html'], ['users', 'Users', './users.html']];
-  const EXTRA = ['leaderboard', 'quotes', 'users'];  // folded into "More" on phones
+  const EXTRA = ['expenses', 'leaderboard', 'quotes', 'users'];  // folded into "More" on phones
   const css = `#asbcNav{display:flex;gap:6px;flex-wrap:wrap;align-items:center;justify-content:flex-end}
 #asbcNav .hnav{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 12px;border-radius:9px;border:1px solid #26292f;background:#1a1d23;color:#fff;font-size:13px;font-weight:600;text-decoration:none;white-space:nowrap;cursor:pointer;font-family:inherit}
 #asbcNav .hnav:hover{border-color:#C7A66A}#asbcNav .hnav.on{border-color:#C7A66A;color:#C7A66A}

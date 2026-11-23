@@ -213,3 +213,8 @@ D-Tools handoff panel (paste-ready labor block); Quote Log search wording.
 - Relay POST /ramp: txns (non-admins only see their own card), attach (receipt upload + project title prepended to memo; existing memo kept), ping.
 - ramp.js: job report "Add receipt" -> matches the tech's charge (same amount, -3..+5 days) -> attach; no charge yet -> rampPending doc (photo held) and the hourly admin sync (calendar load) matches it later. Sync also adds charges whose memo contains a job's D-Tools project name or its 5-digit project number. quote.expenses[] feeds Job profit on the pipeline Revenue tab.
 - No Ramp webhook: the relay has no database write access of its own, so the sync rides the admin calendar load (no extra Claude usage).
+
+## v9.7.0 Project Expenses page (Nov 23, 2026)
+- expenses.html (admin + management; tile on Home, "Expenses" in nav More): every D-Tools project from pipeline/data with its expenses = quote.expenses (job receipts, memo-synced) + projectExpenses/{projectId} (added on the page). By person, by type, totals.
+- Admin adds: "from my Ramp charges" (own card, last 60 days, unclaimed; sets memo + optional receipt via relay attach) or "not in Ramp" (manual: type, vendor, amount, date, paid by, note). ✕ removes from the project only (ids kept in ignored lists so the sync won't re-add).
+- Ramp sync also files memo-coded charges for D-Tools projects with no calculator job into projectExpenses. Pipeline Job profit includes projectExpenses (matched by project name).

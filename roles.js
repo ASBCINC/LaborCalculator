@@ -4,8 +4,8 @@
 // A user's role is config/users[email].access. Older entries without it are read from role/allQuotes.
 (function () {
   const DEFS = {
-    admin:     { label: 'Admin',          pages: ['calendar', 'calculator', 'recaps', 'pipeline', 'leaderboard', 'quotes', 'users'], quotes: 'all',  recaps: 'all' },
-    management:{ label: 'Management',     pages: ['calendar', 'calculator', 'recaps', 'pipeline', 'leaderboard', 'quotes'],          quotes: 'all',  recaps: 'all-view' },  // v9.5.0 non-store managers: see everything read-only, no User Roles
+    admin:     { label: 'Admin',          pages: ['calendar', 'calculator', 'recaps', 'pipeline', 'expenses', 'leaderboard', 'quotes', 'users'], quotes: 'all',  recaps: 'all' },
+    management:{ label: 'Management',     pages: ['calendar', 'calculator', 'recaps', 'pipeline', 'expenses', 'leaderboard', 'quotes'], quotes: 'all',  recaps: 'all-view' },  // v9.5.0 non-store managers: see everything read-only, no User Roles
     director:  { label: 'Sales Director', pages: ['calendar', 'calculator', 'pipeline', 'leaderboard', 'quotes'],                    quotes: 'all',  recaps: 'none' },
     manager:   { label: 'Sales Manager',  pages: ['calendar', 'calculator', 'leaderboard', 'quotes'],                                quotes: 'own',  recaps: 'none' },
     lead:      { label: 'Team Lead',      pages: ['calendar', 'calculator', 'recaps', 'quotes'],                                     quotes: 'all',  recaps: 'assigned' },
@@ -17,6 +17,7 @@
     calculator:  { label: 'Labor Calculator',   href: './index.html?calc=1' },
     recaps:      { label: 'Job Recaps',         href: './jobs.html' },
     pipeline:    { label: 'Pipeline Dashboard', href: './pipeline.html' },
+    expenses:    { label: 'Project Expenses',   href: './expenses.html' },
     leaderboard: { label: 'Leaderboard',        href: './leaderboard.html' },
     quotes:      { label: 'Quote Log',          href: './log.html' },
     users:       { label: 'User Roles',         href: './users.html' }

@@ -39,6 +39,11 @@ service cloud.firestore {
       allow create: if approved() && request.resource.data.email == em();
       allow read, update, delete: if admin() || (approved() && resource.data.email == em());
     }
+    // v9.7.0 expenses added on the Project Expenses page (flights, hotels, rentals, Ramp charges), one doc per D-Tools project.
+    match /projectExpenses/{id} {
+      allow read: if admin() || management() || director();
+      allow write: if admin();
+    }
     // D-Tools opportunities: read by the app, written only by the GitHub sync (service account).
     match /opportunities/{id} {
       allow read: if approved();

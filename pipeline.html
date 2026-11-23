@@ -136,7 +136,7 @@ const KIND = { stage: 'Stage', co: 'Change order', payment: 'Payment', job: 'Job
 const STORES = [['SF', 'San Francisco'], ['PA', 'Palo Alto'], ['WH', 'West Hollywood'], ['CM', 'Costa Mesa'], ['UN', 'Store not set']];
 const SRC = { outlook: 'EMAIL', teams: 'TEAMS', sms: 'TEXT', call: 'CALL', transcript: 'MEETING', dtools: 'D-TOOLS' };
 const VIEWS = [['action', 'Needs action'], ['board', 'Board'], ['stores', 'Stores'], ['active', 'Active jobs'], ['revenue', 'Revenue'], ['opps', 'Opportunities']];
-let DATA = null, EVENTS = [], HOL = {}, FEED = [], FEED_AT = '', USERS = {}, QUOTES = [], CATALOG = new Map(), SETTINGS = {}, OPPS_ALL = [], CONF = [], IS_ADMIN = false;
+let DATA = null, EVENTS = [], HOL = {}, FEED = [], FEED_AT = '', USERS = {}, QUOTES = [], CATALOG = new Map(), SETTINGS = {}, OPPS_ALL = [], CONF = [], IS_ADMIN = false, PEX = {};
 const F = (() => { let s = {}; try { s = JSON.parse(localStorage.getItem('asbcPipeView') || '{}'); } catch (e) {} return { view: s.view || 'action', store: s.store || '', q: '' }; })();
 const saveF = () => { try { localStorage.setItem('asbcPipeView', JSON.stringify({ view: F.view, store: F.store })); } catch (e) {} };
 
@@ -244,7 +244,7 @@ function viewRevenue(P, O) {
   const rate = Number(SETTINGS.hourlyRate) || 200, cost = Number(SETTINGS.crewCostRate) || 0;
   const jobs = QUOTES.filter(q => q.status === 'closed' && (q.job || {}).submittedAt && !q.noQuote && (!F.store || storeOfRep((q.project || {}).salesManagerName) === F.store)).map(q => {
     const est = (q.items || []).reduce((a, it) => a + lineEst(it), 0), act = ((q.job || {}).log || []).reduce((a, r) => a + (Number(r.hours) || 0), 0);
-    return { q, rep: (q.project || {}).salesManagerName || '—', est, act, quoted: est * rate, costAmt: act * cost, ex: (q.expenses || []).reduce((a, e) => a + (Number(e.amount) || 0), 0) }; }).filter(j => j.est > 0);
+    return { q, rep: (q.project || {}).salesManagerName || '—', est, act, quoted: est * rate, costAmt: act * cost, ex: (() => { const seen = new Set(); return (q.expenses || []).concat(PEX[String((q.project || {}).dtoolsProjectName || '').toLowerCase().replace(/[^a-z0-9]+/g, '')] || []).filter(e => { const k = e.id || e.pid; if (k && seen.has(k)) return false; seen.add(k); return true; }).reduce((a, e) => a + (Number(e.amount) || 0), 0); })() }; }).filter(j => j.est > 0);
   const lp = `<div class="sect">Job profit on submitted jobs (${jobs.length})</div>
     <div class="muted" style="margin-bottom:6px">Quoted labor = catalog hours × $${rate}/hr. Crew cost = hours on site × ${cost ? '$' + cost + '/hr' : '<b style="color:var(--warn)">crew cost rate not set</b>'}.
     ${IS_ADMIN ? `Crew cost per hour: <input id="costRate" type="number" min="0" step="1" value="${cost || ''}" placeholder="e.g. 65" style="width:90px;height:28px;font-size:13px"> <button class="btn" id="saveCost" style="height:28px">Save</button>` : ''}</div>
@@ -347,6 +347,7 @@ async function load() {
   QUOTES = qs ? qs.docs.map(d => ({ id: d.id, ...d.data() })).filter(q => !q.isTemplate && !q.jobDeleted) : [];
   CATALOG = new Map(((cat && cat.exists && cat.data().items) || []).map(i => [i.id, i]));
   SETTINGS = (st && st.exists && st.data()) || {};
+  try { PEX = {}; (await db.collection('projectExpenses').get()).docs.forEach(d => { const x = d.data(); PEX[String(x.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '')] = x.expenses || []; }); } catch (e) {}  // v9.7.0
   OPPS_ALL = op ? op.docs.map(d => ({ id: d.id, ...d.data() })) : [];
   try { CONF = window.asbcConflicts ? asbcConflicts(EVENTS.filter(e => e.date >= todayISO()), USERS) : []; } catch (e) { CONF = []; }
   render();

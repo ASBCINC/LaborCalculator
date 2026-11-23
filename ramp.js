@@ -64,9 +64,16 @@
     const today = ymd(new Date()), { txns } = await call('txns', { from: addDays(today, -45), to: today });
     const qs = (await db.collection('quotes').where('status', 'in', ['won', 'scheduled', 'submitted', 'closed']).get()).docs.map(d => ({ ref: d.ref, id: d.id, q: d.data() })).filter(x => !x.q.isTemplate && !x.q.jobDeleted);
     const claimed = new Set(); qs.forEach(x => { (x.q.expenses || []).forEach(e => e.id && claimed.add(e.id)); (x.q.expensesIgnored || []).forEach(k => claimed.add(k)); });
+    // v9.7.0 D-Tools projects with no calculator job: memo-coded charges go to projectExpenses/{projectId}
+    const pex = Object.fromEntries((await db.collection('projectExpenses').get()).docs.map(d => [d.id, d.data()]));
+    Object.values(pex).forEach(d => { (d.expenses || []).forEach(e => e.id && claimed.add(e.id)); (d.ignored || []).forEach(k => claimed.add(k)); });
+    let pp = []; try { const pd = await db.collection('pipeline').doc('data').get(); pp = Object.values((pd.exists && JSON.parse(pd.data().json || '{}').projects) || {}); } catch (e) {}
+    const fold = s => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+    const linked = new Set(qs.map(x => (x.q.project || {}).dtoolsOpportunityId).filter(Boolean).concat(qs.map(x => fold(titleOf(x.q)))));
+    pp.filter(p => !linked.has(p.id) && !linked.has(fold(p.name))).forEach(p => qs.push({ pid: p.id, q: { label: p.name, project: { dtoolsProjectName: p.name, dtoolsOppNumber: p.number, dtoolsClientName: p.client } } }));
     const out = { matched: 0, memo: 0, waiting: 0, at: Date.now() };
     for (const pd of (await db.collection('rampPending').get()).docs) {
-      const p = pd.data(), x = qs.find(y => y.id === p.quote);
+      const p = pd.data(), x = qs.find(y => y.ref && y.id === p.quote);
       if (!x) { await pd.ref.delete(); continue; }
       const hits = txns.filter(t => !claimed.has(t.id) && near(t, p.amount, p.date, p.email));
       if (!hits.length) { out.waiting++; continue; }
@@ -80,8 +87,10 @@
       let hit = qs.filter(x => { const ti = titleOf(x.q).toLowerCase(), n = numOf(x.q); return (ti.length > 5 && m.includes(ti)) || (n && new RegExp('\\b' + n + '\\b').test(m)); });
       if (!hit.length) hit = qs.filter(x => keysOf(x.q).some(k => new RegExp('\\b' + k + '\\b').test(m)));  // client / project name word
       if (hit.length !== 1) continue;
-      const x = hit[0], list = (x.q.expenses || []).concat([exp(t, { src: 'memo' })]);
-      await x.ref.update({ expenses: list }); x.q.expenses = list; claimed.add(t.id); out.memo++;
+      const x = hit[0];
+      if (x.pid) await db.collection('projectExpenses').doc(x.pid).set({ name: titleOf(x.q), expenses: firebase.firestore.FieldValue.arrayUnion(exp(t, { src: 'memo' })), updatedAt: new Date() }, { merge: true });
+      else { const list = (x.q.expenses || []).concat([exp(t, { src: 'memo' })]); await x.ref.update({ expenses: list }); x.q.expenses = list; }
+      claimed.add(t.id); out.memo++;
     }
     await db.collection('config').doc('rampSync').set(out);
     return out;
