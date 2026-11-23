@@ -5,12 +5,13 @@
 (function () {
   const DEFS = {
     admin:     { label: 'Admin',          pages: ['calendar', 'calculator', 'recaps', 'pipeline', 'leaderboard', 'quotes', 'users'], quotes: 'all',  recaps: 'all' },
+    management:{ label: 'Management',     pages: ['calendar', 'calculator', 'recaps', 'pipeline', 'leaderboard', 'quotes'],          quotes: 'all',  recaps: 'all-view' },  // v9.5.0 non-store managers: see everything read-only, no User Roles
     director:  { label: 'Sales Director', pages: ['calendar', 'calculator', 'pipeline', 'leaderboard', 'quotes'],                    quotes: 'all',  recaps: 'none' },
     manager:   { label: 'Sales Manager',  pages: ['calendar', 'calculator', 'leaderboard', 'quotes'],                                quotes: 'own',  recaps: 'none' },
     lead:      { label: 'Team Lead',      pages: ['calendar', 'calculator', 'recaps', 'quotes'],                                     quotes: 'all',  recaps: 'assigned' },
     installer: { label: 'Installer',      pages: ['calendar', 'recaps'],                                                             quotes: 'none', recaps: 'assigned' }
   };
-  const ORDER = ['admin', 'director', 'manager', 'lead', 'installer'];
+  const ORDER = ['admin', 'management', 'director', 'manager', 'lead', 'installer'];
   const PAGES = {
     calendar:    { label: 'Install Calendar',   href: './calendar.html' },
     calculator:  { label: 'Labor Calculator',   href: './index.html?calc=1' },
@@ -21,7 +22,7 @@
     users:       { label: 'User Roles',         href: './users.html' }
   };
   // The fields older code reads (role: admin | rep | tech, allQuotes) for each role.
-  const LEGACY = { admin: { role: 'admin', allQuotes: true }, director: { role: 'rep', allQuotes: true }, manager: { role: 'rep', allQuotes: false },
+  const LEGACY = { admin: { role: 'admin', allQuotes: true }, management: { role: 'rep', allQuotes: true }, director: { role: 'rep', allQuotes: true }, manager: { role: 'rep', allQuotes: false },
                    lead: { role: 'tech', allQuotes: true }, installer: { role: 'tech', allQuotes: false } };
   const OWNER = 'a.ward@asbc.us';
   function accessOf(p, email) {

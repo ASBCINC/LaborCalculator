@@ -15,6 +15,7 @@ service cloud.firestore {
     // v8.29.0 roles (roles.js): installers (role tech without allQuotes) only see and edit jobs assigned to them.
     function me() { return users()[em()]; }
     function installer() { return !isOwner() && me().get('role', 'rep') == 'tech' && me().get('allQuotes', false) != true; }
+    function management() { return approved() && !isOwner() && me().get('access', '') == 'management'; }  // v9.5.0
     function director() { return approved() && !isOwner() && (me().get('access', '') == 'director' || (me().get('access', '') == '' && me().get('role', 'rep') == 'rep' && me().get('allQuotes', false) == true)); }
 
     // Approved users list: an approved person can read it (the app needs names and roles); only admins change it.
@@ -50,7 +51,7 @@ service cloud.firestore {
     }
     // Admin-only data (future pipeline page).
     match /pipeline/{doc=**} {
-      allow read: if admin() || director();
+      allow read: if admin() || director() || management();
       allow write: if false;
     }
     // v9.1.0: project messages (email, Teams, texts, calls) for the Pipeline page, written by an admin's session (the D-Tools pull).
