@@ -109,8 +109,10 @@
           await ref.set(Object.assign({ schedule, status: st, project: Object.assign({}, pr, link) }, open ? { jobHidden: false } : {}), { merge: true });
           out.updated.push(p.name);
           // tell the techs when the install itself changed (not on a link-only or first-time refresh with the same days/times/techs)
-          const was = JSON.stringify([(sc.dates || []).slice().sort(), sc.times || (sc.start ? { all: [sc.start, sc.end || ''] } : {}), (sc.techs || []).slice().sort()]);
-          const now2 = JSON.stringify([schedule.dates, Object.keys(times).length ? times : (schedule.start ? { all: [schedule.start, schedule.end || ''] } : {}), schedule.techs.slice().sort()]);
+          // compare as plain text (Firestore returns map keys in a different order, so never compare objects as JSON)
+          const sig2 = (ds, tm, s0, e0, ts) => (ds || []).slice().sort().map(d => d + '@' + ((tm && tm[d]) ? tm[d].start + '-' + (tm[d].end || '') : (tm && Object.keys(tm).length ? '' : (s0 || '') + '-' + (e0 || '')))).join('|') + '#' + (ts || []).slice().sort().join(',');
+          const was = sig2(sc.dates, sc.times, sc.start, sc.end, sc.techs);
+          const now2 = sig2(schedule.dates, times, schedule.start, schedule.end, schedule.techs);
           if (open && was !== now2 && schedule.dates.some(d => d >= todayPT())) toNotify.push({ quote: ref.id, change: (sc.dates || []).length ? 'updated' : 'new', name: p.name });
         }
         tasks.forEach(t => pushEv(t, doc.id));

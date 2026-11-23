@@ -176,3 +176,4 @@ D-Tools handoff panel (paste-ready labor block); Quote Log search wording.
 - Jobs: titles by D-Tools project name (Quote: <label> underneath), per-day windows + team color in the list, Archive (?archive=1) for reports whose last day is 30+ days old.
 - index.html: loading splash instead of the sign-in flash (#authGate.ready); sales rep dropdown adds Admin/Director/Manager names from config/users.
 - Data fix Nov 22: quote rep names Matt -> Matthew Stachnik, Josh Silva Bang & Olufsen SF -> Josh Silva, Stephen Sandberg -> Stefn Sandberg.
+- v8.33.1: schedule-change alert compares days/times/techs as plain text (Firestore map key order made the first v8.33.0 run send 'schedule changed' to Mina, Eugene and Joseph for Harlesden and Gillis though nothing changed).
