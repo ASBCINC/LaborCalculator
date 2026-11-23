@@ -17,6 +17,10 @@
 // the D-Tools project name is stored on the job (project.dtoolsProjectName) and shown as its title; when an install is added
 // or its days, times or techs change, the assigned techs get a Teams message (relay /notify); window.asbcRecapNudge() reminds
 // techs about today's jobs with no report (run by the D-Tools pull at its 5:37 PM run).
+// v8.34.0: second argument extra = { meetings, holidays } from the D-Tools Calendar (left menu, Event + Project Task):
+//   meetings = [{ id, title, allDay, start: 'YYYY-MM-DDTHH:MM:SS', end, location, people: [names] }]  (D-Tools "Scheduled Events")
+//   holidays = [{ date: 'YYYY-MM-DD', name }]  (D-Tools company holidays; the Calendar adds US holidays itself)
+// Meetings are stored with the other events (kind 'event') so they show on the Install Calendar with their team color.
 (function () {
   const pad = n => String(n).padStart(2, '0');
   function parse(v) {  // -> { date: 'YYYY-MM-DD', time: 'HH:MM' | '' }
@@ -39,7 +43,7 @@
   const todayPT = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
   const cleanAddr = a => String(a || '').replace(/\r?\n/g, ', ').replace(/,\s*United States$/i, '').trim();
 
-  async function importSchedule(projects) {
+  async function importSchedule(projects, extra) {
     const db = firebase.firestore(), u = firebase.auth().currentUser;
     if (!u) throw new Error('not signed in');
     const users = ((await db.collection('config').doc('users').get()).data() || {}).users || {};
@@ -131,8 +135,20 @@
         out.skipped.push(p.name + (finished ? ' (install done)' : ' (no quote, not your project)') + ': shown as calendar event');
       }
     }
+    // D-Tools scheduled events (store work, warehouse pickups, holds…): one entry per day they cover
+    for (const m of ((extra || {}).meetings || [])) {
+      const d0 = String(m.start || '').slice(0, 10), d1 = String(m.end || m.start || '').slice(0, 10) || d0;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(d0)) continue;
+      const people = m.people || [], crew = people.filter(n => techByName[fold(n)]);
+      for (let d = d0, i = 0; d <= (d1 < d0 ? d0 : d1) && i < 31; i++) {
+        events.push({ id: 'mt' + m.id + '-' + d, kind: 'event', date: d, start: m.allDay ? '' : String(m.start).slice(11, 16), end: m.allDay ? '' : String(m.end || '').slice(11, 16),
+          name: String(m.title || 'Event').trim(), client: '', number: '', techs: crew.map(n => techByName[fold(n)]), people, crew, desc: '', address: String(m.location || '').trim(), status: '', stage: '', job: '' });
+        const x = new Date(d + 'T12:00:00Z'); x.setUTCDate(x.getUTCDate() + 1); d = x.toISOString().slice(0, 10);
+      }
+    }
+    const holidays = ((extra || {}).holidays || []).filter(h => h && /^\d{4}-\d{2}-\d{2}/.test(h.date)).map(h => ({ date: String(h.date).slice(0, 10), name: String(h.name || 'Holiday') }));
     out.events = events.filter(e => !e.job).length;
-    await db.collection('config').doc('dtoolsEvents').set({ events, at: new Date().toISOString() });
+    await db.collection('config').doc('dtoolsEvents').set({ events, holidays, at: new Date().toISOString() });
     for (const n of toNotify) out.notified.push(n.name + ': ' + await notify({ kind: 'schedule', quote: n.quote, change: n.change }));
     return out;
   }
