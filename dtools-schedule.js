@@ -206,7 +206,8 @@
       const first = (sc.dates || []).filter(d => d >= t).sort()[0];
       if (q.isTemplate || q.jobDeleted || !first || !targets.includes(first) || q.prepSent === first || !pr.salesManagerName) continue;
       const pp = byName[fold(pr.dtoolsProjectName || q.label)] || {};
-      const st = await notify({ kind: 'prep', quote: s.id, checklist: checklistFor((pp.parts || {}).names || []) });
+      const unstaged = ((pp.parts || {}).notStaged || []).map(x => x.name + (x.qty > 1 ? ' ×' + x.qty : ''));  // v9.9.0 products not Staged in D-Tools
+      const st = await notify({ kind: 'prep', quote: s.id, checklist: checklistFor((pp.parts || {}).names || []), unstaged });
       if (st === 200) await s.ref.set({ prepSent: first }, { merge: true });
       out.push((pr.dtoolsProjectName || q.label) + ': ' + st);
     }

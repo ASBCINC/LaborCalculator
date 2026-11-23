@@ -218,3 +218,8 @@ D-Tools handoff panel (paste-ready labor block); Quote Log search wording.
 - expenses.html (admin + management; tile on Home, "Expenses" in nav More): every D-Tools project from pipeline/data with its expenses = quote.expenses (job receipts, memo-synced) + projectExpenses/{projectId} (added on the page). By person, by type, totals.
 - Admin adds: "from my Ramp charges" (own card, last 60 days, unclaimed; sets memo + optional receipt via relay attach) or "not in Ramp" (manual: type, vendor, amount, date, paid by, note). ✕ removes from the project only (ids kept in ignored lists so the sync won't re-add).
 - Ramp sync also files memo-coded charges for D-Tools projects with no calculator job into projectExpenses. Pipeline Job profit includes projectExpenses (matched by project name).
+
+## v9.9.0 Not-staged warning to reps (Nov 23, 2026)
+- sync_pipeline.py: parts.notStaged = products whose D-Tools installStatus isn't Staged/Delivered/Installed (one-time refetch adds it).
+- asbcPrepReminders (7:37 pull, 2 days before the first install day) passes `unstaged`; relay prep card then titles "Products not staged in D-Tools — upcoming install" with a "Not staged" list and an ask to stage or tell Anthony. Relay deployed e4baab83.
+- Sent by hand Nov 23: Tamura (Nawel Girma, 10 lines) and La Cuesta (Noel Salinas, 3 lines). Harlesden all Staged; Gillis installing today.
