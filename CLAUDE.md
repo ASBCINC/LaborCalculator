@@ -193,3 +193,6 @@ D-Tools handoff panel (paste-ready labor block); Quote Log search wording.
 - Store = the rep's store in config/users (SF/PA/WH/CM, 'Store not set'). Store chips filter every view and the KPI strip.
 - Revenue: To collect = contract − paid (active projects); Due 30 days = unpaid payment terms due ≤ today+30 incl. overdue; Weighted opps = total × probability (null = 0); Projected = to collect + weighted.
 - Messages: pipeline/feed {items:[{id, project (D-Tools project name), date, source outlook|teams|sms|call|transcript, kind, title, detail, url}], at} written by window.asbcImportFeed (dtools-schedule.js, admin) from the D-Tools pull step 7e (copies the Claude dashboard feed, last 30 days). Rules: match /pipeline/feed allow write: if admin() (published Nov 22). Tiles show the 2 newest messages; action/blocker/deadline ≤21 days count as REQUESTS and feed Needs action.
+
+## v9.2.0 — Calendar customer card
+- calendar.html: clicking a job (desktop grid chip or any agenda row) opens a card (infoJob/infoEv): customer, address (maps link), appointment days + times, assigned crew + team, sales rep, notes; 'Open job report' only for roles with recaps. Phones: tap the day, then the job in the list.

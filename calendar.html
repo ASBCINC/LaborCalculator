@@ -43,6 +43,11 @@ h1 { font-size:20px; margin:0; } h1 span { color:var(--gold); }
 .ev.SF { border-left-color:var(--sf); background:rgba(245,158,11,.16); } .ev.LA { border-left-color:var(--la); background:rgba(59,130,246,.18); }
 .ev.BOTH { border-left-color:var(--sf); background:linear-gradient(90deg, rgba(245,158,11,.22), rgba(59,130,246,.22)); }
 .ev.done { opacity:.55; }
+.icbg { position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:80; display:flex; align-items:center; justify-content:center; padding:16px; }
+.ic { width:min(440px,100%); background:#111318; border:1px solid #26292f; border-radius:16px; padding:16px; box-shadow:0 16px 40px rgba(0,0,0,.6); }
+.ich { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:8px; } .ict { font-size:17px; font-weight:800; margin-bottom:4px; }
+.icr { display:flex; gap:12px; padding:9px 0; border-top:1px solid #1d2027; font-size:14px; } .ick { flex:0 0 96px; color:#8b8f98; font-size:12px; text-transform:uppercase; letter-spacing:.05em; font-weight:700; padding-top:2px; } .icv { flex:1; min-width:0; line-height:1.4; } .icv a { color:#C7A66A; }
+@media (max-width:700px) { .icbg { align-items:flex-end; padding:0; } .ic { border-radius:16px 16px 0 0; padding-bottom:calc(16px + env(safe-area-inset-bottom)); } }
 .hol { display:block; font-size:10px; font-weight:700; color:#2dd4bf; margin-top:3px; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; } .aev.holr { border-left-color:#2dd4bf; cursor:default; }
 .ev.dt { cursor:default; border-left-style:dashed; } .aev.dt { cursor:default; } .aev .desc { color:#e9dcc0; font-size:12px; margin-top:3px; white-space:pre-wrap; } .dtb { font-size:9px; font-weight:800; color:#C7A66A; letter-spacing:.05em; margin-right:4px; }
 .more { font-size:10px; color:var(--muted); margin-top:3px; }
@@ -136,8 +141,8 @@ function render() {
     if (i === 35 && d.getMonth() !== m) break;
     html += `<div class="day ${d.getMonth() !== m ? 'out' : ''} ${k === today ? 'today' : ''} ${k === SEL ? 'sel' : ''}" data-day="${k}"><span class="num">${d.getDate()}</span>` +
       evs.filter(q => q._hol).map(q => `<span class="hol" title="${esc(q._hol)}">${esc(q._hol)}</span>`).join('') +
-      evs.filter(q => !q._hol).slice(0, 4).map(q => q._ev ? `<div class="ev dt ${q._team} ${/complete/i.test(q._ev.status) || /installed|completed/i.test(q._ev.stage) ? 'done' : ''}" title="${esc(q._ev.name)} · ${esc(q._win)}${q._ev.desc ? ' · ' + esc(q._ev.desc) : ''}"><b><span class="dtb">${q._ev.kind === 'event' ? 'EVT' : 'D-T'}</span>${esc(q._ev.name)}</b><span class="t">${esc(q._win)}</span></div>`
-        : `<a class="ev ${q._team} ${['submitted', 'closed'].includes(q.status) ? 'done' : ''}" href="./jobs.html?quote=${encodeURIComponent(q._id)}" title="${esc(label(q))} · ${esc(q._win)}${((q.schedule || {}).notes || []).length ? ' · ' + esc(q.schedule.notes.join(' / ')) : ''}"><b>${esc(label(q))}</b><span class="t">${esc(q._win)}</span></a>`).join('') +
+      evs.filter(q => !q._hol).slice(0, 4).map(q => q._ev ? `<div class="ev dt ${q._team} ${/complete/i.test(q._ev.status) || /installed|completed/i.test(q._ev.stage) ? 'done' : ''}" data-ev="${esc(q._ev.id)}" style="cursor:pointer" title="${esc(q._ev.name)} · ${esc(q._win)}${q._ev.desc ? ' · ' + esc(q._ev.desc) : ''}"><b><span class="dtb">${q._ev.kind === 'event' ? 'EVT' : 'D-T'}</span>${esc(q._ev.name)}</b><span class="t">${esc(q._win)}</span></div>`
+        : `<a class="ev ${q._team} ${['submitted', 'closed'].includes(q.status) ? 'done' : ''}" href="./jobs.html?quote=${encodeURIComponent(q._id)}" data-q="${esc(q._id)}" title="${esc(label(q))} · ${esc(q._win)}${((q.schedule || {}).notes || []).length ? ' · ' + esc(q.schedule.notes.join(' / ')) : ''}"><b>${esc(label(q))}</b><span class="t">${esc(q._win)}</span></a>`).join('') +
       (evs.filter(q => !q._hol).length > 4 ? `<div class="more">+${evs.filter(q => !q._hol).length - 4} more</div>` : '') + '</div>';
   }
   document.getElementById('cal').innerHTML = html + '</div>';
@@ -151,17 +156,48 @@ function renderAgenda(byDay) {
   box.innerHTML = `<h3>${esc(title)}${SEL ? ' <button class="btn" style="height:28px;font-size:11px;margin-left:6px" onclick="SEL=null;render()">Show whole month</button>' : ''}</h3>` +
     (days.flatMap(k => (byDay[k] || []).map(q => ({ k, q }))).map(({ k, q }) => { const day = SEL ? '' : esc(new Date(k + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })) + ' · ';
       if (q._hol) return `<div class="aev holr"><div style="flex:1;min-width:0"><div class="nm" style="color:#2dd4bf">${esc(q._hol)}</div><div class="meta">${day}Holiday</div></div></div>`;
-      if (q._ev) { const e = q._ev; return `<div class="aev dt ${q._team}"><div style="flex:1;min-width:0"><div class="nm"><span class="dtb">${e.kind === 'event' ? 'D-TOOLS EVENT' : 'D-TOOLS'}</span>${esc(e.name)}</div>
+      if (q._ev) { const e = q._ev; return `<div class="aev dt ${q._team}" data-ev="${esc(e.id)}" style="cursor:pointer"><div style="flex:1;min-width:0"><div class="nm"><span class="dtb">${e.kind === 'event' ? 'D-TOOLS EVENT' : 'D-TOOLS'}</span>${esc(e.name)}</div>
         <div class="meta">${day}${esc(q._win)} · ${esc(e.people.join(', ') || 'Nobody assigned')}${e.client ? ' · ' + esc(e.client) : ''}${e.address ? ' · ' + esc(e.address) : ''}</div>${e.desc ? `<div class="desc">${esc(e.desc)}</div>` : ''}</div>${teamTag(q._team)}</div>`; }
       const sc = q.schedule || {};
-      return `<a class="aev ${q._team}" href="./jobs.html?quote=${encodeURIComponent(q._id)}"><div style="flex:1;min-width:0"><div class="nm">${esc(label(q))}</div>
+      return `<a class="aev ${q._team}" href="./jobs.html?quote=${encodeURIComponent(q._id)}" data-q="${esc(q._id)}"><div style="flex:1;min-width:0"><div class="nm">${esc(label(q))}</div>
       <div class="meta">${day}${esc(q._win)} · ${esc((sc.techs || []).map(nameOf).join(', ') || 'No techs')}${(q.project || {}).dtoolsClientName ? ' · ' + esc(q.project.dtoolsClientName) : ''}${sc.address ? ' · ' + esc(sc.address) : ''}</div>${(sc.notes || []).length ? `<div class="desc">${esc(sc.notes.join('\n'))}</div>` : ''}</div>${teamTag(q._team)}</a>`; }).join('') || '<div class="empty" style="padding:14px 0">Nothing scheduled.</div>');
 }
+// v9.2.0 tapping a job opens a customer card (name, address, appointment days and times, crew, sales rep) instead of the full job page
+document.getElementById('agenda').addEventListener('click', e => { const c = e.target.closest('[data-q],[data-ev]'); if (!c) return; e.preventDefault(); c.dataset.q ? infoJob(c.dataset.q) : infoEv(c.dataset.ev); });
+function infoCard({ title, client, address, when, crew, team, rep, notes, href }) {
+  document.querySelectorAll('.icbg').forEach(x => x.remove());
+  const bg = document.createElement('div'); bg.className = 'icbg';
+  const row = (k, v) => v ? `<div class="icr"><div class="ick">${k}</div><div class="icv">${v}</div></div>` : '';
+  bg.innerHTML = `<div class="ic" role="dialog" aria-label="${esc(title)}"><div class="ich"><div><div class="ict">${esc(title)}</div>${team ? teamTag(team) : ''}</div><button class="btn" data-x aria-label="Close">✕</button></div>
+    ${row('Customer', esc(client || '—'))}
+    ${row('Address', address ? `<a href="https://maps.google.com/?q=${encodeURIComponent(address)}" target="_blank" rel="noopener">${esc(address)}</a>` : '—')}
+    ${row('Appointment', when.map(w => esc(w)).join('<br>') || '—')}
+    ${row('Assigned', esc(crew || 'Nobody assigned'))}
+    ${row('Sales rep', esc(rep || '—'))}
+    ${notes ? row('Notes', esc(notes)) : ''}
+    ${href && ME && ASBCRoles.can(ME.access, 'recaps') ? `<div style="margin-top:12px;text-align:right"><a class="btn" href="${href}">Open job report</a></div>` : ''}</div>`;
+  bg.addEventListener('click', e => { if (e.target === bg || e.target.closest('[data-x]')) bg.remove(); });
+  document.body.appendChild(bg);
+}
+const dayLbl = d => new Date(d + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+function infoJob(id) {
+  const q = JOBS.find(x => x._id === id); if (!q) return; const sc = q.schedule || {}, p = q.project || {};
+  infoCard({ title: label(q), client: p.dtoolsClientName || p.customerName || q.label, address: sc.address, when: (sc.dates || []).map(d => dayLbl(d) + ' · ' + windowOf(sc, d)),
+    crew: (sc.techs || []).map(nameOf).join(', '), team: teamOf(sc.techs), rep: p.salesManagerName, notes: (sc.notes || []).join(' · '), href: './jobs.html?quote=' + encodeURIComponent(id) });
+}
+function infoEv(id) {
+  const e = EVENTS.find(x => x.id === id); if (!e) return;
+  const same = EVENTS.filter(x => x.name === e.name && x.kind === e.kind).sort((a, b) => a.date.localeCompare(b.date));
+  infoCard({ title: e.name, client: e.client || (e.kind === 'event' ? 'D-Tools event' : ''), address: e.address,
+    when: same.map(x => dayLbl(x.date) + ' · ' + (x.start ? t12(x.start) + (x.end ? '–' + t12(x.end) : '') : 'All day')),
+    crew: (e.people || []).join(', '), team: teamOfNames(e.people), rep: '', notes: e.desc });
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.icbg').forEach(x => x.remove()); });
 document.getElementById('prev').onclick = () => { VIEW.setMonth(VIEW.getMonth() - 1); SEL = null; render(); };
 document.getElementById('next').onclick = () => { VIEW.setMonth(VIEW.getMonth() + 1); SEL = null; render(); };
 document.getElementById('today').onclick = () => { VIEW = new Date(); VIEW.setDate(1); SEL = ymd(new Date()); render(); };
 document.getElementById('teamF').onchange = render;
-document.getElementById('cal').addEventListener('click', e => { if (e.target.closest('.ev') && window.innerWidth > 700) return; const d = e.target.closest('.day'); if (!d) return; e.preventDefault(); SEL = d.dataset.day === SEL ? null : d.dataset.day; render(); if (SEL) document.getElementById('agenda').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+document.getElementById('cal').addEventListener('click', e => { if (e.target.closest('.ev') && window.innerWidth > 700) { const c = e.target.closest('[data-q],[data-ev]'); if (c) { e.preventDefault(); c.dataset.q ? infoJob(c.dataset.q) : infoEv(c.dataset.ev); } return; } const d = e.target.closest('.day'); if (!d) return; e.preventDefault(); SEL = d.dataset.day === SEL ? null : d.dataset.day; render(); if (SEL) document.getElementById('agenda').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
 firebase.auth().onAuthStateChanged(async u => {
   if (!u || !u.emailVerified) { document.getElementById('cal').innerHTML = '<div class="empty">Sign in (and confirm your email) on the <a href="./" style="color:#C7A66A">calculator</a> first, then reopen the Calendar.</div>'; return; }
  try { if (!(await u.getIdTokenResult()).claims.email_verified) { await u.reload(); await u.getIdToken(true); } } catch (e) {}  // v8.28.1: refresh a sign-in token issued before the email was confirmed
