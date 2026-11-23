@@ -34,6 +34,11 @@ service cloud.firestore {
       allow create: if approved() && (!installer() || em() in request.resource.data.schedule.techs);
       allow delete: if approved() && !installer();
     }
+    // v9.6.0 receipts waiting for their Ramp charge to post (photo held here until the hourly sync matches it).
+    match /rampPending/{id} {
+      allow create: if approved() && request.resource.data.email == em();
+      allow read, update, delete: if admin() || (approved() && resource.data.email == em());
+    }
     // D-Tools opportunities: read by the app, written only by the GitHub sync (service account).
     match /opportunities/{id} {
       allow read: if approved();

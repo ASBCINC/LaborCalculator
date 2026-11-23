@@ -207,3 +207,9 @@ D-Tools handoff panel (paste-ready labor block); Quote Log search wording.
 - index.html: learned-hours note on products with 3+ jobs and ≥20% off the catalog (real hrs/unit vs catalog); admin Apply scales install+programming hours (quarter-hour rounding) and saves the catalog.
 - pipeline.html: PARTS NOT READY (install ≤7 days), PUNCH badges + queue items, crew double-bookings and proposals without labor quotes in Needs action, proposal PDFs/parts/punch in the detail sheet, Labor profit table on Revenue (quoted = catalog hours × settings.hourlyRate, cost = log hours × settings.crewCostRate, admin-editable).
 - Nov 22: Anthony skipped the rep Teams message for proposals without a labor quote — asbcOppLaborCheck() is NOT run by the D-Tools pull (the Needs action list of proposals without labor quotes stays). Crew cost rate set to $100/hr per tech (config/settings.crewCostRate).
+
+## v9.6.0 Ramp expenses (Nov 23, 2026)
+- Ramp developer app "Labor Calculator" (client credentials; scopes transactions:read, receipts:read/write, memos:read/write, users:read). Keys only in Cloudflare secrets RAMP_CLIENT_ID / RAMP_CLIENT_SECRET.
+- Relay POST /ramp: txns (non-admins only see their own card), attach (receipt upload + project title prepended to memo; existing memo kept), ping.
+- ramp.js: job report "Add receipt" -> matches the tech's charge (same amount, -3..+5 days) -> attach; no charge yet -> rampPending doc (photo held) and the hourly admin sync (calendar load) matches it later. Sync also adds charges whose memo contains a job's D-Tools project name or its 5-digit project number. quote.expenses[] feeds Job profit on the pipeline Revenue tab.
+- No Ramp webhook: the relay has no database write access of its own, so the sync rides the admin calendar load (no extra Claude usage).

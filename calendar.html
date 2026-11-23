@@ -16,6 +16,7 @@
 <script src="./nav.js" defer></script>
 <script src="./dtools-schedule.js"></script>
 <script src="./health.js"></script>
+<script src="./ramp.js"></script>
 <script src="./update-check.js" defer></script>
 <style>
 :root { --gold:#C7A66A; --bg:#050505; --card:#111318; --line:#26292f; --muted:#8b8f98; --sf:#f59e0b; --la:#3b82f6; --none:#6b7280; }
@@ -254,6 +255,7 @@ firebase.auth().onAuthStateChanged(async u => {
     EVENTS = ((ev.exists && ev.data().events) || []).filter(e => !e.job || !jobIds.has(e.job)).filter(e => !(ME.role === 'tech' && !ME.allQuotes) || (e.techs || []).includes(ME.email)); } catch (e) {}
   try { CONF = window.asbcConflicts ? asbcConflicts(ALLEV.filter(e => e.date >= ymd(new Date())), USERS) : []; } catch (e) { CONF = []; }  // v9.3.0
   render();
+  if (ME.access === 'admin' && window.asbcRamp) asbcRamp.sync().then(r => console.log('ramp sync', r)).catch(e => console.warn('ramp sync', e.message));  // v9.6.0 hourly at most
 });
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
 </script>

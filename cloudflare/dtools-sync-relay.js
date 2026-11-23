@@ -13,6 +13,12 @@
 //   HOOK_SECRET   the random string in the webhook URL
 //   TEAMS_HOOK    the Power Automate webhook URL (type: Secret)
 //   ADMIN_EMAIL   optional: the work address that always gets the Teams message
+// 4) POST /ramp (v9.6.0) Ramp receipts + project expenses, called by the app with the signed-in user's Firebase ID token.
+//    {action:'txns', from, to}        card charges in that window (admins/management: everyone's; others: only their own)
+//    {action:'attach', txn, image, title}  uploads the receipt photo to that charge and puts the project title in front of its memo
+//    {action:'ping'}                  checks the Ramp keys work (admins)
+//   RAMP_CLIENT_ID / RAMP_CLIENT_SECRET  Ramp developer app "Labor Calculator" (client credentials; scopes transactions:read,
+//                 receipts:read/write, memos:read/write, users:read). Nothing here can move money or change cards.
 //                 (if not set: every config/users entry with role "admin")
 const WORKFLOW = 'https://api.github.com/repos/ASBCINC/LaborCalculator/actions/workflows/sync-opportunities.yml/dispatches';
 const FS = 'https://firestore.googleapis.com/v1/projects/asbc-calculator/databases/(default)/documents/';
@@ -186,12 +192,95 @@ async function notifyOpp(token, b, env, json) {
   console.log('notify opp', id, rep, st);
   return json({ ok: true, sent: { [rep]: st } });
 }
+// ---------- v9.6.0 Ramp ----------
+const RAMP = 'https://api.ramp.com/developer/v1/';
+const RAMP_SCOPES = 'transactions:read receipts:read receipts:write memos:read memos:write users:read';
+let rampTok = null, rampExp = 0;
+async function rampToken(env) {
+  if (rampTok && Date.now() < rampExp) return rampTok;
+  if (!env.RAMP_CLIENT_ID || !env.RAMP_CLIENT_SECRET) throw new Error('RAMP_CLIENT_ID / RAMP_CLIENT_SECRET not set');
+  const r = await fetch(RAMP + 'token', { method: 'POST', headers: { Authorization: 'Basic ' + btoa(env.RAMP_CLIENT_ID + ':' + env.RAMP_CLIENT_SECRET), 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
+    body: 'grant_type=client_credentials&scope=' + encodeURIComponent(RAMP_SCOPES) });
+  const t = await r.text(); let j = {}; try { j = JSON.parse(t); } catch (e) {}
+  if (!r.ok || !j.access_token) throw new Error('Ramp sign-in ' + r.status + ' ' + t.slice(0, 160));
+  rampTok = j.access_token; rampExp = Date.now() + Math.max(60, (Number(j.expires_in) || 3600) - 300) * 1000; return rampTok;
+}
+async function ramp(env, path, opt) {
+  opt = opt || {};
+  const r = await fetch(path.startsWith('http') ? path : RAMP + path, Object.assign({}, opt, { headers: Object.assign({ Authorization: 'Bearer ' + await rampToken(env), Accept: 'application/json' }, opt.headers || {}) }));
+  const t = await r.text(); let j = {}; try { j = JSON.parse(t); } catch (e) { j = { raw: t.slice(0, 200) }; }
+  if (!r.ok) throw new Error((opt.method || 'GET') + ' ' + path.split('?')[0].replace(RAMP, '') + ' ' + r.status + ' ' + t.slice(0, 200));
+  return j;
+}
+async function rampAll(env, path, max) {
+  let out = [], next = path, n = 0;
+  while (next && n++ < (max || 10)) { const j = await ramp(env, next); out = out.concat(j.data || []); next = j.page && j.page.next; }
+  return out;
+}
+async function rampUsers(env) { return (await rampAll(env, 'users?page_size=100', 5)).map(u => ({ id: u.id, email: String(u.email || '').toLowerCase(), name: ((u.first_name || '') + ' ' + (u.last_name || '')).trim() })); }
+const money = a => { if (a == null) return 0; if (typeof a === 'object') return Number(a.amount || 0) / (Number(a.minor_unit_conversion_rate) || 100); return Number(a) || 0; };
+async function rampRoute(request, env) {
+  const json = (o, s) => new Response(JSON.stringify(o), { status: s || 200, headers: { ...CORS, 'Content-Type': 'application/json' } });
+  const token = (request.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
+  let b = {}; try { b = await request.json(); } catch (e) {}
+  if (!token) return json({ error: 'sign in first' }, 401);
+  let users = {};
+  try { users = (await getDoc('config/users', token)).users || {}; } catch (e) { return json({ error: 'not approved: ' + e.message }, 403); }
+  const caller = jwtEmail(token), me = users[caller] || {};
+  if (!users[caller] && caller !== String(env.ADMIN_EMAIL || '-').toLowerCase()) return json({ error: 'not approved' }, 403);
+  const boss = caller === String(env.ADMIN_EMAIL || '-').toLowerCase() || me.role === 'admin' || ['admin', 'management'].includes(me.access);
+  try {
+    if (b.action === 'ping') { const u = await rampUsers(env); return json({ ok: true, users: u.length }); }
+    if (b.action === 'txns') {
+      const from = String(b.from || '').slice(0, 10), to = String(b.to || '').slice(0, 10);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to)) return json({ error: 'from/to dates needed' }, 400);
+      const us = await rampUsers(env), byId = Object.fromEntries(us.map(u => [u.id, u]));
+      let q = `transactions?page_size=100&from_date=${from}T00:00:00Z&to_date=${to}T23:59:59Z`;
+      if (!boss) { const mine = us.find(u => u.email === caller); if (!mine) return json({ ok: true, txns: [], note: 'no Ramp user with ' + caller }); q += '&user_id=' + mine.id; }
+      const tx = await rampAll(env, q, boss ? 10 : 3);
+      return json({ ok: true, txns: tx.map(t => { const uid = (t.card_holder || {}).user_id || t.user_id; const u = byId[uid] || {};
+        return { id: t.id, amount: money(t.amount), date: String(t.user_transaction_time || t.settlement_date || '').slice(0, 10), merchant: t.merchant_name || t.merchant_descriptor || '',
+          memo: t.memo || '', receipts: (t.receipts || []).length, state: t.state || '', email: u.email || '', who: u.name || [((t.card_holder || {}).first_name || ''), ((t.card_holder || {}).last_name || '')].join(' ').trim() }; }) });
+    }
+    if (b.action === 'attach') {
+      const id = String(b.txn || ''); if (!/^[\w-]{6,80}$/.test(id)) return json({ error: 'bad txn' }, 400);
+      const t = await ramp(env, 'transactions/' + id);
+      const us = await rampUsers(env); const uid = (t.card_holder || {}).user_id || t.user_id; const owner = (us.find(u => u.id === uid) || {}).email || '';
+      if (!boss && owner !== caller) return json({ error: 'that charge is not on your card' }, 403);
+      const out = { ok: true, txn: id, amount: money(t.amount), merchant: t.merchant_name || '', date: String(t.user_transaction_time || '').slice(0, 10), receipt: false, memo: false };
+      const m = /^data:([\w/+.-]+);base64,(.+)$/.exec(String(b.image || ''));
+      if (m) {
+        const bytes = Uint8Array.from(atob(m[2]), c => c.charCodeAt(0)); if (bytes.length > 9e6) return json({ error: 'receipt file too big' }, 413);
+        const fd = new FormData();
+        fd.append('transaction_id', id); if (uid) fd.append('user_id', uid); fd.append('idempotency_key', crypto.randomUUID());
+        fd.append('receipt', new File([bytes], 'receipt.' + (m[1].includes('pdf') ? 'pdf' : 'jpg'), { type: m[1] }));
+        try { await ramp(env, 'receipts', { method: 'POST', body: fd }); out.receipt = true; } catch (e) { out.receiptErr = e.message; }
+      }
+      const title = String(b.title || '').trim().slice(0, 120);
+      if (title) {
+        const old = String(t.memo || '').trim();
+        if (old.toLowerCase().includes(title.toLowerCase())) out.memo = 'already';
+        else { const memo = old ? title + ' · ' + old : title;
+          try { await ramp(env, 'memos/' + id, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ memo }) }); out.memo = true; out.memoText = memo; }
+          catch (e) { out.memoErr = e.message; } }
+      }
+      console.log('ramp attach', id, caller, JSON.stringify(out));
+      return json(out);
+    }
+    return json({ error: 'unknown action' }, 400);
+  } catch (e) { console.log('ramp error', e.message); return json({ error: e.message }, 502); }
+}
 export default {
   async fetch(request, env) {
     const path = new URL(request.url).pathname;
     if (path === '/notify') {
       if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
       if (request.method === 'POST') return notifyTechs(request, env);
+      return new Response('Not found', { status: 404 });
+    }
+    if (path === '/ramp') {
+      if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
+      if (request.method === 'POST') return rampRoute(request, env);
       return new Response('Not found', { status: 404 });
     }
     if (path === '/recap') {

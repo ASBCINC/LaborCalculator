@@ -14,6 +14,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
 <script src="./leaderboard-core.js"></script>
 <script src="./roles.js"></script>
+<script src="./ramp.js"></script>
 <script src="./nav.js" defer></script>
 <script src="./update-check.js" defer></script>
 <style>
@@ -447,10 +448,41 @@ async function showJob(id) {
   if (EDIT) html += `<div class="card no-print" style="border-color:#8a6d2f"><div style="color:#ffd479;font-weight:700">Editing rev ${Q._live.revision || 1} of this report</div><div class="qmeta" style="font-size:12px">Changes save as you go but stay private until you tap Resubmit to PM.</div></div>` + logForm();
   else if (st === 'scheduled' && (assigned || ME.role === 'admin')) html += logForm();
   else if (st === 'submitted' || st === 'closed') html += report(ME.role === 'admin', canEdit);
+  if (['scheduled', 'submitted', 'closed'].includes(st)) html += expensesCard(assigned || ME.role === 'admin');  // v9.6.0
   app().innerHTML = html;
   steppers(); if (document.querySelector('.step')) { goStep(STEP); saveState(EDIT && Q.jobDraft ? 'Unsent edits restored' : ''); }
   wire(); projectVisits();
 }
+// v9.6.0 Expenses: receipts go to the matching Ramp charge (photo + project title in the memo); charges whose Ramp memo
+// names this project are added by the hourly sync. Waiting = the charge hasn't posted in Ramp yet; it's matched automatically.
+function expensesCard(canAdd) {
+  const ex = (Q.expenses || []).slice().sort((a, b) => String(a.date).localeCompare(String(b.date)));
+  const tot = ex.reduce((a, e) => a + (Number(e.amount) || 0), 0);
+  const usd = n => '$' + (Number(n) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return `<div class="card"><div class="sect" style="margin-top:0">Expenses${ex.length ? ' · ' + usd(tot) : ''}</div>
+    ${ex.map(e => `<div class="qmeta" style="display:flex;justify-content:space-between;gap:8px"><span>${esc(e.date || '')} · ${esc(e.merchant || 'Receipt')}${e.who || e.by ? ' · ' + esc(e.who || nameOf(e.by)) : ''}${e.note ? `<br><span style="color:#ff9f6b">${esc(e.note)}</span>` : ''}</span>
+      <span style="white-space:nowrap">${usd(e.amount)} ${ME.role === 'admin' ? `<button class="qbtn no-print" data-rmx="${esc(e.id || e.pid || '')}" title="Not this job" style="padding:0 6px;min-height:0;height:22px">✕</button> ` : ''}${e.status === 'pending' ? '<span class="st" style="color:#ffd479">WAITING FOR CHARGE</span>' : `<span class="st st-closed">IN RAMP${e.receipt ? ' · RECEIPT' : ''}</span>`}</span></div>`).join('') || '<div class="qmeta">No expenses on this job yet.</div>'}
+    ${canAdd ? `<div class="no-print" style="border-top:1px solid var(--line);margin-top:10px;padding-top:10px">
+      <div class="qmeta">Add a receipt: it's attached to your Ramp charge with this project in the memo. If the charge hasn't posted yet, it's matched automatically when it does.</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;align-items:center"><input type="file" id="rcFile" accept="image/*,application/pdf" style="max-width:230px">
+      <input type="number" id="rcAmt" min="0" step="0.01" placeholder="Total $" style="width:110px"><input type="date" id="rcDate" value="${new Date().toISOString().slice(0, 10)}" style="width:150px">
+      <button class="qbtn gold" id="rcSave">Add receipt</button><span class="qmeta" id="rcMsg"></span></div></div>` : ''}</div>`;
+}
+document.addEventListener('click', async e => {
+  const rm = e.target.closest && e.target.closest('[data-rmx]');
+  if (rm && REF && Q && ME.role === 'admin') { const k = rm.dataset.rmx; if (!k || !confirm('Remove this expense from the job? (Nothing changes in Ramp.)')) return;
+    const keep = (Q.expenses || []).filter(x => (x.id || x.pid) !== k), gone = (Q.expenses || []).find(x => (x.id || x.pid) === k) || {};
+    await REF.update({ expenses: keep, expensesIgnored: firebase.firestore.FieldValue.arrayUnion(k) }); if (gone.pid) await db.collection('rampPending').doc(gone.pid).delete().catch(() => {}); return showJob(REF.id); }
+  if (!e.target.closest || !e.target.closest('#rcSave') || !REF || !Q) return;
+  const msg = t => { const m = document.getElementById('rcMsg'); if (m) m.textContent = t; }, b = document.getElementById('rcSave');
+  const f = (document.getElementById('rcFile').files || [])[0], amt = document.getElementById('rcAmt').value, d = document.getElementById('rcDate').value;
+  if (!f) return msg('Pick the receipt photo first.'); if (!(Number(amt) > 0)) return msg('Enter the receipt total.');
+  b.disabled = true; msg('Sending…');
+  try { const r = await asbcRamp.addReceipt({ ref: REF, q: Q, file: f, amount: amt, date: d || new Date().toISOString().slice(0, 10), email: ME.email });
+    msg(r.status === 'pending' ? 'Saved. Waiting for the charge to post in Ramp.' : 'Attached to the Ramp charge' + (r.note ? ' (' + r.note + ')' : '') + '.');
+    setTimeout(() => showJob(REF.id), 1200); }
+  catch (err) { msg('Could not add: ' + err.message); b.disabled = false; }
+});
 function scheduleCard(st) {
   const sc = Q.schedule || {}; const dates = (sc.dates || []).concat(['']);
   return `<details class="card no-print" ${['draft', 'won'].includes(st) ? 'open' : ''}><summary>Schedule &amp; assign</summary>
