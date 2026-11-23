@@ -131,34 +131,61 @@ async function notifyTechs(request, env) {
   if (!env.TEAMS_HOOK) return json({ error: 'TEAMS_HOOK not set' }, 500);
   const token = (request.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
   let b = {}; try { b = await request.json(); } catch (e) {}
-  const id = String(b.quote || ''), kind = b.kind === 'nudge' ? 'nudge' : 'schedule';
+  const kind = ['nudge', 'prep', 'opp'].includes(b.kind) ? b.kind : 'schedule';
+  if (kind === 'opp') return notifyOpp(token, b, env, json);
+  const id = String(b.quote || '');
   if (!token || !/^[\w-]{1,100}$/.test(id)) return json({ error: 'bad request' }, 400);
   let q, users = {};
   try { q = await getDoc('quotes/' + encodeURIComponent(id), token); users = (await getDoc('config/users', token)).users || {}; }
   catch (e) { return json({ error: 'cannot read job: ' + e.message }, 403); }
   const caller = jwtEmail(token);  // the token passed Firestore's own check above, so its email is genuine
-  if (!(caller === 'a.ward@asbc.us' || (users[caller] || {}).role === 'admin' || (users[caller] || {}).access === 'admin')) return json({ error: 'admin only' }, 403);
+  if (!((env.ADMIN_EMAIL && caller === String(env.ADMIN_EMAIL).toLowerCase()) || (users[caller] || {}).role === 'admin' || (users[caller] || {}).access === 'admin')) return json({ error: 'admin only' }, 403);
   const sc = q.schedule || {}, p = q.project || {};
   const techs = (sc.techs || []).map(e => String(e).toLowerCase()).filter(e => /@asbc\.us$/.test(e));
-  if (!techs.length) return json({ ok: true, sent: {}, note: 'no techs' });
+  const repEmail = (Object.keys(users).find(e => (users[e] || {}).name === p.salesManagerName) || '').toLowerCase();
+  const to = kind === 'prep' ? [repEmail].filter(e => /@asbc\.us$/.test(e)) : techs;
+  if (!to.length) return json({ ok: true, sent: {}, note: kind === 'prep' ? 'rep not found' : 'no techs' });
   const name = e => ((users[e] || {}).name) || e;
   const job = p.dtoolsProjectName || q.label || p.customerName || 'Job';
   const url = 'https://asbcinc.github.io/LaborCalculator/jobs.html?quote=' + encodeURIComponent(id);
   const facts = [['When', scheduleLines(sc)], ['Address', sc.address], ['Client', p.dtoolsClientName], ['Crew', techs.map(name).join(', ')], ['Sales rep', p.salesManagerName]]
     .filter(([, v]) => v).map(([title, value]) => ({ title, value: String(value) }));
   const body = [{ type: 'TextBlock', size: 'Medium', weight: 'Bolder', wrap: true,
-    text: kind === 'nudge' ? 'Reminder: submit today\'s job report — ' + clip(job, 80) : (b.change === 'new' ? 'New install scheduled: ' : 'Install schedule changed: ') + clip(job, 80) }];
+    text: kind === 'nudge' ? 'Reminder: submit today\'s job report — ' + clip(job, 80) : kind === 'prep' ? 'Install in 2 days: please confirm the site is ready — ' + clip(job, 80) : (b.change === 'new' ? 'New install scheduled: ' : 'Install schedule changed: ') + clip(job, 80) }];
   if (kind === 'nudge') body.push({ type: 'TextBlock', wrap: true, text: 'No job report has been submitted for today yet. Open the job, log your time and submit the recap before you finish.' });
   body.push({ type: 'FactSet', facts });
+  if (kind === 'prep') { const parts = q.parts || {}; if (parts.total) facts.push({ title: 'Parts', value: parts.ready >= parts.total ? 'All ' + parts.total + ' ready' : (parts.total - parts.ready) + ' of ' + parts.total + ' not received/staged: ' + clip((parts.notReady || []).join(', '), 200) });
+    body.push({ type: 'TextBlock', wrap: true, weight: 'Bolder', spacing: 'Medium', text: 'Please confirm with the client:' });
+    (Array.isArray(b.checklist) ? b.checklist : []).slice(0, 12).forEach(c => body.push({ type: 'TextBlock', wrap: true, spacing: 'Small', text: '• ' + clip(c, 160) })); }
   (sc.notes || []).forEach(n => body.push({ type: 'TextBlock', wrap: true, spacing: 'Small', text: '**Notes:** ' + clip(n, 300) }));
   const card = { type: 'AdaptiveCard', $schema: 'http://adaptivecards.io/schemas/adaptive-card.json', version: '1.4', body,
     actions: [{ type: 'Action.OpenUrl', title: kind === 'nudge' ? 'Open job report' : 'View job', url }] };
   const sent = {};
-  for (const t of techs) sent[t] = await postTeams(env, t, card);
+  for (const t of to) sent[t] = await postTeams(env, t, card);
   console.log('notify', kind, id, JSON.stringify(sent));
   return json({ ok: true, sent });
 }
 
+// v9.3.0 opportunity in Proposal / Customer Review with no labor quote: Teams message to its sales rep (admin session only)
+async function notifyOpp(token, b, env, json) {
+  const id = String(b.opp || '');
+  if (!token || !/^[\w-]{1,100}$/.test(id)) return json({ error: 'bad request' }, 400);
+  let o, users = {};
+  try { o = await getDoc('opportunities/' + encodeURIComponent(id), token); users = (await getDoc('config/users', token)).users || {}; }
+  catch (e) { return json({ error: 'cannot read opportunity: ' + e.message }, 403); }
+  const caller = jwtEmail(token);
+  if (!((env.ADMIN_EMAIL && caller === String(env.ADMIN_EMAIL).toLowerCase()) || (users[caller] || {}).role === 'admin' || (users[caller] || {}).access === 'admin')) return json({ error: 'admin only' }, 403);
+  const rep = (Object.keys(users).find(e => (users[e] || {}).name === o.owner) || '').toLowerCase();
+  if (!/@asbc\.us$/.test(rep)) return json({ ok: true, sent: {}, note: 'rep not found' });
+  const card = { type: 'AdaptiveCard', $schema: 'http://adaptivecards.io/schemas/adaptive-card.json', version: '1.4', body: [
+    { type: 'TextBlock', size: 'Medium', weight: 'Bolder', wrap: true, text: 'Labor quote needed: ' + clip(o.name, 90) },
+    { type: 'TextBlock', wrap: true, text: 'This opportunity is in ' + (o.stage || 'Proposal') + ' but has no labor quote in the labor calculator. If it includes installation, please build the labor quote before the proposal goes to the client.' },
+    { type: 'FactSet', facts: [['Client', o.clientName], ['Opportunity', o.number], ['Value', o.total ? '$' + Number(o.total).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '']].filter(([, v]) => v).map(([title, value]) => ({ title, value: String(value) })) }],
+    actions: [{ type: 'Action.OpenUrl', title: 'Open the labor calculator', url: 'https://asbcinc.github.io/LaborCalculator/index.html?calc=1' }] };
+  const st = await postTeams(env, rep, card);
+  console.log('notify opp', id, rep, st);
+  return json({ ok: true, sent: { [rep]: st } });
+}
 export default {
   async fetch(request, env) {
     const path = new URL(request.url).pathname;

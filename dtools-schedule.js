@@ -53,7 +53,7 @@
     Object.entries(users).forEach(([e, p]) => { const a = ASBCRoles.accessOf(p, e); if (a === 'lead' || a === 'installer') techByName[fold(p.name)] = e; });
     let pipe = {};
     try { const s = await db.collection('pipeline').doc('data').get(); if (s.exists) pipe = (JSON.parse(s.data().json || '{}').projects) || {}; } catch (e) {}
-    const idByName = {}, stageOf = {}; Object.values(pipe).forEach(p => { idByName[fold(p.name)] = p.id; stageOf[p.id] = p.stage || ''; });
+    const idByName = {}, stageOf = {}, pipeByName = {}; Object.values(pipe).forEach(p => { idByName[fold(p.name)] = p.id; stageOf[p.id] = p.stage || ''; pipeByName[fold(p.name)] = p; });
     const all = (await db.collection('quotes').get()).docs.filter(d => { const q = d.data(); return !q.isTemplate && !q.jobDeleted; });
     const out = { updated: [], created: [], linked: [], removed: [], unchanged: 0, events: 0, notified: [], skipped: [] };
     const toNotify = [];
@@ -99,8 +99,13 @@
         if (p.client && !pr.dtoolsClientName) link['dtoolsClientName'] = p.client;
         if (p.rep && !pr.salesManagerName) link['salesManagerName'] = p.rep;
         if (p.name && pr.dtoolsProjectName !== p.name) link['dtoolsProjectName'] = p.name;
+        const pp = pipeByName[fold(p.name)] || {};  // v9.3.0 proposal PDF + parts readiness from the pipeline sync
+        if (pp.proposalPdf && pr.proposalPdf !== pp.proposalPdf) link['proposalPdf'] = pp.proposalPdf;
+        const partsNow = pp.parts && pp.parts.known ? { total: pp.parts.total, ready: pp.parts.ready, notReady: (pp.parts.notReady || []).map(x => x.name + (x.qty > 1 ? ' ×' + x.qty : '')) } : null;
+        const partsChanged = partsNow && JSON.stringify(partsNow) !== JSON.stringify(q.parts || null);
         if (Object.keys(link).some(k => k !== 'dtoolsProjectName')) out.linked.push(p.name);
-        if (sc.dtoolsHash === sig && !Object.keys(link).length) { out.unchanged++; }
+        if (sc.dtoolsHash === sig && !Object.keys(link).length && !partsChanged) { out.unchanged++; }
+        else if (sc.dtoolsHash === sig) { await ref.set(Object.assign({ project: Object.assign({}, pr, link) }, partsChanged ? { parts: partsNow } : {}), { merge: true }); out.unchanged++; }
         else {
           const prevImport = sc.dtoolsImport || { dates: [], techs: [] };
           const keepDates = (sc.dates || []).filter(d => !prevImport.dates.includes(d));   // added by hand
@@ -110,7 +115,7 @@
             start: start || sc.start || '', end: end || (start ? '' : sc.end || ''), times, notes, address: address || sc.address || '',
             dtoolsHash: sig, dtoolsImport: { dates, techs, at: now }, dtoolsEventIds: crew.map(t => t.id), fromDtools: true, updatedAt: now, updatedBy: 'D-Tools calendar' });
           const st = open && ['draft', 'won', undefined, ''].includes(q.status) ? 'scheduled' : q.status;
-          await ref.set(Object.assign({ schedule, status: st, project: Object.assign({}, pr, link) }, open ? { jobHidden: false } : {}), { merge: true });
+          await ref.set(Object.assign({ schedule, status: st, project: Object.assign({}, pr, link) }, open ? { jobHidden: false } : {}, partsChanged ? { parts: partsNow } : {}), { merge: true });
           out.updated.push(p.name);
           // tell the techs when the install itself changed (not on a link-only or first-time refresh with the same days/times/techs)
           // compare as plain text (Firestore returns map keys in a different order, so never compare objects as JSON)
@@ -124,7 +129,7 @@
         const id = 'job-dt-' + (dtoolsId || fold(p.name).replace(/[^a-z0-9]+/g, '-')).slice(0, 60);
         await db.collection('quotes').doc(id).set({
           id, label: p.name, noQuote: true, status: 'scheduled', items: [], isTemplate: false, counted: 'dtools-schedule', updatedAt: new Date(),
-          project: { customerName: p.name, dtoolsProjectName: p.name, salesManagerName: p.rep || '', dtoolsOpportunityId: dtoolsId, dtoolsOppNumber: p.number || '', dtoolsClientName: p.client || '' },
+          project: { customerName: p.name, dtoolsProjectName: p.name, salesManagerName: p.rep || '', dtoolsOpportunityId: dtoolsId, dtoolsOppNumber: p.number || '', dtoolsClientName: p.client || '', proposalPdf: (pipeByName[fold(p.name)] || {}).proposalPdf || '' },
           schedule: { dates, techs, start, end, times, notes, address, dtoolsHash: sig, dtoolsImport: { dates, techs, at: now }, dtoolsEventIds: crew.map(t => t.id), fromDtools: true, updatedAt: now, updatedBy: 'D-Tools calendar' }
         }, { merge: true });
         out.created.push(p.name);
@@ -173,6 +178,57 @@
     return { saved: clean.length, withProject: clean.filter(m => m.project).length };
   }
   window.asbcImportFeed = importFeed;
+  // v9.3.0 Pre-install heads-up to the sales rep (Teams), 2 days before the first install day (Friday also covers Monday).
+  // The checklist comes from what is being installed (D-Tools items) plus the standard site-readiness items.
+  function checklistFor(names) {
+    const t = (names || []).join(' ').toLowerCase(), out = [];
+    if (/oled|beovision|tv|contour|harmony|theatre|lg /.test(t)) out.push('TV location confirmed: wall blocking or stand, power and network at the TV');
+    if (/beolab|speaker|shape|celestial|in-wall|in-ceiling/.test(t)) out.push('Speaker locations clear; power at each active speaker');
+    if (/shape/.test(t)) out.push('Shape wall ready (paint dry, layout agreed), outlet near the amplifier tile');
+    if (/eero|unifi|ubiquiti|switch|router|network|access point|poe/.test(t)) out.push('Internet live; access to modem/router and Wi-Fi name and password');
+    if (/rack|core|amp|encore|wattbox|strong/.test(t)) out.push('Equipment location with power and ventilation');
+    if (/motoriz|lift|mount/.test(t)) out.push('Mounting surface approved by the client (no surprises behind the wall)');
+    out.push('Client (or someone with authority) home for the full window; gate/parking/access details');
+    out.push('Clear path for delivery and removal of packaging');
+    out.push('Any payment due before install has been collected');
+    return out;
+  }
+  async function prepReminders() {
+    const db = firebase.firestore(), t = todayPT();
+    const add = n => { const x = new Date(t + 'T12:00:00Z'); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
+    const wd = new Date(t + 'T12:00:00Z').getUTCDay(), targets = [add(2)].concat(wd === 5 ? [add(3)] : []).concat(wd === 4 ? [add(4)] : []);
+    let pipe = {}; try { const s = await db.collection('pipeline').doc('data').get(); if (s.exists) pipe = JSON.parse(s.data().json || '{}').projects || {}; } catch (e) {}
+    const byName = {}; Object.values(pipe).forEach(p => byName[fold(p.name)] = p);
+    const out = [];
+    for (const s of (await db.collection('quotes').where('status', '==', 'scheduled').get()).docs) {
+      const q = s.data(), sc = q.schedule || {}, pr = q.project || {};
+      const first = (sc.dates || []).filter(d => d >= t).sort()[0];
+      if (q.isTemplate || q.jobDeleted || !first || !targets.includes(first) || q.prepSent === first || !pr.salesManagerName) continue;
+      const pp = byName[fold(pr.dtoolsProjectName || q.label)] || {};
+      const st = await notify({ kind: 'prep', quote: s.id, checklist: checklistFor((pp.parts || {}).names || []) });
+      if (st === 200) await s.ref.set({ prepSent: first }, { merge: true });
+      out.push((pr.dtoolsProjectName || q.label) + ': ' + st);
+    }
+    return out;
+  }
+  // v9.3.0 Opportunities that reach Proposal / Customer Review with no labor quote in the calculator: one Teams message to the rep.
+  // Ones already in those stages on the first run are recorded without a message (config/oppLabor.seen).
+  async function oppLaborCheck() {
+    const db = firebase.firestore(), ref = db.collection('config').doc('oppLabor');
+    const doc = await ref.get(), seen = (doc.exists && doc.data().seen) || {}, first = !doc.exists;
+    const ops = (await db.collection('opportunities').get()).docs.map(d => ({ id: d.id, ...d.data() })).filter(o => /proposal|customer review/i.test(o.stage || ''));
+    const qs = (await db.collection('quotes').get()).docs.map(d => d.data()).filter(q => !q.isTemplate);
+    const has = o => qs.some(q => (q.project || {}).dtoolsOpportunityId === o.id || fold(q.label) === fold(o.name));
+    const out = { checked: ops.length, missing: 0, sent: [], baseline: first };
+    const upd = {};
+    for (const o of ops) { if (has(o)) continue; out.missing++; if (seen[o.id]) continue;
+      if (!first && out.sent.length < 10) { const st = await notify({ kind: 'opp', opp: o.id }); out.sent.push(o.name + ': ' + st); if (st !== 200) continue; }
+      upd[o.id] = new Date().toISOString(); }
+    if (Object.keys(upd).length || first) await ref.set({ seen: upd, at: new Date().toISOString() }, { merge: true });
+    return out;
+  }
+  window.asbcPrepReminders = prepReminders;
+  window.asbcOppLaborCheck = oppLaborCheck;
   window.asbcImportSchedule = importSchedule;
   window.asbcRecapNudge = recapNudge;
 })();

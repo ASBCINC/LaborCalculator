@@ -196,3 +196,14 @@ D-Tools handoff panel (paste-ready labor block); Quote Log search wording.
 
 ## v9.2.0 — Calendar customer card
 - calendar.html: clicking a job (desktop grid chip or any agenda row) opens a card (infoJob/infoEv): customer, address (maps link), appointment days + times, assigned crew + team, sales rep, notes; 'Open job report' only for roles with recaps. Phones: tap the day, then the job in the list.
+
+## v9.3.0 — Crew conflicts, parts ready, prep + labor-quote Teams, learned hours, labor profit, punch list, proposal PDFs
+- sync_pipeline.py: from REST Projects/GetProject (refetched once for every project via 'parts' not in old): pdfs[] + proposalPdf (accepted/Q- PDF first), parts {total, ready, known, notReady[], names[]} (ready = installStatus staged/delivered/installed/received or orderStatus received/in stock).
+- dtools-schedule.js: import copies project.proposalPdf and quote.parts from pipeline/data; asbcPrepReminders() (7:37 run: rep Teams 2 days before first install day, Fri covers Mon, Thu covers Mon/next; quote.prepSent); asbcOppLaborCheck() (7:37 run: opps in Proposal/Customer Review with no labor quote → rep Teams, max 10/run, config/oppLabor.seen; first run is a silent baseline).
+- Relay /notify kinds: schedule, nudge, prep (to the rep, with checklist + parts), opp (reads opportunities/<id>). Admin check via config/users role/access or env ADMIN_EMAIL (no hard-coded address). Deployed 06110db9.
+- health.js: window.asbcConflicts(events, users) = same tech, same day, two different jobs/events with overlapping times (all-day = whole day); Home shows double-bookings and open punch-list items.
+- calendar.html: ⚠ on double-booked chips + red banner; Crew week view (techs × days, hours = D-Tools window, all-day 8 h); customer card shows parts readiness and proposal PDF link.
+- jobs.html: header shows proposal PDF + parts; submit builds quote.punch from Open items (one per line/bullet), punch card with tick-off (by/at); recordItemHours → stats/items {id: {n, qty, est, act, name}} once per job.
+- index.html: learned-hours note on products with 3+ jobs and ≥20% off the catalog (real hrs/unit vs catalog); admin Apply scales install+programming hours (quarter-hour rounding) and saves the catalog.
+- pipeline.html: PARTS NOT READY (install ≤7 days), PUNCH badges + queue items, crew double-bookings and proposals without labor quotes in Needs action, proposal PDFs/parts/punch in the detail sheet, Labor profit table on Revenue (quoted = catalog hours × settings.hourlyRate, cost = log hours × settings.crewCostRate, admin-editable).
+- Nov 22: Anthony skipped the rep Teams message for proposals without a labor quote — asbcOppLaborCheck() is NOT run by the D-Tools pull (the Needs action list of proposals without labor quotes stays). Crew cost rate set to $100/hr per tech (config/settings.crewCostRate).

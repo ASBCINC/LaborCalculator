@@ -361,6 +361,24 @@ document.addEventListener('input', e => { if (!e.target.closest) return; const m
 document.addEventListener('change', e => { if (!e.target.closest) return; const m = e.target.closest('.miss'); if (m) m.classList.remove('miss'); if (e.target.closest('.step')) autosave(); });
 document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-go]'); if (b) goStep(Number(b.dataset.go)); });
 // v8.24.0: no approval step. Submitting files the report right away and records actual vs estimated hours (Labor Calibration).
+// v9.3.0 learned hours: per catalog item, sum of quantity, quoted hours and actual hours from submitted reports (stats/items)
+function recordItemHours(act) {
+  try { const inc = firebase.firestore.FieldValue.increment, items = {};
+    (act.lines || []).forEach(l => { if (!l.id || !(Number(l.qty) > 0)) return; const k = String(l.id);
+      items[k] = { n: inc(1), qty: inc(Number(l.qty) || 1), est: inc(Math.round((Number(l.estHours) || 0) * 100) / 100), act: inc(Math.round((Number(l.actualHours) || 0) * 100) / 100), name: l.name }; });
+    if (Object.keys(items).length) db.collection('stats').doc('items').set({ items, updatedAt: new Date() }, { merge: true }).catch(e => console.warn('item hours', e));
+  } catch (e) { console.warn('item hours', e); }
+}
+// v9.3.0 punch list: one item per line/bullet of "Open items / return visit"
+document.addEventListener('change', async e => { const c = e.target.closest('.pk'); if (!c || !REF || !Q) return; const pl = (Q.punch || []).slice(), i = Number(c.dataset.i); if (!pl[i]) return;
+  pl[i] = Object.assign({}, pl[i], c.checked ? { done: true, by: ME.email, at: new Date().toISOString() } : { done: false, by: null, at: null }); Q.punch = pl; await save(REF, { punch: pl }); showJob(new URLSearchParams(location.search).get('quote')); });
+function punchFrom(text) { return String(text || '').split(/\n|•|;/).map(x => x.replace(/^[\s\-–*\d.)]+/, '').trim()).filter(x => x.length > 2).slice(0, 15).map(t => ({ t, done: false })); }
+function punchCard(canTick) {
+  const pl = Q.punch || []; if (!pl.length) return '';
+  const open = pl.filter(x => !x.done).length;
+  return `<div class="card" style="border-color:${open ? '#8a6d2f' : 'var(--line)'}"><div class="sect" style="margin-top:0;color:${open ? '#ffd479' : 'inherit'}">Punch list (${open} open of ${pl.length})</div>
+    ${pl.map((x, i) => `<label class="chk" style="display:flex;gap:8px;align-items:flex-start;padding:4px 0"><input type="checkbox" class="pk" data-i="${i}" ${x.done ? 'checked' : ''} ${canTick ? '' : 'disabled'}><span style="${x.done ? 'text-decoration:line-through;color:var(--muted)' : ''}">${esc(x.t)}${x.done && x.by ? ` <span class="qmeta">· ${esc(nameOf(x.by))} ${esc(new Date(x.at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }))}</span>` : ''}</span></label>`).join('')}</div>`;
+}
 function actualsFrom(j) {
   const lines = [];
   (Q.items || []).forEach((it, i) => { const l = (j.lines || []).find(x => x.i === i); if (l && l.actualHours != null && lineEst(it) > 0) lines.push({ id: it.id, name: lineName(it), zone: it.zone || 'General', qty: it.qty, estHours: Math.round(lineEst(it) * 100) / 100, actualHours: l.actualHours, note: l.note || '' }); });
@@ -422,7 +440,7 @@ async function showJob(id) {
   const st = Q.status || 'draft';
   let html = `<div class="card"><div class="qtop"><div><div class="qname">${esc(label(Q))} ${stBadge(st)} ${jsBadge((Q.job || {}).jobStatus)}</div>
     <div class="qmeta">${esc((Q.project || {}).dtoolsClientName || '')}${(Q.project || {}).dtoolsOppNumber ? ' · D-Tools #' + esc(Q.project.dtoolsOppNumber) : ''} · Rep: ${esc((Q.project || {}).salesManagerName || '—')}</div>
-    ${subLabel(Q) ? `<div class="qmeta">${esc(subLabel(Q))}</div>` : ''}${Q.noQuote ? '<div class="qmeta" style="color:#ff9f6b">Job report without a labor quote</div>' : ''}<div class="qmeta">Dates: ${esc(dayWins(Q.schedule || {}) || '—')} · Techs: ${esc(((Q.schedule || {}).techs || []).map(nameOf).join(', ') || '—')}</div>${(Q.schedule || {}).address ? `<div class="qmeta">Address: <a href="https://maps.google.com/?q=${encodeURIComponent(Q.schedule.address)}" target="_blank" rel="noopener" style="color:#C7A66A">${esc(Q.schedule.address)}</a></div>` : ''}${((Q.schedule || {}).notes || []).length ? `<div class="qmeta" style="white-space:pre-wrap;color:#e9dcc0">D-Tools notes: ${esc(Q.schedule.notes.join('\n'))}</div>` : ''}</div></div>
+    ${subLabel(Q) ? `<div class="qmeta">${esc(subLabel(Q))}</div>` : ''}${Q.noQuote ? '<div class="qmeta" style="color:#ff9f6b">Job report without a labor quote</div>' : ''}<div class="qmeta">Dates: ${esc(dayWins(Q.schedule || {}) || '—')} · Techs: ${esc(((Q.schedule || {}).techs || []).map(nameOf).join(', ') || '—')}</div>${(Q.schedule || {}).address ? `<div class="qmeta">Address: <a href="https://maps.google.com/?q=${encodeURIComponent(Q.schedule.address)}" target="_blank" rel="noopener" style="color:#C7A66A">${esc(Q.schedule.address)}</a></div>` : ''}${((Q.schedule || {}).notes || []).length ? `<div class="qmeta" style="white-space:pre-wrap;color:#e9dcc0">D-Tools notes: ${esc(Q.schedule.notes.join('\n'))}</div>` : ''}${(Q.project || {}).proposalPdf ? `<div class="qmeta"><a href="${esc(Q.project.proposalPdf)}" target="_blank" rel="noopener" style="color:#C7A66A">Open proposal PDF</a></div>` : ''}${Q.parts && Q.parts.total ? `<div class="qmeta" style="color:${Q.parts.ready >= Q.parts.total ? '#7ee2a0' : '#ff8b8b'}">Parts: ${Q.parts.ready >= Q.parts.total ? 'all ' + Q.parts.total + ' received or staged' : (Q.parts.total - Q.parts.ready) + ' of ' + Q.parts.total + ' not received or staged' + ((Q.parts.notReady || []).length ? ' (' + esc(Q.parts.notReady.join(', ')) + ')' : '')}</div>` : ''}</div></div>
     ${Q.job && Q.job.reviewNote && st === 'scheduled' ? `<div class="qmeta" style="color:#ff9f6b;margin-top:6px">Sent back by ${esc(nameOf(Q.job.reviewedBy))}: ${esc(Q.job.reviewNote)}</div>` : ''}</div>`;
   if (ME.role === 'admin') html += scheduleCard(st);
   html += '<div id="visits"></div>';
@@ -513,7 +531,7 @@ function report(admin, canEdit) {
   const head = `<div class="print-only"><b>ASBC Job Report</b> · ${esc(label(Q))} · printed ${new Date().toLocaleDateString('en-US')}</div>`;
   const itemsCard = timeOnly ? `<div class="card">${head}<div class="sect" style="margin-top:0">Total time on site</div><div class="big" style="font-size:24px;font-weight:800;color:var(--gold)">${hrs(tLog)} hrs</div>
     ${admin && Q.noQuote && !Q.returnFor ? '<div class="qmeta" style="margin-top:6px"><b style="color:#ff9f6b">No labor quote was submitted for this job.</b> Time on site only; nothing to compare against an estimate.</div>' : ''}</div>` : null;
-  if (timeOnly) return parentCard + itemsCard + extrasCard + daily() + recapCard() + photoReport(Q) + signoffReport(Q) + actions;
+  if (timeOnly) return parentCard + itemsCard + extrasCard + daily() + recapCard() + punchCard(admin || canEdit) + photoReport(Q) + signoffReport(Q) + actions;
   return `<div class="card">${head}
     <div class="sect" style="margin-top:0">Hours by item</div><table><tr><th>Item</th><th>Qty</th>${admin ? '<th class="right">Est</th>' : ''}<th class="right">Actual</th>${admin ? '<th class="right">Var</th>' : ''}<th>Who</th><th>Note</th></tr>
     ${zones.map(z => { const zr = rows.filter(r => r.zone === z); const ze = zr.reduce((a, r) => a + r.est, 0), za = zr.reduce((a, r) => a + (Number(r.act) || 0), 0);
@@ -521,7 +539,7 @@ function report(admin, canEdit) {
       zr.map(r => `<tr><td>${esc(lineName(r.it))}</td><td>${esc(r.it.qty)}</td>${admin ? `<td class="right">${hrs(r.est)}</td>` : ''}<td class="right">${r.act == null ? '—' : hrs(r.act)}</td>${admin ? `<td class="right">${v(r.est, r.act)}</td>` : ''}<td>${esc(techLabel(r.by))}</td><td>${esc(r.note || '')}</td></tr>`).join(''); }).join('')}
     <tr><td><b>Total</b></td><td></td>${admin ? `<td class="right"><b>${hrs(tEst)}</b></td>` : ''}<td class="right"><b>${hrs(tAct)}</b></td>${admin ? `<td class="right"><b>${v(tEst, tAct)}</b></td>` : ''}<td></td><td></td></tr></table>
     ${admin ? '<div class="qmeta" style="margin-top:6px">' + (Q.noQuote ? '<b style="color:#ff9f6b">No labor quote was submitted for this job.</b> Estimates shown are catalog hours for the items the tech picked; "Other" items have no estimate.' : 'Estimates are catalog labor hours (before site conditions, PM and commissioning).') + '</div>' : ''}</div>
-${extrasCard}${daily()}${recapCard()}${photoReport(Q)}${signoffReport(Q)}${actions}`;
+${extrasCard}${daily()}${recapCard()}${punchCard(admin || canEdit)}${photoReport(Q)}${signoffReport(Q)}${actions}`;
 }
 function wire() {
   const on = (id, fn) => { const el = document.getElementById(id); if (el) el.addEventListener('click', fn); };
@@ -593,9 +611,10 @@ function wire() {
       delete job.reviewedAt; delete job.reviewedBy;
     } else { job.revision = job.revision || 1; job.firstSubmittedAt = job.firstSubmittedAt || now; }
     const data = { job, status: 'closed' }, act = actualsFrom(job); if (act) data.actuals = act;
+    if (!(Q.punch || []).length) { const pl = punchFrom((job.recap || {}).followups); if (pl.length) data.punch = pl; }  // v9.3.0 punch list from Open items
     if (EDIT) { data.jobDraft = firebase.firestore.FieldValue.delete(); data.jobRevisions = firebase.firestore.FieldValue.arrayUnion(Object.assign({}, Q._live || {}, { revision: (Q._live || {}).revision || 1, clocks: null })); }
     await save(REF, data);
-    if (act && !Q.actuals) { try { await ASBCBoard.recordAccuracy(db, (Q.project || {}).salesManagerName, act.totalEstHours, act.totalActualHours); } catch (err) { console.warn('accuracy tally', err); } }  // tallied once per job
+    if (act && !Q.actuals) { try { await ASBCBoard.recordAccuracy(db, (Q.project || {}).salesManagerName, act.totalEstHours, act.totalActualHours); } catch (err) { console.warn('accuracy tally', err); } recordItemHours(act); }  // tallied once per job
     EDIT = false;
     notifyRecap(qid);
     STEP = 1; await showJob(qid);

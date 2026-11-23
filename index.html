@@ -717,7 +717,7 @@
               }
           });
 
-        const APP_VERSION = '9.2.0';
+        const APP_VERSION = '9.3.0';
         const BUILD_DATE = '2026-11-22';
         let HOURLY_RATE = 200;
 
@@ -1411,6 +1411,20 @@
             renderCatalog();
         });
 
+        // v9.3.0 hours that learn from real jobs: stats/items holds, per catalog item, quantity + quoted + actual hours from submitted job reports.
+        // When 3+ jobs disagree with the catalog by 20%+, the product shows the real average; admins can apply it to the catalog in one tap.
+        let ITEM_STATS = {};
+        async function loadItemStats() { try { const s = await db.collection('stats').doc('items').get(); ITEM_STATS = (s.exists && s.data().items) || {}; if (typeof renderCatalog === 'function') renderCatalog(); } catch (e) {} }
+        function learnedFor(item) { const st = ITEM_STATS[item.id]; if (!st || (st.n || 0) < 3 || !(st.qty > 0) || !(st.est > 0)) return null;
+            const est = (Number(item.installHours) || 0) + (Number(item.programmingHours) || 0), act = st.act / st.qty; if (!(est > 0) || Math.abs(act - est) / est < 0.2) return null; return { est, act, n: st.n }; }
+        function learnedHtml(item) { const l = learnedFor(item); if (!l) return '';
+            return `<div class="text-[11px] mt-1" style="color:${l.act > l.est ? '#ff9f6b' : '#7ee2a0'}">Real jobs: ${l.act.toFixed(2)} hrs/unit vs ${l.est.toFixed(2)} in the catalog (${l.n} jobs)${isAdminUser() ? ` <button type="button" data-learn="${item.id}" class="underline text-brandGold ml-1">Apply</button>` : ''}</div>`; }
+        document.addEventListener('click', async e => { const b = e.target.closest('[data-learn]'); if (!b || !isAdminUser()) return; e.preventDefault(); e.stopPropagation();
+            const item = catalog.find(i => i.id === b.dataset.learn), l = item && learnedFor(item); if (!l) return;
+            const f = l.act / l.est;
+            if (!confirm(`Update ${item.name}?\n\nInstall ${item.installHours.toFixed(2)} → ${(item.installHours * f).toFixed(2)} hrs, programming ${item.programmingHours.toFixed(2)} → ${(item.programmingHours * f).toFixed(2)} hrs (based on ${l.n} real jobs).`)) return;
+            item.installHours = Math.round(item.installHours * f * 4) / 4; item.programmingHours = Math.round(item.programmingHours * f * 4) / 4;
+            await persistCatalog(); renderCatalog(); });
         function renderCatalog() {
             const visibleItems = getVisibleCatalogItems();
             const currentZone = activeZone.value.trim() || 'General';
@@ -1479,6 +1493,7 @@
                         </div>
                     `;
                 }
+                { const lb = learnedHtml(item); if (lb) { const t = card.querySelector('h3'); if (t) t.insertAdjacentHTML('afterend', lb); } }  // v9.3.0 learned hours
                 productGrid.appendChild(card);
             });
         }
@@ -2048,6 +2063,7 @@
                 const email = (u.email || '').toLowerCase();
                 const users = await loadApprovedUsers();
                 syncRepOptions(users);  // v8.33.0
+                loadItemStats();  // v9.3.0
                 const p = users[email];
                 if (!p) { showAuthGate(true, email + ' is not on the approved list yet. Ask Anthony to add you, then reload.'); return; }
                 currentUserProfile = { email, name: p.name, role: p.role || 'rep', allQuotes: !!p.allQuotes, access: ASBCRoles.accessOf(p, email) };

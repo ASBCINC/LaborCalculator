@@ -15,6 +15,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
 <script src="./roles.js"></script>
 <script src="./nav.js" defer></script>
+<script src="./health.js"></script>
 <script src="./update-check.js" defer></script>
 <style>
 :root { --gold:#C7A66A; --bg:#050505; --card:#111318; --line:#26292f; --muted:#8b8f98; --good:#7ee2a0; --warn:#ffd479; --bad:#ff8b8b; --blue:#8fb3ff; --sf:#f59e0b; --la:#3b82f6; }
@@ -135,7 +136,7 @@ const KIND = { stage: 'Stage', co: 'Change order', payment: 'Payment', job: 'Job
 const STORES = [['SF', 'San Francisco'], ['PA', 'Palo Alto'], ['WH', 'West Hollywood'], ['CM', 'Costa Mesa'], ['UN', 'Store not set']];
 const SRC = { outlook: 'EMAIL', teams: 'TEAMS', sms: 'TEXT', call: 'CALL', transcript: 'MEETING', dtools: 'D-TOOLS' };
 const VIEWS = [['action', 'Needs action'], ['board', 'Board'], ['stores', 'Stores'], ['active', 'Active jobs'], ['revenue', 'Revenue'], ['opps', 'Opportunities']];
-let DATA = null, EVENTS = [], HOL = {}, FEED = [], FEED_AT = '', USERS = {};
+let DATA = null, EVENTS = [], HOL = {}, FEED = [], FEED_AT = '', USERS = {}, QUOTES = [], CATALOG = new Map(), SETTINGS = {}, OPPS_ALL = [], CONF = [], IS_ADMIN = false;
 const F = (() => { let s = {}; try { s = JSON.parse(localStorage.getItem('asbcPipeView') || '{}'); } catch (e) {} return { view: s.view || 'action', store: s.store || '', q: '' }; })();
 const saveF = () => { try { localStorage.setItem('asbcPipeView', JSON.stringify({ view: F.view, store: F.store })); } catch (e) {} };
 
@@ -144,6 +145,12 @@ const storeOfRep = name => { const u = Object.values(USERS).find(x => x && x.nam
 const stTag = k => `<span class="st ${k}">${k === 'UN' ? '—' : k}</span>`;
 function nextInstall(p) { const t = todayISO(); const l = EVENTS.filter(e => e.name === p.name && e.date >= t && e.kind !== 'event').sort((a, b) => (a.date + (a.start || '')).localeCompare(b.date + (b.start || ''))); return l[0] || null; }
 const instTxt = e => fmtD(e.date) + (e.start ? ' ' + t12(e.start) + (e.end ? '–' + t12(e.end) : '') : '') + ((e.crew || []).length ? ' · ' + e.crew.map(n => n.split(' ')[0]).join(', ') : '');
+// v9.3.0 parts, punch list, labor quotes, crew conflicts
+const daysTo = d => d ? Math.round((Date.parse(d + 'T12:00:00Z') - Date.parse(todayISO() + 'T12:00:00Z')) / 864e5) : null;
+const partsOk = p => !p.parts || !p.parts.known || !p.parts.total || p.parts.ready >= p.parts.total;
+const quotesOf = p => QUOTES.filter(q => (q.project || {}).dtoolsProjectName === p.name || (q.project || {}).dtoolsOpportunityId === p.id);
+const punchOf = p => quotesOf(p).flatMap(q => (q.punch || []).filter(x => !x.done).map(x => ({ t: x.t, q })));
+const lineEst = it => { const c = it.isCustom ? it : (CATALOG.get(it.id) || {}); const per = (Number(c.installHours) || 0) + (Number(c.programmingHours) || 0) + (it.addon ? (Number(it.addon.installHours) || 0) + (Number(it.addon.programmingHours) || 0) : 0); return per * (Number(it.qty) || 0); };
 const msgsOf = p => FEED.filter(m => m.project === p.name).sort((a, b) => String(b.date).localeCompare(String(a.date)));
 const isReq = m => ['action', 'blocker', 'deadline'].includes(m.kind) && days(m.date) <= 21;
 function flags(p) {
@@ -156,6 +163,8 @@ function flags(p) {
   if (overdue(p).length) out.push(['INVOICE OVERDUE', 'b']); else if (openInv(p).length) out.push(['INVOICE OPEN', 'u']);
   if (col === 'INSTALLED' && (p.price || 0) - (p.paid || 0) > 1) out.push(['BALANCE ' + usd0((p.price || 0) - (p.paid || 0)), 'b']);
   const req = msgsOf(p).filter(isReq).length; if (req) out.push([req + ' REQUEST' + (req > 1 ? 'S' : ''), 'w']);
+  const ni = nextInstall(p); if (!partsOk(p) && ni && daysTo(ni.date) <= 7) out.push([(p.parts.total - p.parts.ready) + ' PARTS NOT READY', 'b']);
+  const pu = punchOf(p).length; if (pu) out.push([pu + ' PUNCH', 'w']);
   return out;
 }
 const unpaid = x => (Number(x.amount) || 0) - (Number(x.paid) || 0) > 0.01;
@@ -173,7 +182,7 @@ function card(p, showStore) {
   return `<div class="pc ${isNew(p) ? 'newp' : ''}" data-id="${esc(p.id)}" data-t="p"><div class="nm">${showStore ? stTag(storeOfRep(p.rep)) : ''}${esc(p.name)}</div>
     <div class="sub">${esc(p.client || '')}${p.rep ? ' · ' + esc(p.rep) : ''}${showStore === 'stage' ? ' · ' + esc(colOf(p)) : ''}</div>
     <div class="money"><span>${usd0(p.price)}</span><span class="muted">${p.paid != null ? pct + '% paid' : ''}</span></div>${p.paid != null ? `<div class="pbar"><i style="width:${pct}%"></i></div>` : ''}
-    ${ni ? `<div class="inst">Next install: ${esc(instTxt(ni))}</div>` : ''}
+    ${ni ? `<div class="inst">Next install: ${esc(instTxt(ni))}</div>` : ''}${p.parts && p.parts.known && p.parts.total ? `<div class="sub" style="color:${partsOk(p) ? 'var(--good)' : 'var(--warn)'}">Parts ${p.parts.ready}/${p.parts.total} ready</div>` : ''}
     <div class="badges">${isNew(p) ? '<span class="bd w">NEW</span>' : ''}${d != null ? `<span class="bd">${d}d</span>` : ''}${fl.map(([t, c]) => `<span class="bd ${c}">${esc(t)}</span>`).join('')}</div>
     ${ms.length ? `<div class="msgs">${ms.map(m => `<div class="msg ${esc(m.kind)}"><span class="src">${SRC[m.source] || esc(m.source)}</span><span class="tx">${esc(m.title)} <span class="muted">· ${esc(ago(m.date))}</span></span></div>`).join('')}</div>`
       : (lastEv(p) ? `<div class="msgs"><div class="msg"><span class="src">${esc((KIND[lastEv(p).kind] || lastEv(p).kind).toUpperCase())}</span><span class="tx">${esc(lastEv(p).text)} <span class="muted">· ${esc(ago(lastEv(p).at))}</span></span></div></div>` : '')}</div>`;
@@ -231,12 +240,23 @@ function viewRevenue(P, O) {
     <td>${tot ? '' : `<div class="hbar" title="To collect + weighted pipeline"><i style="width:${(r.c - r.pd) / max * 100}%;background:var(--good)"></i><i style="width:${r.w / max * 100}%;background:var(--gold)"></i></div>`}</td></tr>`;
   const reps = [...new Set(P.map(p => p.rep).concat(O.map(o => o.owner)).filter(Boolean))].map(n => { const ps = P.filter(p => p.rep === n), os = O.filter(o => o.owner === n);
     return { n, k: storeOfRep(n), j: ps.length, c: sum(ps, 'price'), due: sum(ps, 'price') - sum(ps, 'paid'), w: sum(os, o => (Number(o.total) || 0) * (Number(o.probability) || 0) / 100) }; }).sort((a, b) => (b.due + b.w) - (a.due + a.w));
+  // v9.3.0 labor profit on submitted job reports: quoted labor (catalog hours × rate) vs hours on site × crew cost
+  const rate = Number(SETTINGS.hourlyRate) || 200, cost = Number(SETTINGS.crewCostRate) || 0;
+  const jobs = QUOTES.filter(q => q.status === 'closed' && (q.job || {}).submittedAt && !q.noQuote && (!F.store || storeOfRep((q.project || {}).salesManagerName) === F.store)).map(q => {
+    const est = (q.items || []).reduce((a, it) => a + lineEst(it), 0), act = ((q.job || {}).log || []).reduce((a, r) => a + (Number(r.hours) || 0), 0);
+    return { q, rep: (q.project || {}).salesManagerName || '—', est, act, quoted: est * rate, costAmt: act * cost }; }).filter(j => j.est > 0);
+  const lp = `<div class="sect">Labor profit on submitted jobs (${jobs.length})</div>
+    <div class="muted" style="margin-bottom:6px">Quoted labor = catalog hours × $${rate}/hr. Crew cost = hours on site × ${cost ? '$' + cost + '/hr' : '<b style="color:var(--warn)">crew cost rate not set</b>'}.
+    ${IS_ADMIN ? `Crew cost per hour: <input id="costRate" type="number" min="0" step="1" value="${cost || ''}" placeholder="e.g. 65" style="width:90px;height:28px;font-size:13px"> <button class="btn" id="saveCost" style="height:28px">Save</button>` : ''}</div>
+    <table><tr><th>Job</th><th>Rep</th><th class="r">Quoted hrs</th><th class="r">Actual hrs</th><th class="r">Quoted labor</th><th class="r">Crew cost</th><th class="r">Labor profit</th></tr>
+    ${jobs.map(j => `<tr><td>${stTag(storeOfRep(j.rep))}${esc((j.q.project || {}).dtoolsProjectName || j.q.label)}</td><td>${esc(j.rep)}</td><td class="r">${j.est.toFixed(1)}</td><td class="r" style="color:${j.act > j.est * 1.15 ? 'var(--bad)' : 'inherit'}">${j.act.toFixed(1)}</td><td class="r">${usd0(j.quoted)}</td><td class="r">${cost ? usd0(j.costAmt) : '—'}</td><td class="r"><b>${cost ? usd0(j.quoted - j.costAmt) + ' (' + Math.round((j.quoted - j.costAmt) / (j.quoted || 1) * 100) + '%)' : '—'}</b></td></tr>`).join('') || '<tr><td colspan=7 class="empty">No submitted job reports with a labor quote yet.</td></tr>'}
+    ${jobs.length ? `<tr class="tot"><td>Total</td><td></td><td class="r">${sum(jobs, 'est').toFixed(1)}</td><td class="r">${sum(jobs, 'act').toFixed(1)}</td><td class="r">${usd0(sum(jobs, 'quoted'))}</td><td class="r">${cost ? usd0(sum(jobs, 'costAmt')) : '—'}</td><td class="r">${cost ? usd0(sum(jobs, 'quoted') - sum(jobs, 'costAmt')) : '—'}</td></tr>` : ''}</table>`;
   return `<div class="split"><div class="panel"><div class="sect" style="margin-top:0">Projected revenue by store</div>
     <table><tr><th>Store</th><th class="r">Active jobs</th><th class="r">Contract</th><th class="r">Collected</th><th class="r">%</th><th class="r">To collect</th><th class="r">Due 30 days</th><th class="r">Overdue</th><th class="r">Weighted opps</th><th class="r">Projected</th><th></th></tr>
     ${rows.map(r => tr(r)).join('')}${tr(T, true)}</table>
     <div class="muted" style="margin-top:8px">To collect = contract − collected on active projects. Due 30 days = unpaid payment terms due in the next 30 days (incl. overdue). Weighted opps = open opportunities × D-Tools probability (blank probability counts as 0). Projected = to collect + weighted opps. Store = the sales rep's store in User Roles. <span style="color:var(--good)">■</span> to collect <span style="color:var(--gold)">■</span> weighted pipeline</div></div>
     <div class="panel"><div class="sect" style="margin-top:0">By sales rep</div><table><tr><th>Rep</th><th class="r">Jobs</th><th class="r">Contract</th><th class="r">To collect</th><th class="r">Weighted opps</th></tr>
-    ${reps.map(r => `<tr><td>${stTag(r.k)} ${esc(r.n)}</td><td class="r">${r.j}</td><td class="r">${usd0(r.c)}</td><td class="r">${usd0(r.due)}</td><td class="r">${usd0(r.w)}</td></tr>`).join('') || '<tr><td colspan=5 class="empty">None</td></tr>'}</table></div></div>`;
+    ${reps.map(r => `<tr><td>${stTag(r.k)} ${esc(r.n)}</td><td class="r">${r.j}</td><td class="r">${usd0(r.c)}</td><td class="r">${usd0(r.due)}</td><td class="r">${usd0(r.w)}</td></tr>`).join('') || '<tr><td colspan=5 class="empty">None</td></tr>'}</table>${lp}</div></div>`;
 }
 function viewOpps(O) {
   const groups = [['Proposal', o => /proposal|quote/i.test(o.stage || '')], ['On hold', o => /hold/i.test(o.stage || '')], ['Lead / new', () => true]];
@@ -253,6 +273,8 @@ function queue(P) {
   const q = [];
   P.forEach(p => {
     msgsOf(p).filter(isReq).forEach(m => q.push({ lv: m.kind === 'blocker' ? 'high' : 'medium', p, h: `${SRC[m.source] || m.source}: ${m.title}`, d: (m.detail || '') + ' · ' + ago(m.date), at: m.date }));
+    punchOf(p).forEach(x => q.push({ lv: 'medium', p, h: 'Punch list: ' + x.t, d: '' }));
+    if (!partsOk(p) && nextInstall(p) && daysTo(nextInstall(p).date) <= 7) q.push({ lv: 'high', p, h: 'Parts not ready for the ' + fmtD(nextInstall(p).date) + ' install', d: (p.parts.notReady || []).map(x => x.name).join(', ') });
     flags(p).forEach(([t]) => {
       if (/DELAYED|OVERDUE/.test(t)) q.push({ lv: 'high', p, h: t === 'DELAYED' ? 'Project delayed' : 'Invoice overdue', d: '' });
       else if (/CO PENDING|NOT SCHEDULED|CLOSE OUT|BALANCE/.test(t)) q.push({ lv: /BALANCE|NOT SCHEDULED/.test(t) ? 'medium' : 'low', p, h: { 'CLOSE OUT': 'Installed 30+ days: close out' }[t] || t.charAt(0) + t.slice(1).toLowerCase(), d: '' });
@@ -261,6 +283,8 @@ function queue(P) {
   const o = { high: 0, medium: 1, low: 2 };
   return q.sort((a, b) => o[a.lv] - o[b.lv] || String(b.at || '').localeCompare(String(a.at || '')));
 }
+const noLabor = () => OPPS_ALL.filter(o => /proposal|customer review/i.test(o.stage || '') && (Number(o.total) || 0) > 0 && (!F.store || storeOfRep(o.owner) === F.store)
+  && !QUOTES.some(q => (q.project || {}).dtoolsOpportunityId === o.id || String(q.label || '').toLowerCase() === String(o.name || '').toLowerCase())).sort((a, b) => (b.total || 0) - (a.total || 0));
 function viewAction(P) {
   const q = queue(P), t = todayISO(), names = new Set(P.map(p => p.name));
   const soon = EVENTS.filter(e => e.date >= t && e.date <= addDays(t, 2) && (e.kind === 'event' || names.has(e.name))).sort((a, b) => (a.date + (a.start || '')).localeCompare(b.date + (b.start || '')));
@@ -269,6 +293,8 @@ function viewAction(P) {
     ${q.map(x => `<div class="qrow" data-id="${esc(x.p.id)}" data-t="p"><span class="lv ${x.lv}"></span><div class="w"><div class="h">${esc(x.h)}</div><div class="d">${stTag(storeOfRep(x.p.rep))}${esc(x.p.name)}${x.d ? ' · ' + esc(x.d) : ''}</div></div></div>`).join('') || '<div class="empty">Nothing needs action right now.</div>'}</div>
     <div class="panel"><div class="sect" style="margin-top:0">Today and next 2 days</div>
     ${soon.map(e => `<div class="ev2 ${ASBCTeams.ofNames(e.crew || e.people || [])}"><b>${esc(fmtD(e.date))} · ${e.start ? esc(t12(e.start) + (e.end ? '–' + t12(e.end) : '')) : 'All day'}</b><div class="m">${e.kind === 'event' ? 'Event: ' : ''}${esc(e.name)}${(e.crew || []).length ? ' · ' + esc(e.crew.map(n => n.split(' ')[0]).join(', ')) : ''}</div></div>`).join('') || '<div class="empty">Nothing on the calendar.</div>'}
+    ${CONF.length ? `<div class="sect" style="color:var(--bad)">Crew double-booked (${CONF.length})</div>${CONF.slice(0, 8).map(c => `<div class="msg blocker" style="padding:4px 0"><span class="src">CREW</span><span class="tx">${esc(c.techName.split(' ')[0])} ${esc(fmtD(c.date))}: ${esc(c.a)} + ${esc(c.b)}</span></div>`).join('')}` : ''}
+    ${noLabor().length ? `<div class="sect">Proposals with no labor quote (${noLabor().length})</div>${noLabor().slice(0, 8).map(o => `<div class="msg action" style="padding:4px 0"><span class="src">${esc(storeOfRep(o.owner) === 'UN' ? '—' : storeOfRep(o.owner))}</span><span class="tx">${esc(o.name)} · ${esc(o.owner || '')} · ${usd0(o.total)} <span class="muted">${esc(o.stage)}</span></span></div>`).join('')}${noLabor().length > 8 ? `<div class="muted">+${noLabor().length - 8} more</div>` : ''}` : ''}
     ${unl.length ? `<div class="sect">Requests not tied to a project</div>${unl.slice(0, 8).map(m => `<div class="msg ${esc(m.kind)}" style="padding:4px 0"><span class="src">${SRC[m.source] || esc(m.source)}</span><span class="tx">${esc(m.title)} <span class="muted">· ${esc(ago(m.date))}</span></span></div>`).join('')}` : ''}</div></div>`;
 }
 function render() {
@@ -282,6 +308,7 @@ function render() {
   document.getElementById('stores').innerHTML = `<button class="chip ${!F.store ? 'on' : ''}" data-s="">All stores</button>` + present.map(([k, l]) => `<button class="chip ${F.store === k ? 'on' : ''}" data-s="${k}" title="${esc(l)}">${k === 'UN' ? 'No store' : k}</button>`).join('');
   const v = { action: () => viewAction(P), board: () => viewBoard(P), stores: () => viewStores(P), active: () => viewActive(P), revenue: () => viewRevenue(P, O), opps: () => viewOpps(O) }[F.view] || (() => viewBoard(P));
   document.getElementById('app').innerHTML = v();
+  const sc = document.getElementById('saveCost'); if (sc) sc.onclick = async () => { const v2 = Number(document.getElementById('costRate').value) || 0; await db.collection('config').doc('settings').set({ crewCostRate: v2 }, { merge: true }); SETTINGS.crewCostRate = v2; render(); };
 }
 document.getElementById('tabs').addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (b) { F.view = b.dataset.v; saveF(); render(); } });
 document.getElementById('stores').addEventListener('click', e => { const b = e.target.closest('[data-s]'); if (b) { F.store = b.dataset.s; saveF(); render(); } });
@@ -297,6 +324,9 @@ function detail(r, type) {
       <div class="muted">${stTag(storeOfRep(r.rep || r.owner))}${esc(r.number || '')} · ${esc(r.client || '')}${(r.rep || r.owner) ? ' · ' + esc(r.rep || r.owner) : ''}</div></div><button class="btn" data-x>Close</button></div>
     <div class="badges" style="margin-top:8px"><span class="bd u">${esc(r.stage || '')}</span>${days(r.stageAt) != null ? `<span class="bd">${days(r.stageAt)}d in stage</span>` : ''}${type === 'p' ? flags(r).map(([t, c]) => `<span class="bd ${c}">${esc(t)}</span>`).join('') : ''}</div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">${type === 'p' ? `<a class="btn" href="${esc(r.url || 'https://d-tools.cloud/')}" target="_blank" rel="noopener">Open in D-Tools</a>` : ''}<a class="btn" href="./calendar.html">Calendar</a><a class="btn" href="./jobs.html">Jobs</a></div>
+    ${type === 'p' && (r.pdfs || []).length ? `<div class="sect">Proposal</div>${r.pdfs.map(f => `<div><a href="${esc(f.url)}" target="_blank" rel="noopener" style="color:var(--gold)">${esc(f.name)}</a></div>`).join('')}` : ''}
+    ${type === 'p' && r.parts && r.parts.known && r.parts.total ? `<div class="sect">Parts (${r.parts.ready}/${r.parts.total} received or staged)</div>${(r.parts.notReady || []).map(x => `<div class="muted">${esc(x.name)}${x.qty > 1 ? ' ×' + x.qty : ''} · ${esc(x.order || '—')} / ${esc(x.install || '—')}</div>`).join('') || '<div class="muted">All items ready.</div>'}` : ''}
+    ${type === 'p' && punchOf(r).length ? `<div class="sect">Punch list</div>${punchOf(r).map(x => `<div><a href="./jobs.html?quote=${encodeURIComponent(x.q.id || '')}" style="color:#fff">☐ ${esc(x.t)}</a></div>`).join('')}` : ''}
     ${type === 'p' ? `<div class="sect">Money</div><table><tr><td>Contract</td><td class="r">${usd(r.price)}</td></tr><tr><td>Paid</td><td class="r">${r.paid != null ? usd(r.paid) : '—'}</td></tr><tr><td>Balance</td><td class="r">${r.paid != null ? usd((r.price || 0) - r.paid) : '—'}</td></tr><tr><td>Due next 30 days</td><td class="r">${usd(dueSoon(r))}</td></tr></table>
       ${(r.payments || []).length ? `<div class="sect">Payments</div><table><tr><th>Name</th><th>Status</th><th>Due</th><th class="r">Amount</th><th class="r">Paid</th></tr>${r.payments.map(x => `<tr><td>${esc(x.name)}</td><td>${esc(x.status)}</td><td>${fmtD(x.due)}</td><td class="r">${usd(x.amount)}</td><td class="r">${usd(x.paid)}</td></tr>`).join('')}</table>` : ''}
       ${(r.cos || []).length ? `<div class="sect">Change orders</div><table><tr><th>CO</th><th>Name</th><th>State</th><th class="r">Price</th></tr>${r.cos.map(c => `<tr><td>${esc(c.number)}</td><td>${esc(c.name)}</td><td>${esc(c.state)}</td><td class="r">${usd(c.price)}</td></tr>`).join('')}</table>` : ''}
@@ -313,6 +343,12 @@ async function load() {
   DATA = JSON.parse(s.data().json || '{}');
   try { const ev = await db.collection('config').doc('dtoolsEvents').get(); EVENTS = (ev.exists && ev.data().events) || []; HOL = Object.fromEntries(((ev.exists && ev.data().holidays) || []).map(h => [h.date, h.name])); } catch (e) { EVENTS = []; }
   try { const fd = await db.collection('pipeline').doc('feed').get(); FEED = (fd.exists && fd.data().items) || []; FEED_AT = fd.exists ? fd.data().at : ''; } catch (e) { FEED = []; }
+  const [qs, cat, st, op] = await Promise.all([db.collection('quotes').get().catch(() => null), db.collection('config').doc('catalog').get().catch(() => null), db.collection('config').doc('settings').get().catch(() => null), db.collection('opportunities').get().catch(() => null)]);
+  QUOTES = qs ? qs.docs.map(d => ({ id: d.id, ...d.data() })).filter(q => !q.isTemplate && !q.jobDeleted) : [];
+  CATALOG = new Map(((cat && cat.exists && cat.data().items) || []).map(i => [i.id, i]));
+  SETTINGS = (st && st.exists && st.data()) || {};
+  OPPS_ALL = op ? op.docs.map(d => ({ id: d.id, ...d.data() })) : [];
+  try { CONF = window.asbcConflicts ? asbcConflicts(EVENTS.filter(e => e.date >= todayISO()), USERS) : []; } catch (e) { CONF = []; }
   render();
 }
 document.getElementById('refresh').onclick = () => load().catch(err => alertBox(err));
@@ -322,6 +358,7 @@ firebase.auth().onAuthStateChanged(async u => {
   try { if (!(await u.getIdTokenResult()).claims.email_verified) { await u.reload(); await u.getIdToken(true); } } catch (e) {}  // v8.28.1: refresh a sign-in token issued before the email was confirmed
   const us = await db.collection('config').doc('users').get().catch(() => null);
   USERS = (us && us.exists && us.data().users) || {}; const email = (u.email || '').toLowerCase();
+  IS_ADMIN = ASBCRoles.accessOf(USERS[email], email) === 'admin';
   if (!ASBCRoles.can(ASBCRoles.accessOf(USERS[email], email), 'pipeline')) return ASBCRoles.deny('pipeline', document.getElementById('app'));  // v8.29.0: admin + sales director
   load().catch(alertBox);
 });

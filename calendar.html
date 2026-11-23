@@ -43,6 +43,9 @@ h1 { font-size:20px; margin:0; } h1 span { color:var(--gold); }
 .ev.SF { border-left-color:var(--sf); background:rgba(245,158,11,.16); } .ev.LA { border-left-color:var(--la); background:rgba(59,130,246,.18); }
 .ev.BOTH { border-left-color:var(--sf); background:linear-gradient(90deg, rgba(245,158,11,.22), rgba(59,130,246,.22)); }
 .ev.done { opacity:.55; }
+.conf { background:#2a1414; border:1px solid #8a2f2f; color:#ffb4b4; border-radius:10px; padding:8px 12px; margin:0 0 10px; font-size:13px; } .conf b { color:#fff; }
+.warn { color:#ff8b8b; font-weight:800; margin-right:3px; }
+.crew { width:100%; border-collapse:collapse; font-size:12px; } .crew th, .crew td { border:1px solid #26292f; padding:6px; vertical-align:top; text-align:left; } .crew th { color:#8b8f98; font-size:11px; background:#0b0d11; } .crew td.c { background:#2a1414; } .crew .h { color:#C7A66A; font-weight:700; } .crew .j { display:block; margin-top:2px; } .crewwrap { overflow-x:auto; }
 .icbg { position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:80; display:flex; align-items:center; justify-content:center; padding:16px; }
 .ic { width:min(440px,100%); background:#111318; border:1px solid #26292f; border-radius:16px; padding:16px; box-shadow:0 16px 40px rgba(0,0,0,.6); }
 .ich { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:8px; } .ict { font-size:17px; font-weight:800; margin-bottom:4px; }
@@ -81,9 +84,11 @@ select { background:#101216; border:1px solid var(--line); color:#fff; border-ra
     <div class="month" id="monthLbl"></div>
     <button class="btn" id="next" aria-label="Next month">›</button>
     <button class="btn" id="today">Today</button>
+    <button class="btn" id="crewBtn" title="Who is booked each day this week">Crew week</button>
     <select id="teamF" aria-label="Filter by team"><option value="">All teams</option><option value="SF">SF Team</option><option value="LA">LA Team</option></select>
     <div class="legend"><span><i style="background:var(--sf)"></i>SF Team (Joseph, Eugene)</span><span><i style="background:var(--la)"></i>LA Team (Ivan, Mina)</span><span><i style="background:var(--none)"></i>Other / not assigned</span><span><b style="color:#C7A66A;font-size:10px">D-T</b> D-Tools calendar event (no job in the calculator)</span><span><b style="color:#2dd4bf;font-size:10px">Holiday</b></span><span><b style="color:#C7A66A;font-size:10px">EVT</b> D-Tools scheduled event (store work, pickups, holds)</span></div>
   </div>
+  <div id="conf"></div>
   <div id="cal"><div class="empty">Loading…</div></div>
   <div class="agenda" id="agenda"></div>
 </div>
@@ -104,7 +109,7 @@ function usHolidays(y) {
   return [[f(0, 1), "New Year's Day"], [nth(0, 1, 3), 'MLK Jr. Day'], [nth(1, 1, 3), "Presidents' Day"], [last(4, 1), 'Memorial Day'], [f(5, 19), 'Juneteenth'], [f(6, 4), 'Independence Day'],
     [nth(8, 1, 1), 'Labor Day'], [f(10, 11), 'Veterans Day'], [tg, 'Thanksgiving'], [after, 'Day after Thanksgiving'], [f(11, 24), 'Christmas Eve'], [f(11, 25), 'Christmas Day'], [f(11, 31), "New Year's Eve"]];
 }
-let HOLIDAYS = {};
+let HOLIDAYS = {}, ALLEV = [], CONF = [], CREW = false, WEEK = null;
 let ME = null, USERS = {}, JOBS = [], EVENTS = [], VIEW = new Date(), SEL = null;
 VIEW.setDate(1);
 const ymd = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
@@ -142,10 +147,13 @@ function render() {
     html += `<div class="day ${d.getMonth() !== m ? 'out' : ''} ${k === today ? 'today' : ''} ${k === SEL ? 'sel' : ''}" data-day="${k}"><span class="num">${d.getDate()}</span>` +
       evs.filter(q => q._hol).map(q => `<span class="hol" title="${esc(q._hol)}">${esc(q._hol)}</span>`).join('') +
       evs.filter(q => !q._hol).slice(0, 4).map(q => q._ev ? `<div class="ev dt ${q._team} ${/complete/i.test(q._ev.status) || /installed|completed/i.test(q._ev.stage) ? 'done' : ''}" data-ev="${esc(q._ev.id)}" style="cursor:pointer" title="${esc(q._ev.name)} · ${esc(q._win)}${q._ev.desc ? ' · ' + esc(q._ev.desc) : ''}"><b><span class="dtb">${q._ev.kind === 'event' ? 'EVT' : 'D-T'}</span>${esc(q._ev.name)}</b><span class="t">${esc(q._win)}</span></div>`
-        : `<a class="ev ${q._team} ${['submitted', 'closed'].includes(q.status) ? 'done' : ''}" href="./jobs.html?quote=${encodeURIComponent(q._id)}" data-q="${esc(q._id)}" title="${esc(label(q))} · ${esc(q._win)}${((q.schedule || {}).notes || []).length ? ' · ' + esc(q.schedule.notes.join(' / ')) : ''}"><b>${esc(label(q))}</b><span class="t">${esc(q._win)}</span></a>`).join('') +
+        : `<a class="ev ${q._team} ${['submitted', 'closed'].includes(q.status) ? 'done' : ''}" href="./jobs.html?quote=${encodeURIComponent(q._id)}" data-q="${esc(q._id)}" title="${esc(label(q))} · ${esc(q._win)}${((q.schedule || {}).notes || []).length ? ' · ' + esc(q.schedule.notes.join(' / ')) : ''}"><b>${CONF.some(c => c.date === k && [c.a, c.b].includes(label(q))) ? '<span class="warn">⚠</span>' : ''}${esc(label(q))}</b><span class="t">${esc(q._win)}</span></a>`).join('') +
       (evs.filter(q => !q._hol).length > 4 ? `<div class="more">+${evs.filter(q => !q._hol).length - 4} more</div>` : '') + '</div>';
   }
   document.getElementById('cal').innerHTML = html + '</div>';
+  const mk = y + '-' + String(m + 1).padStart(2, '0'), cm = CONF.filter(c => c.date.startsWith(mk) || (c.date >= today && c.date <= ymd(new Date(Date.now() + 14 * 864e5))));
+  document.getElementById('conf').innerHTML = cm.length ? `<div class="conf"><b>⚠ Crew double-booked:</b> ${cm.map(c => esc(c.techName.split(' ')[0] + ' ' + new Date(c.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'numeric', day: 'numeric' }) + ' — ' + c.a + ' + ' + c.b)).join(' · ')}</div>` : '';
+  if (CREW) renderCrew();
   renderAgenda(byDay);
 }
 function renderAgenda(byDay) {
@@ -164,7 +172,7 @@ function renderAgenda(byDay) {
 }
 // v9.2.0 tapping a job opens a customer card (name, address, appointment days and times, crew, sales rep) instead of the full job page
 document.getElementById('agenda').addEventListener('click', e => { const c = e.target.closest('[data-q],[data-ev]'); if (!c) return; e.preventDefault(); c.dataset.q ? infoJob(c.dataset.q) : infoEv(c.dataset.ev); });
-function infoCard({ title, client, address, when, crew, team, rep, notes, href }) {
+function infoCard({ title, client, address, when, crew, team, rep, notes, href, pdf, parts }) {
   document.querySelectorAll('.icbg').forEach(x => x.remove());
   const bg = document.createElement('div'); bg.className = 'icbg';
   const row = (k, v) => v ? `<div class="icr"><div class="ick">${k}</div><div class="icv">${v}</div></div>` : '';
@@ -174,6 +182,8 @@ function infoCard({ title, client, address, when, crew, team, rep, notes, href }
     ${row('Appointment', when.map(w => esc(w)).join('<br>') || '—')}
     ${row('Assigned', esc(crew || 'Nobody assigned'))}
     ${row('Sales rep', esc(rep || '—'))}
+    ${parts ? row('Parts', parts) : ''}
+    ${pdf ? row('Proposal', `<a href="${esc(pdf)}" target="_blank" rel="noopener">Open proposal PDF</a>`) : ''}
     ${notes ? row('Notes', esc(notes)) : ''}
     ${href && ME && ASBCRoles.can(ME.access, 'recaps') ? `<div style="margin-top:12px;text-align:right"><a class="btn" href="${href}">Open job report</a></div>` : ''}</div>`;
   bg.addEventListener('click', e => { if (e.target === bg || e.target.closest('[data-x]')) bg.remove(); });
@@ -183,7 +193,12 @@ const dayLbl = d => new Date(d + 'T12:00:00').toLocaleDateString('en-US', { week
 function infoJob(id) {
   const q = JOBS.find(x => x._id === id); if (!q) return; const sc = q.schedule || {}, p = q.project || {};
   infoCard({ title: label(q), client: p.dtoolsClientName || p.customerName || q.label, address: sc.address, when: (sc.dates || []).map(d => dayLbl(d) + ' · ' + windowOf(sc, d)),
-    crew: (sc.techs || []).map(nameOf).join(', '), team: teamOf(sc.techs), rep: p.salesManagerName, notes: (sc.notes || []).join(' · '), href: './jobs.html?quote=' + encodeURIComponent(id) });
+    crew: (sc.techs || []).map(nameOf).join(', '), team: teamOf(sc.techs), rep: p.salesManagerName, notes: (sc.notes || []).join(' · '), href: './jobs.html?quote=' + encodeURIComponent(id),
+    pdf: p.proposalPdf, parts: partsTxt(q.parts) });
+}
+// v9.3.0 parts readiness from D-Tools item statuses
+function partsTxt(pt) { if (!pt || !pt.total) return ''; if (pt.ready >= pt.total) return `<span style="color:#7ee2a0">All ${pt.total} items received or staged</span>`;
+  return `<span style="color:#ff8b8b">${pt.total - pt.ready} of ${pt.total} not received or staged</span>${(pt.notReady || []).length ? '<br><span style="color:#8b8f98;font-size:12px">' + esc(pt.notReady.join(', ')) + '</span>' : ''}`;
 }
 function infoEv(id) {
   const e = EVENTS.find(x => x.id === id); if (!e) return;
@@ -193,6 +208,24 @@ function infoEv(id) {
     crew: (e.people || []).join(', '), team: teamOfNames(e.people), rep: '', notes: e.desc });
 }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.icbg').forEach(x => x.remove()); });
+// v9.3.0 Crew week: who is booked each day (leads + installers), hours per day, double-bookings in red
+function hrsOf(e) { const a = e.start ? e.start.split(':').map(Number) : null, b = e.end ? e.end.split(':').map(Number) : null; return a && b ? Math.max(0.5, (b[0] * 60 + b[1] - a[0] * 60 - a[1]) / 60) : 8; }
+function renderCrew() {
+  const box = document.getElementById('cal'); if (!WEEK) { const d = new Date(); d.setDate(d.getDate() - d.getDay() + 1); WEEK = ymd(d); }
+  const days = [...Array(7)].map((_, i) => { const d = new Date(WEEK + 'T12:00:00'); d.setDate(d.getDate() + i); return ymd(d); });
+  const techs = Object.entries(USERS).filter(([e, u]) => ['lead', 'installer'].includes(ASBCRoles.accessOf(u, e))).map(([e, u]) => ({ e, n: u.name }))
+    .filter(t => !(ME.role === 'tech' && !ME.allQuotes) || t.e === ME.email).sort((a, b) => a.n.localeCompare(b.n));
+  const cell = (t, d) => { const l = ALLEV.filter(x => x.date === d && (x.techs || []).includes(t.e)); const uniq = []; l.forEach(x => { if (!uniq.some(u => u.name === x.name)) uniq.push(x); });
+    const h = uniq.reduce((a, x) => a + hrsOf(x), 0), c = CONF.some(x => x.tech === t.e && x.date === d);
+    return `<td class="${c ? 'c' : ''}">${uniq.length ? `<span class="h">${Math.round(h * 10) / 10} h</span>` + uniq.map(x => `<span class="j">${esc(x.name)}${x.start ? ' · ' + esc(t12(x.start)) : ''}</span>`).join('') : '<span style="color:#555">—</span>'}</td>`; };
+  const tot = t => days.reduce((a, d) => { const l = ALLEV.filter(x => x.date === d && (x.techs || []).includes(t.e)); const u = []; l.forEach(x => { if (!u.some(y => y.name === x.name)) u.push(x); }); return a + u.reduce((s, x) => s + hrsOf(x), 0); }, 0);
+  box.innerHTML = `<div style="display:flex;gap:6px;align-items:center;margin-bottom:8px"><button class="btn" id="wkPrev">‹</button><b>Week of ${esc(new Date(WEEK + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }))}</b><button class="btn" id="wkNext">›</button><span style="color:#8b8f98;font-size:12px">Hours = D-Tools time window (all-day = 8 h). Red = double-booked.</span></div>
+    <div class="crewwrap"><table class="crew"><tr><th>Tech</th>${days.map(d => `<th>${esc(new Date(d + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'numeric', day: 'numeric' }))}</th>`).join('')}<th>Week</th></tr>
+    ${techs.map(t => `<tr><td><b>${esc(t.n)}</b> ${teamTag(ASBCTeams.ofNames([t.n]))}</td>${days.map(d => cell(t, d)).join('')}<td class="h">${Math.round(tot(t) * 10) / 10} h</td></tr>`).join('')}</table></div>`;
+  document.getElementById('wkPrev').onclick = () => { const d = new Date(WEEK + 'T12:00:00'); d.setDate(d.getDate() - 7); WEEK = ymd(d); renderCrew(); };
+  document.getElementById('wkNext').onclick = () => { const d = new Date(WEEK + 'T12:00:00'); d.setDate(d.getDate() + 7); WEEK = ymd(d); renderCrew(); };
+}
+document.getElementById('crewBtn').onclick = () => { CREW = !CREW; document.getElementById('crewBtn').classList.toggle('on', CREW); document.getElementById('crewBtn').textContent = CREW ? 'Month view' : 'Crew week'; if (CREW) renderCrew(); else render(); };
 document.getElementById('prev').onclick = () => { VIEW.setMonth(VIEW.getMonth() - 1); SEL = null; render(); };
 document.getElementById('next').onclick = () => { VIEW.setMonth(VIEW.getMonth() + 1); SEL = null; render(); };
 document.getElementById('today').onclick = () => { VIEW = new Date(); VIEW.setDate(1); SEL = ymd(new Date()); render(); };
@@ -216,7 +249,9 @@ firebase.auth().onAuthStateChanged(async u => {
   // v8.32.0: D-Tools calendar events that are not a calculator job (other PMs' installs, finished projects), refreshed hourly by the D-Tools pull
   if (!(ME.role === 'rep' && !ME.allQuotes)) try { const ev = await db.collection('config').doc('dtoolsEvents').get(); const jobIds = new Set(JOBS.map(q => q._id));
     HOLIDAYS = Object.fromEntries(((ev.exists && ev.data().holidays) || []).map(h => [h.date, h.name]));
+    ALLEV = (ev.exists && ev.data().events) || [];
     EVENTS = ((ev.exists && ev.data().events) || []).filter(e => !e.job || !jobIds.has(e.job)).filter(e => !(ME.role === 'tech' && !ME.allQuotes) || (e.techs || []).includes(ME.email)); } catch (e) {}
+  try { CONF = window.asbcConflicts ? asbcConflicts(ALLEV.filter(e => e.date >= ymd(new Date())), USERS) : []; } catch (e) { CONF = []; }  // v9.3.0
   render();
 });
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});

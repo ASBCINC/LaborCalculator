@@ -12,6 +12,7 @@ received, newly assigned work, and installer job reports (from jobs.json, writte
 before this one). Detail calls (GetProject, GetChangeOrders, GetOpportunity) only happen for records
 whose modifiedDate changed, so a quiet run costs one D-Tools list call per type and one Firestore read.
 """
+import re
 import json, os, sys, time, datetime, urllib.request, urllib.parse
 sys.path.insert(0, os.path.dirname(__file__))
 import fs
@@ -89,7 +90,7 @@ def main():
                 push(rec, 'stage', f"Stage: {old.get('stage') or '—'} → {p.get('stage')}")
             if old.get('price') is not None and abs(money(old.get('price')) - rec['price']) >= 0.01:
                 push(rec, 'value', f"Contract value ${old['price']:,.2f} → ${rec['price']:,.2f}")
-        if not old or old.get('modified') != rec['modified'] or not old.get('detailAt'):
+        if not old or old.get('modified') != rec['modified'] or not old.get('detailAt') or 'parts' not in old:  # v9.3.0: one-time refetch for parts + proposal PDF
             try:
                 d = api('Projects/GetProject', {'id': pid})
                 rec.update({'rep': d.get('salesperson'), 'start': utc(d.get('startDate')), 'end': utc(d.get('endDate')),
@@ -103,6 +104,16 @@ def main():
                         gain = x['paid'] - oldpaid.get(x['name'], 0)
                         if gain >= 0.01: push(rec, 'payment', f"Payment received: {x['name']} ${gain:,.2f}")
                 rec['payments'] = pays
+                # v9.3.0: proposal PDF (D-Tools project files) and parts readiness (product items' order/install status)
+                pdfs = [f for f in (d.get('files') or []) if str(f.get('name') or '').lower().endswith('.pdf') and f.get('url')]
+                pdfs.sort(key=lambda f: (0 if 'accepted' in f['name'].lower() else 1, 0 if re.search(r'\bQ-\d+', f['name']) else 1))
+                rec['pdfs'] = [{'name': f['name'], 'url': f['url']} for f in pdfs[:6]]
+                rec['proposalPdf'] = rec['pdfs'][0]['url'] if rec['pdfs'] else None
+                prods = [i for i in (d.get('items') or []) if i.get('type') == 'Product' and not i.get('isClientSupplied')]
+                ready = lambda i: str(i.get('installStatus') or '').lower() in ('staged', 'delivered', 'installed', 'received') or str(i.get('orderStatus') or '').lower() in ('received', 'in stock', 'delivered', 'installed')
+                rec['parts'] = {'total': sum(int(i.get('quantity') or 1) for i in prods), 'ready': sum(int(i.get('quantity') or 1) for i in prods if ready(i)), 'known': bool(d.get('items') is not None),
+                                'notReady': [{'name': i.get('model') or i.get('name') or 'Item', 'qty': i.get('quantity') or 1, 'order': i.get('orderStatus') or '', 'install': i.get('installStatus') or ''} for i in prods if not ready(i)][:10],
+                                'names': [i.get('model') or i.get('name') or '' for i in prods][:20]}
                 rec['paid'] = round(sum(x['paid'] for x in pays), 2)
                 cos = api('ChangeOrders/GetChangeOrders', {'projectId': pid})
                 cos = cos if isinstance(cos, list) else (cos.get('changeOrders') or [])
