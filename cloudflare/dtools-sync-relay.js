@@ -14,7 +14,7 @@
 //   TEAMS_HOOK    the Power Automate webhook URL (type: Secret)
 //   ADMIN_EMAIL   optional: the work address that always gets the Teams message
 // 4) POST /ramp (v9.6.0) Ramp receipts + project expenses, called by the app with the signed-in user's Firebase ID token.
-//    {action:'txns', from, to}        card charges in that window (admins/management: everyone's; others: only their own)
+//    {action:'txns', from, to, email?} card charges in that window (admins/management: everyone's or one person's; others: only their own)
 //    {action:'attach', txn, image, title}  uploads the receipt photo to that charge and puts the project title in front of its memo
 //    {action:'ping'}                  checks the Ramp keys work (admins)
 //   RAMP_CLIENT_ID / RAMP_CLIENT_SECRET  Ramp developer app "Labor Calculator" (client credentials; scopes transactions:read,
@@ -236,7 +236,7 @@ async function rampRoute(request, env) {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to)) return json({ error: 'from/to dates needed' }, 400);
       const us = await rampUsers(env), byId = Object.fromEntries(us.map(u => [u.id, u]));
       let q = `transactions?page_size=100&from_date=${from}T00:00:00Z&to_date=${to}T23:59:59Z`;
-      if (!boss) { const mine = us.find(u => u.email === caller); if (!mine) return json({ ok: true, txns: [], note: 'no Ramp user with ' + caller }); q += '&user_id=' + mine.id; }
+      if (!boss || b.email) { const who = boss ? String(b.email).toLowerCase() : caller; const mine = us.find(u => u.email === who); if (!mine) return json({ ok: true, txns: [], note: 'no Ramp user with ' + who }); q += '&user_id=' + mine.id; }
       const tx = await rampAll(env, q, boss ? 10 : 3);
       return json({ ok: true, txns: tx.map(t => { const uid = (t.card_holder || {}).user_id || t.user_id; const u = byId[uid] || {};
         return { id: t.id, amount: money(t.amount), date: String(t.user_transaction_time || t.settlement_date || '').slice(0, 10), merchant: t.merchant_name || t.merchant_descriptor || '',
