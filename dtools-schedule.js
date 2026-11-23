@@ -164,6 +164,15 @@
       out.push((((q.project || {}).dtoolsProjectName) || q.label) + ': ' + st); }
     return out;
   }
+  // v9.1.0: project messages (email, Teams, texts, calls) for the Pipeline tiles. items = [{ id, project (D-Tools project name), date, source, kind, title, detail, url }]
+  async function importFeed(items) {
+    const u = firebase.auth().currentUser; if (!u) throw new Error('not signed in');
+    const clean = (items || []).filter(m => m && m.title && m.date).slice(0, 300).map(m => ({ id: String(m.id || ''), project: m.project ? String(m.project) : '', date: String(m.date), source: String(m.source || ''),
+      kind: String(m.kind || 'update'), title: String(m.title).slice(0, 160), detail: String(m.detail || '').slice(0, 200), url: m.url ? String(m.url) : '' }));
+    await firebase.firestore().collection('pipeline').doc('feed').set({ items: clean, at: new Date().toISOString() });
+    return { saved: clean.length, withProject: clean.filter(m => m.project).length };
+  }
+  window.asbcImportFeed = importFeed;
   window.asbcImportSchedule = importSchedule;
   window.asbcRecapNudge = recapNudge;
 })();

@@ -53,6 +53,10 @@ service cloud.firestore {
       allow read: if admin() || director();
       allow write: if false;
     }
+    // v9.1.0: project messages (email, Teams, texts, calls) for the Pipeline page, written by an admin's session (the D-Tools pull).
+    match /pipeline/feed {
+      allow write: if admin();
+    }
     // Everything else: closed.
     match /{path=**} {
       allow read, write: if false;
