@@ -2961,7 +2961,7 @@
         applyProjectData();
         loadRepLeaderboard();
         let _bootQuoteId = new URLSearchParams(location.search).get('quote'); // opened after sign-in (see onAuthStateChanged)
-        if (_bootQuoteId) history.replaceState(null, '', location.pathname); // keep the address clean after a Load from Saved Quotes
+        if (_bootQuoteId) history.replaceState(null, '', location.pathname + '?calc=1'); // v10.6.0 keep ?calc=1 so sign-in stays in the calculator (was sending Load to Home)
         if (localStorage.getItem('asbcWideEstimate') === '1') toggleWideEstimate(true);
         if (localStorage.getItem('asbcPricingOpen') === '1') togglePricingDetails(true);
         document.addEventListener('click', e => { const m = document.getElementById('moreTools'); if (m && m.classList.contains('open') && !e.target.closest('#moreTools') && !e.target.closest('#moreToolsButton')) m.classList.remove('open'); });

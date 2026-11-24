@@ -162,7 +162,7 @@ function quoteHours(q) {
     hours += per * qn; units += qn;
     totInst += (inst + (it.addon ? Number(it.addon.installHours) || 0 : 0)) * qn;
     totProg += (prog + (it.addon ? Number(it.addon.programmingHours) || 0 : 0)) * qn;
-    lines.push({ name, zone: it.zone || 'General', qty: it.qty || 0, per, addon: it.addon ? it.addon.name : '', missing });
+    lines.push({ name, zone: it.zone || 'General', qty: it.qty || 0, per, inst: inst + (it.addon ? Number(it.addon.installHours) || 0 : 0), prog: prog + (it.addon ? Number(it.addon.programmingHours) || 0 : 0), addon: it.addon ? it.addon.name : '', missing });
   });
   return { hours, lines, install: totInst, prog: totProg, units };
 }
@@ -218,8 +218,9 @@ function renderList() {
     const a = r.actuals;
     const detail = `
       <div class="qdetail">
-        <table><tr><th>Item</th><th>Space</th><th>Qty</th><th>Hrs ea</th></tr>
-        ${info.lines.map(l => `<tr><td>${esc(l.name)}${l.addon ? ` <span style="color:#C7A66A">+ ${esc(l.addon)}</span>` : ''}${l.missing ? ' <span class="neg">(no longer in catalog)</span>' : ''}</td><td>${esc(l.zone)}</td><td>${l.qty}</td><td>${l.per.toFixed(2)}</td></tr>`).join('')}
+        <table><tr><th>Item</th><th>Space</th><th>Qty</th><th>Labor hrs</th><th>Prog hrs</th></tr>
+        ${info.lines.map(l => `<tr><td>${esc(l.name)}${l.addon ? ` <span style="color:#C7A66A">+ ${esc(l.addon)}</span>` : ''}${l.missing ? ' <span class="neg">(no longer in catalog)</span>' : ''}</td><td>${esc(l.zone)}</td><td>${l.qty}</td><td>${(l.inst * (Number(l.qty) || 0)).toFixed(2)}</td><td>${(l.prog * (Number(l.qty) || 0)).toFixed(2)}</td></tr>`).join('')}
+        <tr><td colspan="3"><b>Total</b></td><td><b>${info.install.toFixed(2)}</b></td><td><b>${info.prog.toFixed(2)}</b></td></tr>
         </table>
         <div style="margin-top:8px;color:#8b8f98">Labor ${fmt(p.labor)} &middot; Materials ${fmt(p.materials)} (${Number((r.options || {}).markup) || 0}%)${p.trip ? ' &middot; Trip ' + fmt(p.trip) : ''} &middot; Recycling ${fmt(p.recycling)} &middot; Crew ${Number((r.options || {}).crewSize) || 1}</div>
         <div style="margin-top:4px"><b>Total: ${fmt(p.total)}</b></div>
@@ -228,7 +229,7 @@ function renderList() {
     return `<div class="qrow" onclick="if(event.target.closest('.qactions'))return;this.classList.toggle('open')">
       <div class="qtop">
         <div><div class="qname">${cust} ${badges}</div><div class="qmeta">${mgr ? mgr + ' &middot; ' : ''}${date}</div></div>
-        <div class="qnums"><div class="qnum-b">${fmt(p.total)}</div><div class="qmeta">${p.billedHours.toFixed(2)} hrs</div></div>
+        <div class="qnums"><div class="qnum-b">${fmt(p.total)}</div><div class="qmeta">${p.billedHours.toFixed(2)} hrs billed</div><div class="qmeta">Labor ${info.install.toFixed(2)} · Prog ${info.prog.toFixed(2)}</div></div>
       </div>
       <div class="qactions">
         <button class="qbtn qbtn-load" data-act="load" data-id="${r._id}">Load</button>
