@@ -262,6 +262,28 @@
     return { projects: Object.values(by), extra: { meetings: (raw.M || []).map(([id, title, allDay, start, end, location, people]) => ({ id, title, allDay, start, end, location, people })), holidays: (raw.HO || []).map(([date, name]) => ({ date, name })).filter(x => x.date) } };
   }
   window.asbcRawToProjects = rawToProjects;
+  // v10.4.0 installer task status from job reports (replaces the encrypted jobs.enc list the D-Tools pull used to decrypt).
+  // Each report submitted in the last 14 days and not yet applied: target task status Completed (job Complete) or In Progress.
+  async function pendingTasks() {
+    const db = firebase.firestore(); let pipe = {};
+    try { const s = await db.collection('pipeline').doc('data').get(); if (s.exists) pipe = JSON.parse(s.data().json || '{}').projects || {}; } catch (e) {}
+    const P = Object.values(pipe), users = ((await db.collection('config').doc('users').get()).data() || {}).users || {}, since = new Date(Date.now() - 14 * 864e5).toISOString(), out = [];
+    for (const d of (await db.collection('quotes').where('status', '==', 'closed').get()).docs) {
+      const q = d.data(), j = q.job || {}, pr = q.project || {}; if (!j.submittedAt || j.submittedAt < since) continue;
+      if (q.dtoolsTasks && q.dtoolsTasks.for === j.submittedAt) continue;
+      const p = P.find(x => x.id === pr.dtoolsOpportunityId) || P.find(x => fold(x.name) === fold(pr.dtoolsProjectName || q.label));
+      const techs = [...new Set((j.log || []).flatMap(r => Array.isArray(r.techs) ? r.techs : (r.who ? [r.who] : [])))].map(e => (users[e] || {}).name || e);
+      out.push({ quote: d.id, for: j.submittedAt, project: p ? p.id : '', url: p ? p.url : '', name: p ? p.name : (pr.dtoolsProjectName || q.label), techs, dates: [...new Set((j.log || []).map(r => r.date))].sort(), target: j.jobStatus === 'Complete' ? 'Completed' : 'In Progress' });
+    }
+    return out.slice(0, 5);
+  }
+  async function tasksDone(results) {
+    const db = firebase.firestore();
+    for (const r of results || []) await db.collection('quotes').doc(r.quote).set({ dtoolsTasks: { for: r.for, at: new Date().toISOString(), result: r.result || (r.ok ? 'set to ' + r.target : 'skipped') } }, { merge: true });
+    return (results || []).length;
+  }
+  window.asbcPendingTasks = pendingTasks;
+  window.asbcTasksDone = tasksDone;
   window.asbcPendingStages = pendingStages;
   window.asbcStagesDone = stagesDone;
   window.asbcPrepReminders = prepReminders;

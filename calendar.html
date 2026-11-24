@@ -221,11 +221,12 @@ function renderCrew() {
     .filter(t => !(ME.role === 'tech' && !ME.allQuotes) || t.e === ME.email).sort((a, b) => a.n.localeCompare(b.n));
   const cell = (t, d) => { const l = ALLEV.filter(x => x.date === d && (x.techs || []).includes(t.e)); const uniq = []; l.forEach(x => { if (!uniq.some(u => u.name === x.name)) uniq.push(x); });
     const h = uniq.reduce((a, x) => a + hrsOf(x), 0), c = CONF.some(x => x.tech === t.e && x.date === d);
-    const wk = [0, 6].includes(new Date(d + 'T12:00:00').getDay()) || HOLIDAYS[d];
+    const wk = !workday(d);
     return `<td class="${c ? 'c' : ''}">${uniq.length ? `<span class="h">${Math.round(h * 10) / 10} h</span>` + uniq.map(x => `<span class="j">${esc(x.name)}${x.start ? ' · ' + esc(t12(x.start)) : ''}</span>`).join('') : wk ? '<span style="color:#555">—</span>' : '<span style="color:#7ee2a0;font-weight:700">Free</span>'}</td>`; };
   // v10.3.0 who's free: a tech is free on a weekday with no booking; a team is free when both of its techs are
   const busy = (e, d) => ALLEV.some(x => x.date === d && (x.techs || []).includes(e)) || JOBS.some(q => ((q.schedule || {}).dates || []).includes(d) && ((q.schedule || {}).techs || []).includes(e));
-  const workday = d => ![0, 6].includes(new Date(d + 'T12:00:00').getDay()) && !HOLIDAYS[d];
+  const HOLS = Object.assign({}, ...[-1, 0, 1].map(k => Object.fromEntries(usHolidays(new Date().getFullYear() + k))), HOLIDAYS);  // v10.3.1 US + D-Tools holidays
+  const workday = d => ![0, 6].includes(new Date(d + 'T12:00:00').getDay()) && !HOLS[d];
   const teamFree = (k, d) => { const m = techs.filter(t => ASBCTeams.ofNames([t.n]) === k); return m.length && m.every(t => !busy(t.e, d)); };
   const nextFree = k => { const d = new Date(); for (let i = 1; i <= 90; i++) { d.setDate(d.getDate() + 1); const s = ymd(d); if (workday(s) && teamFree(k, s)) return s; } return ''; };
   const nf = ['SF', 'LA'].map(k => { const s = nextFree(k); return `<span style="margin-right:14px">${teamTag(k)} next fully free day: <b>${s ? esc(new Date(s + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })) : 'none in 90 days'}</b>${s ? ` <a href="#" data-wk="${s}" style="color:#C7A66A">show</a>` : ''}</span>`; }).join('');

@@ -1,0 +1,39 @@
+name: Deploy relay and database rules
+
+# v10.4.0 What is in GitHub is what runs: the Cloudflare relay and the Firestore rules deploy on every push that changes them.
+on:
+  push:
+    branches: [main]
+    paths: ['cloudflare/**', 'firestore.rules', 'scripts/deploy_rules.py', '.github/workflows/deploy-infra.yml']
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-infra
+  cancel-in-progress: false
+
+jobs:
+  rules:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install --quiet google-auth requests
+      - run: python3 scripts/deploy_rules.py
+        env:
+          FIREBASE_SA: ${{ secrets.FIREBASE_SA }}
+  relay:
+    runs-on: ubuntu-latest
+    env:
+      CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Skip until the Cloudflare token is added
+        if: env.CF_TOKEN == ''
+        run: echo "Add the CLOUDFLARE_API_TOKEN secret to deploy the relay automatically."
+      - name: Deploy the Cloudflare relay (yellow-cloud-830a)
+        if: env.CF_TOKEN != ''
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: 61231ee33f693a9b7b9d6906ed2dce89
+          workingDirectory: cloudflare
+          command: deploy

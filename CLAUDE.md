@@ -254,3 +254,9 @@ D-Tools handoff panel (paste-ready labor block); Quote Log search wording.
 - Job/event cards: "Open in D-Tools" (pipeline/data project url, matched by project name; admin/management/director).
 - "Crew / who is free" view: Free cells on open weekdays, a Free crews row (SF/LA team free when both techs are), next fully free day per team (90 days), date picker to jump weeks.
 - "Sync from D-Tools" (admin): "ASBC sync" bookmarklet run on a signed-in d-tools.cloud page reads GetEvents3 + getGlobalCalendar + holidays (same as the pull, -7..+60 days), returns to calendar.html#dtsync=<json> (fragment only), page confirms (15-min freshness) and runs asbcRawToProjects + asbcImportSchedule. MINE keyed by pipeline project num (numeric D-Tools id) and GUID. No Claude usage. Tested the read side live: 8 items, 5 events, ~16 KB.
+- v10.3.1: who-is-free counts US holidays too (Thanksgiving showed as free).
+
+## v10.4.0 Tech debt: auto-deploys, retired jobs.enc, merged job-report steps (Nov 24, 2026)
+- .github/workflows/deploy-infra.yml: on push to cloudflare/** or firestore.rules: scripts/deploy_rules.py publishes firestore.rules with FIREBASE_SA (needs "Firebase Rules Admin" role); wrangler deploys cloudflare/ (wrangler.toml: yellow-cloud-830a, keep_vars) when secret CLOUDFLARE_API_TOKEN exists. Stop editing the relay/rules by hand.
+- sync-opportunities.yml no longer publishes jobs.enc; it deletes the old `data` branch. JOBS_KEY secret can be deleted. jobs.json is still written locally for sync_pipeline.py.
+- D-Tools pull: old step 5 (decrypt jobs.enc hourly) retired; 7g uses asbcPendingTasks()/asbcTasksDone() (quote.dtoolsTasks.for = job.submittedAt) on the 3 daily runs. Existing closed reports were marked handled.

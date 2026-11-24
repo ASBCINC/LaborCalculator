@@ -1,0 +1,7 @@
+# v10.4.0 Deployed by .github/workflows/deploy-infra.yml on every push that changes cloudflare/** (wrangler deploy).
+# Secrets (GITHUB_TOKEN, HOOK_SECRET, TEAMS_HOOK, RAMP_CLIENT_ID, RAMP_CLIENT_SECRET) stay in Cloudflare; keep_vars keeps dashboard vars.
+name = "yellow-cloud-830a"
+main = "dtools-sync-relay.js"
+compatibility_date = "2025-01-01"
+workers_dev = true
+keep_vars = true
