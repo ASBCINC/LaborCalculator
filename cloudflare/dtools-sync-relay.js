@@ -27,6 +27,8 @@
 const WORKFLOW = 'https://api.github.com/repos/ASBCINC/LaborCalculator/actions/workflows/sync-opportunities.yml/dispatches';
 const FS = 'https://firestore.googleapis.com/v1/projects/asbc-calculator/databases/(default)/documents/';
 const APP_ORIGIN = 'https://asbcinc.github.io';
+const PHOTO_KEY = /^[\w-]{1,100}\/[0-9a-f-]{36}\.jpg$/;
+const PHOTO_BASE = 'https://yellow-cloud-830a.a-ward-612.workers.dev/photo/';
 const CORS = { 'Access-Control-Allow-Origin': APP_ORIGIN, 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization', 'Access-Control-Max-Age': '86400' };
 
@@ -91,6 +93,12 @@ function buildCard(q, id, users) {
   (j.extras || []).filter(x => x && (x.desc || x.hours)).forEach(x =>
     body.push({ type: 'TextBlock', wrap: true, color: 'Attention', text: 'Possible change order: ' + clip(x.desc, 160) + (x.hours ? ' (' + x.hours + ' hrs)' : '') }));
   if (signoff) body.push({ type: 'TextBlock', wrap: true, color: so.concerns ? 'Attention' : 'Default', text: signoff });
+  // v10.6.0 install photos taken in the app: up to 4 thumbnails (tap for full size), the rest are in the report
+  const pics = ((j.photos || {}).list || []).filter(x => x && PHOTO_KEY.test(String(x.k || '')));
+  if (pics.length) {
+    body.push({ type: 'TextBlock', wrap: true, spacing: 'Medium', text: '**Install photos (' + pics.length + ')**' + (pics.length > 4 ? ' · ' + (pics.length - 4) + ' more in the report' : '') });
+    body.push({ type: 'ImageSet', imageSize: 'Medium', images: pics.slice(0, 4).map(x => ({ type: 'Image', url: PHOTO_BASE + x.k, altText: 'Install photo', selectAction: { type: 'Action.OpenUrl', url: PHOTO_BASE + x.k } })) });
+  }
   return {
     type: 'AdaptiveCard', $schema: 'http://adaptivecards.io/schemas/adaptive-card.json', version: '1.4', body,
     actions: [{ type: 'Action.OpenUrl', title: 'View report', url: 'https://asbcinc.github.io/LaborCalculator/jobs.html?quote=' + encodeURIComponent(id) }]
@@ -280,7 +288,6 @@ async function rampRoute(request, env) {
     return json({ error: 'unknown action' }, 400);
   } catch (e) { console.log('ramp error', e.message); return json({ error: e.message }, 502); }
 }
-const PHOTO_KEY = /^[\w-]{1,100}\/[0-9a-f-]{36}\.jpg$/;
 async function photoRoute(request, env) {
   const json = (o, s) => new Response(JSON.stringify(o), { status: s || 200, headers: { ...CORS, 'Content-Type': 'application/json' } });
   if (!env.PHOTOS) return json({ error: 'photo storage is not set up' }, 500);
