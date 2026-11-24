@@ -532,17 +532,17 @@ function productsReport(j) {
   return `<div class="card"><div class="sect" style="margin-top:0">Products installed (${n} of ${P.length})</div>${P.map(x => `<div class="prod" style="padding:6px 0"><span class="${done.has(x.name) ? 'pl' : 'mi'}">${done.has(x.name) ? '✓' : '✗'}</span><span>${esc(x.name)}${Number(x.qty) > 1 ? ' ×' + esc(x.qty) : ''}</span></div>`).join('')}</div>`;
 }
 let SETTINGS = {};
-function moneyCard(j, show) {  // v10.0.0 totals + labor revenue/loss (quoted labor − crew cost)
+function moneyCard(j, show) {  // v10.2.0 time quoted vs time on site (no dollars); bid points for the rep
   const lab = j.laborHours != null ? j.laborHours : laborHours(j.log), site = j.siteHours != null ? j.siteHours : siteHours(j.log);
-  const days = new Set((j.log || []).map(r => r.date)).size, est = (Q.items || []).reduce((a, it) => a + lineEst(it), 0);
-  const rate = Number(SETTINGS.hourlyRate) || 200, cost = Number(SETTINGS.crewCostRate) || 100, usd = n => (n < 0 ? '−$' : '$') + Math.abs(Math.round(n)).toLocaleString('en-US');
-  const quoted = est * rate, crew = lab * cost, pl = quoted - crew;
-  return `<div class="card"><div class="print-only"><b>ASBC Job Report</b> · ${esc(label(Q))} · printed ${new Date().toLocaleDateString('en-US')}</div><div class="sect" style="margin-top:0">Total time</div>
-    <div style="display:flex;gap:22px;flex-wrap:wrap"><div><div class="qmeta">Days</div><div style="font-size:22px;font-weight:800">${days}</div></div><div><div class="qmeta">Hours on site</div><div style="font-size:22px;font-weight:800">${hrs(site)}</div></div><div><div class="qmeta">Labor hours (× techs)</div><div style="font-size:22px;font-weight:800;color:var(--gold)">${hrs(lab)}</div></div>
-    ${show && est ? `<div><div class="qmeta">Quoted hours</div><div style="font-size:22px;font-weight:800">${hrs(est)}</div></div>` : ''}</div>
-    ${show && est ? `<table style="margin-top:10px"><tr><td>Quoted labor (${hrs(est)} hrs × $${rate})</td><td class="right">${usd(quoted)}</td></tr><tr><td>Crew cost (${hrs(lab)} labor hrs × $${cost})</td><td class="right">${usd(crew)}</td></tr>
-      <tr><td><b>${pl >= 0 ? 'Revenue' : 'Loss'}</b></td><td class="right"><b class="${pl >= 0 ? 'pl' : 'mi'}" style="font-size:18px">${usd(pl)}</b> <span class="qmeta">(${Math.round(pl / (quoted || 1) * 100)}%)</span></td></tr></table>` : ''}
-    ${show && !est ? '<div class="qmeta" style="margin-top:6px">' + (Q.noQuote ? '<b style="color:#ff9f6b">No labor quote for this job</b>, so there is no revenue or loss to show.' : 'This quote has no catalog hours to compare against.') + '</div>' : ''}</div>`;
+  const days = new Set((j.log || []).map(r => r.date)).size, est = Math.round((Q.items || []).reduce((a, it) => a + lineEst(it), 0) * 100) / 100;
+  const d = est ? (lab - est) / est : 0, pts = est ? ASBCBoard.accuracyPoints(est, lab) : 0, diff = Math.round((lab - est) * 100) / 100;
+  const verdict = !est ? '' : Math.abs(d) <= 0.10 ? ['Bid correctly', 'pl'] : d < 0 ? ['Finished under the quote', 'pl'] : ['Ran over the quote', 'mi'];
+  return `<div class="card"><div class="print-only"><b>ASBC Job Report</b> · ${esc(label(Q))} · printed ${new Date().toLocaleDateString('en-US')}</div><div class="sect" style="margin-top:0">Time quoted vs time on site</div>
+    <div style="display:flex;gap:22px;flex-wrap:wrap">${est ? `<div><div class="qmeta">Time quoted</div><div style="font-size:22px;font-weight:800">${hrs(est)} hrs</div></div>` : ''}
+    <div><div class="qmeta">Actual labor (${hrs(site)} hrs on site × techs)</div><div style="font-size:22px;font-weight:800;color:var(--gold)">${hrs(lab)} hrs</div></div>
+    <div><div class="qmeta">Days</div><div style="font-size:22px;font-weight:800">${days}</div></div></div>
+    ${est ? `<div style="margin-top:10px;font-size:15px"><b class="${verdict[1]}">${verdict[0]}</b>: ${diff > 0 ? hrs(diff) + ' hrs over' : diff < 0 ? hrs(-diff) + ' hrs under' : 'right on'} (${d > 0 ? '+' : ''}${Math.round(d * 100)}%)${show ? ` · <span class="${pts >= 0 ? 'pl' : 'mi'}">${pts > 0 ? '+' : ''}${pts} pts</span> to ${esc((Q.project || {}).salesManagerName || 'the rep')}` : ''}</div>`
+      : `<div class="qmeta" style="margin-top:6px">${Q.noQuote ? '<b style="color:#ff9f6b">No labor quote for this job</b>, so there is no quoted time to compare.' : 'This quote has no catalog hours to compare against.'}</div>`}</div>`;
 }
 function logForm() {
   const j = Q.job || {}; const lines = j.lines || [];
@@ -677,7 +677,7 @@ function wire() {
     if (!(Q.punch || []).length) { const pl = punchFrom((job.recap || {}).followups); if (pl.length) data.punch = pl; }  // v9.3.0 punch list from Open items
     if (EDIT) { data.jobDraft = firebase.firestore.FieldValue.delete(); data.jobRevisions = firebase.firestore.FieldValue.arrayUnion(Object.assign({}, Q._live || {}, { revision: (Q._live || {}).revision || 1, clocks: null })); }
     await save(REF, data);
-    if (act && !Q.actuals) { try { await ASBCBoard.recordAccuracy(db, (Q.project || {}).salesManagerName, act.totalEstHours, act.totalActualHours); } catch (err) { console.warn('accuracy tally', err); } recordItemHours(act); }  // tallied once per job
+    if (act && job.jobStatus === 'Complete' && !Q.accScored) { try { await ASBCBoard.recordAccuracy(db, (Q.project || {}).salesManagerName, act.totalEstHours, act.totalActualHours); await REF.set({ accScored: { at: new Date().toISOString(), est: act.totalEstHours, act: act.totalActualHours } }, { merge: true }); } catch (err) { console.warn('accuracy tally', err); } }  // v10.2.0 scored once, when the job is marked Complete (all days logged)
     EDIT = false;
     notifyRecap(qid);
     STEP = 1; await showJob(qid);

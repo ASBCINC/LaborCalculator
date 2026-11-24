@@ -39,9 +39,10 @@
     await qref.set({ counted: mk }, { merge: true });
     return true;
   }
-  // v8.17.0: accuracy. When Anthony approves a job report, the rep who quoted it earns accuracy points:
-  // actual hours within 10% of the estimate = 10 pts, within 25% = 5 pts, otherwise 0.
-  function accuracyPoints(est, act) { if (!(est > 0)) return 0; const e = Math.abs(act - est) / est; return e <= 0.10 ? 10 : e <= 0.25 ? 5 : 0; }
+  // v10.2.0 bid accuracy (Anthony, Nov 24): quoted labor hours vs actual labor hours (hours on site × techs).
+  // Bid correctly (actual within 10% either way) = +10. Over-bid (job took 10%+ less than quoted) = +5.
+  // Under-bid (job took longer than quoted): 10–25% over = −5, more than 25% over = −10.
+  function accuracyPoints(est, act) { if (!(est > 0)) return 0; const d = (act - est) / est; return Math.abs(d) <= 0.10 ? 10 : d < 0 ? 5 : d <= 0.25 ? -5 : -10; }
   async function recordAccuracy(db, repName, est, act) {
     if (!repName || !(est > 0)) return;
     const inc = firebase.firestore.FieldValue.increment;

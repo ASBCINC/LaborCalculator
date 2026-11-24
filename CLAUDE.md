@@ -245,3 +245,7 @@ D-Tools handoff panel (paste-ready labor block); Quote Log search wording.
 ## v10.1.0 Multi-day recaps (Nov 24, 2026)
 - Recap time log shows a row for every scheduled day (also when reopening a saved/submitted report), lists the scheduled days, "+ Add another day" button.
 - Submitted report: "+ Log another day" opens edit with today added (resubmits as the next revision; techs/rep notified as a revision).
+
+## v10.2.0 Time quoted vs time on site + bid points (Nov 24, 2026)
+- Report card shows quoted hours vs actual labor hours (site hrs × techs), hrs over/under and %, verdict; no dollars on the report (pipeline Job profit unchanged).
+- Rep bid points (leaderboard-core accuracyPoints): within ±10% = +10, 10%+ under quote = +5, 10–25% over = −5, >25% over = −10. Scored once when a report is submitted with status Complete (quote.accScored), so multi-day jobs score on the final total.
