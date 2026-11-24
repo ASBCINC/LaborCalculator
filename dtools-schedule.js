@@ -102,7 +102,7 @@
         const pp = pipeByName[fold(p.name)] || {};  // v9.3.0 proposal PDF + parts readiness from the pipeline sync
         if (pp.proposalPdf && pr.proposalPdf !== pp.proposalPdf) link['proposalPdf'] = pp.proposalPdf;
         if ((pp.files || []).length && JSON.stringify(pp.files) !== JSON.stringify(pr.files || [])) link['files'] = pp.files;  // v9.4.0 all project files
-        const partsNow = pp.parts && pp.parts.known ? { total: pp.parts.total, ready: pp.parts.ready, notReady: (pp.parts.notReady || []).map(x => x.name + (x.qty > 1 ? ' ×' + x.qty : '')) } : null;
+        const partsNow = pp.parts && pp.parts.known ? { total: pp.parts.total, ready: pp.parts.ready, notReady: (pp.parts.notReady || []).map(x => x.name + (x.qty > 1 ? ' ×' + x.qty : '')), items: (pp.parts.items || []).map(x => ({ name: x.name, qty: x.qty || 1, install: x.install || '' })) } : null;  // v10.0.0 items = tech checklist
         const partsChanged = partsNow && JSON.stringify(partsNow) !== JSON.stringify(q.parts || null);
         if (Object.keys(link).some(k => k !== 'dtoolsProjectName')) out.linked.push(p.name);
         if (sc.dtoolsHash === sig && !Object.keys(link).length && !partsChanged) { out.unchanged++; }

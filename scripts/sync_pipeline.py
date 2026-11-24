@@ -96,7 +96,7 @@ def main():
                 push(rec, 'stage', f"Stage: {old.get('stage') or '—'} → {p.get('stage')}")
             if old.get('price') is not None and abs(money(old.get('price')) - rec['price']) >= 0.01:
                 push(rec, 'value', f"Contract value ${old['price']:,.2f} → ${rec['price']:,.2f}")
-        if not old or old.get('modified') != rec['modified'] or not old.get('detailAt') or 'parts' not in old or 'files' not in old or 'notStaged' not in (old.get('parts') or {}):  # v9.3.0/9.4.0: one-time refetch for parts, proposal PDF, all files
+        if not old or old.get('modified') != rec['modified'] or not old.get('detailAt') or 'parts' not in old or 'files' not in old or 'items' not in (old.get('parts') or {}):  # v9.3.0/9.4.0: one-time refetch for parts, proposal PDF, all files
             try:
                 d = api('Projects/GetProject', {'id': pid})
                 rec.update({'rep': d.get('salesperson'), 'start': utc(d.get('startDate')), 'end': utc(d.get('endDate')),
@@ -121,6 +121,8 @@ def main():
                 rec['parts'] = {'total': sum(int(i.get('quantity') or 1) for i in prods), 'ready': sum(int(i.get('quantity') or 1) for i in prods if ready(i)), 'known': bool(d.get('items') is not None),
                                 'notReady': [{'name': i.get('model') or i.get('name') or 'Item', 'qty': i.get('quantity') or 1, 'order': i.get('orderStatus') or '', 'install': i.get('installStatus') or ''} for i in prods if not ready(i)][:10],
                                 'names': [i.get('model') or i.get('name') or '' for i in prods][:20],
+                                # v10.0.0: every product line, for the techs' install checklist on the job report
+                                'items': [{'name': i.get('model') or i.get('name') or 'Item', 'qty': i.get('quantity') or 1, 'install': i.get('installStatus') or ''} for i in prods][:40],
                                 # v9.9.0: products not yet set to Staged (or later) in D-Tools, for the rep's 2-day warning
                                 'notStaged': [{'name': i.get('model') or i.get('name') or 'Item', 'qty': i.get('quantity') or 1, 'install': i.get('installStatus') or ''} for i in prods if str(i.get('installStatus') or '').lower() not in ('staged', 'delivered', 'installed')][:15]}
                 rec['paid'] = round(sum(x['paid'] for x in pays), 2)

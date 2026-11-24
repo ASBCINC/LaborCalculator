@@ -428,8 +428,8 @@
                     <label class="text-[10px] sm:text-xs text-textMuted flex flex-col">
                         <span>Trip charge</span>
                         <select id="tripToggle" class="mt-1 w-full bg-bgDark border border-gray-700 rounded-lg p-2 sm:p-2.5 text-sm sm:text-base outline-none focus:border-brandGold">
-                            <option value="yes" selected>Yes</option>
-                            <option value="no">No</option>
+                            <option value="yes">Yes</option>
+                            <option value="no" selected>No</option>
                         </select>
                     </label>
                     <label class="text-[10px] sm:text-xs text-textMuted flex flex-col">
@@ -442,8 +442,8 @@
                     <label class="text-[10px] sm:text-xs text-textMuted flex flex-col">
                         <span>Recycling</span>
                         <select id="recyclingToggle" class="mt-1 w-full bg-bgDark border border-gray-700 rounded-lg p-2 sm:p-2.5 text-sm sm:text-base outline-none focus:border-brandGold">
-                            <option value="no">No</option>
-                            <option value="yes" selected>Yes (+$75)</option>
+                            <option value="no" selected>No</option>
+                            <option value="yes">Yes (+$75)</option>
                             <option value="custom">Custom...</option>
                         </select>
                         <input type="number" id="customRecyclingInput" inputmode="decimal" class="hidden mt-1 w-full bg-gray-900 border border-brandGold rounded-lg p-2 text-sm sm:text-base outline-none" placeholder="$">
@@ -454,7 +454,7 @@
                         <span>Crew Size</span>
                         <select id="crewSize" class="mt-1 w-full bg-bgDark border border-gray-700 rounded-lg p-2 sm:p-2.5 text-sm sm:text-base outline-none focus:border-brandGold">
                             <option value="1">1 Tech</option>
-                            <option value="2">2 Techs</option>
+                            <option value="2" selected>2 Techs</option>
                             <option value="3">3 Techs</option>
                             <option value="4">4 Techs</option>
                         </select>
@@ -717,7 +717,7 @@
               }
           });
 
-        const APP_VERSION = '9.11.0';
+        const APP_VERSION = '10.0.1';
         const BUILD_DATE = '2026-11-23';
         let HOURLY_RATE = 200;
 
@@ -793,7 +793,7 @@
         let RECYCLING_FEE = 75;
 
         const MATERIALS_MARKUP_PCT = 5; // Materials fee locked at 5% on every quote (v8.9.15: dropdown removed again at Anthony's request; the row stays visible in the summary with the dollar value)
-        let appSettings = { hourlyRate: 200, recyclingFee: 75, defaultRecyclingToggle: 'yes', defaultMarkup: 5, zonePresets: ['General', 'MEC (Equip. Closet)', 'Entry / Foyer', 'Living Room', 'Family Room', 'Great Room', 'Formal Living Room', 'Den', 'Sitting Room', 'Lounge', 'Library', 'Media Room', 'Home Theater', 'Game Room', 'Primary Bedroom', 'Patio / Outdoor'] };
+        let appSettings = { hourlyRate: 200, recyclingFee: 75, defaultRecyclingToggle: 'no', defaultMarkup: 5, zonePresets: ['General', 'MEC (Equip. Closet)', 'Entry / Foyer', 'Living Room', 'Family Room', 'Great Room', 'Formal Living Room', 'Den', 'Sitting Room', 'Lounge', 'Library', 'Media Room', 'Home Theater', 'Game Room', 'Primary Bedroom', 'Patio / Outdoor'] };
         try { const _savedSettings = JSON.parse(localStorage.getItem('asbcAppSettings') || 'null'); if (_savedSettings) appSettings = Object.assign(appSettings, _savedSettings); } catch (_e) {}
         function applyAppSettings() {
             HOURLY_RATE = Number(appSettings.hourlyRate) || 200;
@@ -2357,7 +2357,7 @@
             appSettings.hourlyRate = Number(h && h.value) || 200;
             appSettings.recyclingFee = Number(r && r.value) || 75;
             appSettings.defaultMarkup = 5; // locked
-            appSettings.defaultRecyclingToggle = appSettings.defaultRecyclingToggle || 'yes';
+            appSettings.defaultRecyclingToggle = appSettings.defaultRecyclingToggle || 'no';
             appSettings.zonePresets = (z && z.value ? z.value.split('\n') : []).map(s => s.trim()).filter(Boolean);
             document.querySelectorAll('[data-pset]').forEach(el => { const v = Number(el.value); if (el.value !== '' && Number.isFinite(v)) appSettings[el.dataset.pset] = v; });
             localStorage.setItem('asbcAppSettings', JSON.stringify(appSettings));
@@ -2571,13 +2571,13 @@
                 currentLoadedIsTemplate = false;
                 isTemplateCheckbox.checked = false;
                 if (isLockedCheckbox) isLockedCheckbox.checked = false;
-                recyclingToggle.value = String(appSettings.defaultRecyclingToggle || 'yes');
+                recyclingToggle.value = String(appSettings.defaultRecyclingToggle || 'no');
                 customRecyclingInput.value = '';
                 
-                crewSize.value = '1';
+                crewSize.value = '2';  // v10.0.1 default crew of 2
                 pricingV2 = true;
                 document.getElementById('siteConditions').value = 'standard';
-                document.getElementById('tripToggle').value = 'yes';
+                document.getElementById('tripToggle').value = 'no';  // v10.0.1 trip charge off by default
                 document.getElementById('pmToggle').value = 'no';
                 localStorage.removeItem('asbcActiveDraft');
                 currentActuals = null;

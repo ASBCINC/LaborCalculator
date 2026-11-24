@@ -231,3 +231,13 @@ D-Tools handoff panel (paste-ready labor block); Quote Log search wording.
 - jobs.html queueStage() on every submitted report: quote.dtoolsStage {want, from, done:false}. Complete -> Completed (Anthony chose Completed, not Installed); In Progress -> In Progress; Sales/PM Follow up, Cancelled -> Delayed.
 - dtools-schedule.js: asbcPendingStages() (skips already-at-stage, already Completed, not found) and asbcStagesDone(results) (3 tries).
 - Applied by the D-Tools pull step 7f on the 7:37/12:37/5:37 runs from the signed-in D-Tools page: Completed = PUT Project/api/v1/Projects/MarkProjectAsCompleted?id=; others = POST Projects/UpdateProjectsOpenStage?ids=&stageId= (ids from Catalog/api/v1/Stages/GetProjectStages: In Progress 3072, Delayed 3302). Not test-written yet; first real run will confirm. Step 6a no longer uses recaps.
+
+## v10.0.0 Recap form: project hours + product checklist (Nov 23, 2026) — MAJOR (workflow change)
+- Time log is one row per day: {date, hours (on site), techs:[emails]}; labor hours = hours × techs (old per-tech rows {date, who, hours} still read; regrouped by day when edited). job.siteHours / job.laborHours saved on every save.
+- No per-item hours any more (job.lines = []). actuals = {totalEstHours: catalog hours of the quote, totalActualHours: labor hours}; stats/items (learned item hours) gets no new data.
+- Step 2 "Products": D-Tools product lines (quote.parts.items, from sync_pipeline parts.items -> asbcImportSchedule) with an Installed checkbox -> job.installedItems; "Mark all installed". Complete with unchecked products = soft warning.
+- Report "Total time" card: days, hours on site, labor hours; admin/management also see quoted labor (est × hourlyRate) − crew cost (labor hrs × crewCostRate) = Revenue / Loss.
+- Pipeline Job profit uses job.laborHours.
+
+## v10.0.1 Calculator defaults (Nov 23, 2026)
+- New quotes start with Trip charge = No, Recycling = No (config/settings.defaultRecyclingToggle set to "no"), Crew size = 2. Saved quotes keep their own values.

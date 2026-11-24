@@ -64,6 +64,9 @@ textarea { background:#101216; border:1px solid var(--line); color:#fff; border-
 .item { display:grid; grid-template-columns:1fr 90px; gap:6px 8px; padding:8px 0; border-bottom:1px solid #1d2026; }
 .item .nm { font-size:14px; }
 .item .note { grid-column:1 / -1; }
+.tchip { display:inline-flex; align-items:center; gap:4px; margin:2px 8px 2px 0; font-size:13px; white-space:nowrap; } .tchip input { width:auto; height:auto; }
+.prod { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid #1d2026; font-size:14px; } .prod input { width:20px; height:20px; flex:0 0 auto; } .prod .ds { color:var(--muted,#8b8f98); font-size:12px; margin-left:auto; text-align:right; }
+.pl { color:#7ee2a0; } .mi { color:#ff8b8b; }
 .item input { padding:8px 10px; }
 .st { display:inline-block; font-size:10px; font-weight:800; letter-spacing:.06em; padding:2px 8px; border-radius:999px; border:1px solid var(--line); color:var(--muted); }
 .st-won { color:#ffd479; border-color:#8a6d2f; } .st-scheduled { color:#8fb3ff; border-color:#33518f; } .st-submitted { color:#ff9f6b; border-color:#8a4b2f; } .st-closed { color:#7ee2a0; border-color:#2f7a4c; }
@@ -277,8 +280,8 @@ async function hideJob(id) {
 
 // ---------- v8.24.0: steps, missing-field sheet, steppers, autosave, edit & resubmit ----------
 let STEP = 1, EDIT = false, SAVE_T = null;
-const STEP_NAMES = ['Time', 'Items', 'Recap', 'Photos & sign-off'];
-function stepNav(hasItems) { return `<div class="steps no-print">${STEP_NAMES.map((t, i) => `<button type="button" data-go="${i + 1}"><b>${i + 1}</b>${i === 1 && !hasItems ? 'Extras' : t}</button>`).join('')}</div>`; }
+const STEP_NAMES = ['Time', 'Products', 'Recap', 'Photos & sign-off'];
+function stepNav(hasItems) { return `<div class="steps no-print">${STEP_NAMES.map((t, i) => `<button type="button" data-go="${i + 1}"><b>${i + 1}</b>${t}</button>`).join('')}</div>`; }
 function goStep(n) {
   const secs = document.querySelectorAll('.step'); if (!secs.length) return;
   STEP = Math.max(1, Math.min(secs.length, n));
@@ -301,12 +304,12 @@ function actBar() {
 // Missing-field check. "Must fix" blocks the submit; "Please check" can be submitted anyway.
 function checkJob(job) {
   const must = [], check = [];
-  if (!(job.log || []).length) must.push(['Add at least one day on the time log (date, tech, hours)', '#logT']);
+  if (!(job.log || []).length) must.push(['Add at least one day of time on site (date and hours)', '#logT']);
   if (!job.jobStatus) must.push(['Pick a job status', '#jobStatus']);
   if (!((job.recap || {}).work || '').trim()) must.push(['Fill in "Work completed"', '.rc[data-k="work"]']);
   const soP = signoffProblem(Q, job.jobStatus, job.signoffSkip); if (soP) must.push([soP.replace(/\.$/, ''), '#soCard']);
-  const miss = (job.lines || []).filter(l => l.actualHours == null);
-  if (miss.length) check.push([miss.length + ' item' + (miss.length > 1 ? 's have' : ' has') + ' no hours', `.ah[data-i="${miss[0].i}"]`]);
+  const P = prodList(Q), left = P.filter(x => !(job.installedItems || []).includes(x.name));
+  if (P.length && left.length && job.jobStatus === 'Complete') check.push([left.length + ' product' + (left.length > 1 ? 's' : '') + ' not marked installed', '.pi']);
   if (!(job.photos && job.photos.uploaded) && document.getElementById('photosDone')) check.push(['Photos not marked as uploaded', '#photosDone']);
   return { must, check };
 }
@@ -380,12 +383,11 @@ function punchCard(canTick) {
   return `<div class="card" style="border-color:${open ? '#8a6d2f' : 'var(--line)'}"><div class="sect" style="margin-top:0;color:${open ? '#ffd479' : 'inherit'}">Punch list (${open} open of ${pl.length})</div>
     ${pl.map((x, i) => `<label class="chk" style="display:flex;gap:8px;align-items:flex-start;padding:4px 0"><input type="checkbox" class="pk" data-i="${i}" ${x.done ? 'checked' : ''} ${canTick ? '' : 'disabled'}><span style="${x.done ? 'text-decoration:line-through;color:var(--muted)' : ''}">${esc(x.t)}${x.done && x.by ? ` <span class="qmeta">· ${esc(nameOf(x.by))} ${esc(new Date(x.at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }))}</span>` : ''}</span></label>`).join('')}</div>`;
 }
-function actualsFrom(j) {
-  const lines = [];
-  (Q.items || []).forEach((it, i) => { const l = (j.lines || []).find(x => x.i === i); if (l && l.actualHours != null && lineEst(it) > 0) lines.push({ id: it.id, name: lineName(it), zone: it.zone || 'General', qty: it.qty, estHours: Math.round(lineEst(it) * 100) / 100, actualHours: l.actualHours, note: l.note || '' }); });
-  if (!lines.length) return null;
-  return { lines, totalEstHours: Math.round(lines.reduce((a, l) => a + l.estHours, 0) * 100) / 100, totalActualHours: Math.round(lines.reduce((a, l) => a + l.actualHours, 0) * 100) / 100,
-    notes: [(j.recap || {}).issues, (j.recap || {}).followups].filter(Boolean).join(' | '), savedAt: new Date().toISOString(), source: 'job report' };
+function actualsFrom(j) {  // v10.0.0 whole-project hours: quoted catalog hours vs labor hours (hours on site × techs)
+  const est = Math.round((Q.items || []).reduce((a, it) => a + lineEst(it), 0) * 100) / 100, act = j.laborHours != null ? j.laborHours : laborHours(j.log);
+  if (!est || !act) return null;
+  return { lines: [], totalEstHours: est, totalActualHours: act, siteHours: j.siteHours != null ? j.siteHours : siteHours(j.log),
+    notes: [(j.recap || {}).issues, (j.recap || {}).followups].filter(Boolean).join(' | '), savedAt: new Date().toISOString(), source: 'job report (project hours)' };
 }
 // What changed between two submissions (revision history + Teams message)
 function diffJob(a, b) {
@@ -493,14 +495,63 @@ function scheduleCard(st) {
     <div class="sect">Status</div><select id="stSel">${Object.entries(STATUS).map(([k, v]) => `<option value="${k}" ${k === st ? 'selected' : ''}>${v}</option>`).join('')}</select>
     <div class="qactions"><button class="qbtn gold" id="saveSched">Save schedule</button></div><div id="schedMsg" class="qmeta"></div></details>`;
 }
+// v10.0.0 crew time log: one row per day = hours on site + the techs on site. Labor hours = hours on site × techs.
+// Older reports have one row per tech ({date, who, hours}); they count as hours × 1 and are regrouped by day when edited.
+const rowLabor = r => (Number(r.hours) || 0) * (Array.isArray(r.techs) ? Math.max(1, r.techs.length) : 1);
+const laborHours = log => Math.round((log || []).reduce((a, r) => a + rowLabor(r), 0) * 100) / 100;
+const siteHours = log => { const by = {}; (log || []).forEach(r => { const k = r.date || '?'; by[k] = Array.isArray(r.techs) ? (by[k] || 0) + (Number(r.hours) || 0) : Math.max(by[k] || 0, Number(r.hours) || 0); }); return Math.round(Object.values(by).reduce((a, h) => a + h, 0) * 100) / 100; };
+const rowTechs = r => Array.isArray(r.techs) ? r.techs : (r.who ? [r.who] : []);
+function crewRows(log) {  // old per-tech rows -> one row per day
+  if (!(log || []).length || (log || []).every(r => Array.isArray(r.techs))) return log || [];
+  const by = {}; log.forEach(r => { const k = r.date || ''; const x = by[k] || (by[k] = { date: k, hours: 0, techs: [] }); x.hours = Math.max(x.hours, Number(r.hours) || 0); rowTechs(r).forEach(t => { if (!x.techs.includes(t)) x.techs.push(t); }); });
+  return Object.values(by).sort((a, b) => a.date.localeCompare(b.date));
+}
+function logRowHtml(r) {
+  const on = rowTechs(r), list = techs(), assigned = ((Q && Q.schedule) || {}).techs || [];
+  const show = list.filter(t => assigned.includes(t.email) || on.includes(t.email) || t.email === ME.email).concat(list.filter(t => !(assigned.includes(t.email) || on.includes(t.email) || t.email === ME.email)));
+  return `<tr><td><input type="date" class="ld" value="${esc(r.date || '')}"></td><td><input type="number" class="lh" min="0" step="0.25" inputmode="decimal" placeholder="hrs" value="${esc(r.hours ?? '')}"></td>
+    <td class="lt">${show.map(t => `<label class="tchip"><input type="checkbox" class="lk" value="${esc(t.email)}" ${on.includes(t.email) ? 'checked' : ''}>${esc(String(t.name).split(' ')[0])}</label>`).join('')}</td></tr>`;
+}
+function logTable(rows) { return `<table id="logT"><tr><th style="width:150px">Date</th><th style="width:90px">Hours on site</th><th>Techs on site</th></tr>${rows.map(logRowHtml).join('')}</table>`; }
+function collectLog() {
+  return [...document.querySelectorAll('#logT tr')].slice(1).map(tr => { const t = [...tr.querySelectorAll('.lk:checked')].map(x => x.value);
+    return { date: tr.querySelector('.ld').value, hours: Number(tr.querySelector('.lh').value) || 0, techs: t.length ? t : (ME.role === 'tech' ? [ME.email] : []) }; }).filter(r => r.date && r.hours);
+}
+// v10.0.0 products to bring out (D-Tools product lines on the project); techs tick each one installed
+const prodList = q => ((q && q.parts && q.parts.items) || []).filter(x => x && x.name);
+function productsCard(j) {
+  const P = prodList(Q), done = new Set(j.installedItems || []);
+  if (!P.length) return `<div class="card"><div class="sect" style="margin-top:0">Products to bring</div><div class="qmeta">No product list from D-Tools for this project yet.</div></div>`;
+  return `<div class="card"><div class="sect" style="margin-top:0;display:flex;justify-content:space-between;align-items:center">Products to bring (${P.length})<button type="button" class="qbtn" id="allInst" style="height:26px;padding:0 10px">Mark all installed</button></div>
+    <div class="qmeta">Check each product once it's installed.</div>
+    ${P.map((x, i) => `<label class="prod"><input type="checkbox" class="pi" value="${esc(x.name)}" ${done.has(x.name) ? 'checked' : ''}><span>${esc(x.name)}${Number(x.qty) > 1 ? ' <b>×' + esc(x.qty) + '</b>' : ''}</span>${x.install ? `<span class="ds">D-Tools: ${esc(x.install)}</span>` : ''}</label>`).join('')}</div>`;
+}
+function productsReport(j) {
+  const P = prodList(Q); if (!P.length) return '';
+  const done = new Set(j.installedItems || []), n = P.filter(x => done.has(x.name)).length;
+  return `<div class="card"><div class="sect" style="margin-top:0">Products installed (${n} of ${P.length})</div>${P.map(x => `<div class="prod" style="padding:6px 0"><span class="${done.has(x.name) ? 'pl' : 'mi'}">${done.has(x.name) ? '✓' : '✗'}</span><span>${esc(x.name)}${Number(x.qty) > 1 ? ' ×' + esc(x.qty) : ''}</span></div>`).join('')}</div>`;
+}
+let SETTINGS = {};
+function moneyCard(j, show) {  // v10.0.0 totals + labor revenue/loss (quoted labor − crew cost)
+  const lab = j.laborHours != null ? j.laborHours : laborHours(j.log), site = j.siteHours != null ? j.siteHours : siteHours(j.log);
+  const days = new Set((j.log || []).map(r => r.date)).size, est = (Q.items || []).reduce((a, it) => a + lineEst(it), 0);
+  const rate = Number(SETTINGS.hourlyRate) || 200, cost = Number(SETTINGS.crewCostRate) || 100, usd = n => (n < 0 ? '−$' : '$') + Math.abs(Math.round(n)).toLocaleString('en-US');
+  const quoted = est * rate, crew = lab * cost, pl = quoted - crew;
+  return `<div class="card"><div class="print-only"><b>ASBC Job Report</b> · ${esc(label(Q))} · printed ${new Date().toLocaleDateString('en-US')}</div><div class="sect" style="margin-top:0">Total time</div>
+    <div style="display:flex;gap:22px;flex-wrap:wrap"><div><div class="qmeta">Days</div><div style="font-size:22px;font-weight:800">${days}</div></div><div><div class="qmeta">Hours on site</div><div style="font-size:22px;font-weight:800">${hrs(site)}</div></div><div><div class="qmeta">Labor hours (× techs)</div><div style="font-size:22px;font-weight:800;color:var(--gold)">${hrs(lab)}</div></div>
+    ${show && est ? `<div><div class="qmeta">Quoted hours</div><div style="font-size:22px;font-weight:800">${hrs(est)}</div></div>` : ''}</div>
+    ${show && est ? `<table style="margin-top:10px"><tr><td>Quoted labor (${hrs(est)} hrs × $${rate})</td><td class="right">${usd(quoted)}</td></tr><tr><td>Crew cost (${hrs(lab)} labor hrs × $${cost})</td><td class="right">${usd(crew)}</td></tr>
+      <tr><td><b>${pl >= 0 ? 'Revenue' : 'Loss'}</b></td><td class="right"><b class="${pl >= 0 ? 'pl' : 'mi'}" style="font-size:18px">${usd(pl)}</b> <span class="qmeta">(${Math.round(pl / (quoted || 1) * 100)}%)</span></td></tr></table>` : ''}
+    ${show && !est ? '<div class="qmeta" style="margin-top:6px">' + (Q.noQuote ? '<b style="color:#ff9f6b">No labor quote for this job</b>, so there is no revenue or loss to show.' : 'This quote has no catalog hours to compare against.') + '</div>' : ''}</div>`;
+}
 function logForm() {
   const j = Q.job || {}; const lines = j.lines || [];
   const items = (Q.items || []).map((it, i) => ({ it, i, prev: lines.find(l => l.i === i) || {} }));
   const zones = [...new Set(items.map(x => x.it.zone || 'General'))];
   // v8.32.0: a new report starts with one row per scheduled day per assigned tech (from the Calendar / D-Tools)
-  const sc0 = Q.schedule || {}, who0 = ME.role === 'tech' ? [ME.email] : (sc0.techs || []).length ? sc0.techs : [''];
-  const pre = (sc0.dates || []).flatMap(d => who0.map(w => ({ date: d, who: w, hours: '' })));
-  const log = (j.log && j.log.length ? j.log : pre.length ? pre : [{ date: new Date().toISOString().slice(0, 10), who: ME.role === 'tech' ? ME.email : '', hours: '' }]);
+  const sc0 = Q.schedule || {}, who0 = (sc0.techs || []).length ? sc0.techs : (ME.role === 'tech' ? [ME.email] : []);
+  const pre = (sc0.dates || []).map(d => ({ date: d, hours: '', techs: who0.slice() }));
+  const log = (j.log && j.log.length ? crewRows(j.log) : pre.length ? pre : [{ date: new Date().toISOString().slice(0, 10), hours: '', techs: who0.slice() }]);
   const tOpts = sel => techs().map(t => `<option value="${esc(t.email)}" ${t.email === sel ? 'selected' : ''}>${esc(t.name)}</option>`).join('');
   const clock = ((j.clocks || {})[ME.email]) || null;
   const extras = (j.extras && j.extras.length) ? j.extras : [{ desc: '', hours: '' }];
@@ -509,47 +560,31 @@ function logForm() {
       <div class="qactions"><button class="qbtn gold" id="clockOut">End day</button><button class="qbtn" id="clockCancel">Cancel timer</button></div>`
     : `<div class="qmeta">Tap Start when you arrive; tap End when you leave. Your hours are added to the time log below.</div><div class="qactions"><button class="qbtn gold" id="clockIn">Start day</button></div>`}</div>`;
   const parent = Q.returnFor ? `<div class="card" style="border-color:#8a6d2f"><div class="sect" style="margin-top:0;color:#ffd479">Return visit</div><div class="qmeta">For: ${esc(Q.returnFor.label || '')}</div><div style="white-space:pre-wrap;margin-top:6px">${esc(Q.returnFor.openItems || '')}</div></div>` : '';
-  const itemsCard = items.length ? `<div class="card"><div class="sect" style="margin-top:0">Actual hours per item</div>
-    <div class="qmeta">Enter the total hours spent on each line (all techs combined), and pick who did it. Add a note if something ran long or short.</div>
-    <div class="qmeta no-print" style="display:flex;align-items:center;gap:6px;margin-top:6px">Set every item to: ${techPick('', 'id="awAll" onchange="document.querySelectorAll(\'.aw\').forEach(s => s.value = this.value)"', ' ')}</div>
-    ${zones.map(z => `<div class="sect">${esc(z)}</div>` + items.filter(x => (x.it.zone || 'General') === z).map(x => `<div class="item">
-      <div class="nm">${esc(lineName(x.it))}${Number(x.it.qty) > 1 ? ' <span class="qmeta">×' + esc(x.it.qty) + '</span>' : ''}</div>
-      <input type="number" min="0" step="0.25" inputmode="decimal" class="ah" data-i="${x.i}" placeholder="hrs" value="${x.prev.actualHours ?? ''}">
-      <div class="note" style="display:flex;gap:6px"><input type="text" class="an" data-i="${x.i}" placeholder="Note (optional)" value="${esc(x.prev.note || '')}" style="flex:1;min-width:0">${techPick('aw', `data-i="${x.i}"`, x.prev.by)}</div></div>`).join('')).join('')}</div>` : '';
   const extrasCard = `<div class="card"><div class="sect" style="margin-top:0">Unplanned / extra work</div>
     <div class="qmeta">Anything done that was NOT on the quote (possible change order). Anthony and the sales rep are flagged.</div>
     <table id="exT"><tr><th>What was done</th><th style="width:80px">Hours</th><th style="width:130px">Who</th></tr>${extras.map(x => `<tr><td><input class="exd" value="${esc(x.desc || '')}" placeholder="e.g. Moved outlet behind TV"></td><td><input type="number" class="exh" min="0" step="0.25" value="${esc(x.hours ?? '')}"></td><td>${techPick('exw', '', x.by).replace('max-width:48%', 'max-width:100%;width:100%')}</td></tr>`).join('')}</table>
     <button type="button" class="qbtn" id="addEx" style="margin-top:6px">+ Add extra</button></div>`;
-  return stepNav(items.length) + parent + `<section class="step" data-step="1">` + timer + `
-    <div class="card"><div class="sect" style="margin-top:0">Daily time log</div><div class="qmeta">One row per tech per day.</div>
-    <table id="logT"><tr><th>Date</th><th>Tech</th><th>Hours</th></tr>${log.map(r => `<tr><td><input type="date" class="ld" value="${esc(r.date || '')}"></td><td><select class="lw"><option value="">—</option>${tOpts(r.who)}</select></td><td><input type="number" class="lh" min="0" step="0.25" value="${esc(r.hours)}"></td></tr>`).join('')}</table>
-    <button type="button" class="qbtn" id="addLog" style="margin-top:6px">+ Add day / tech</button></div></section>
-    <section class="step" data-step="2">${itemsCard}${extrasCard}</section>
+  return stepNav(true) + parent + `<section class="step" data-step="1">` + timer + `
+    <div class="card"><div class="sect" style="margin-top:0">Time on site</div><div class="qmeta">One row per day: total hours on site, and check every tech who was there. Labor hours = hours × techs.</div>
+    ${logTable(log)}
+    <button type="button" class="qbtn" id="addLog" style="margin-top:6px">+ Add day</button></div></section>
+    <section class="step" data-step="2">${productsCard(j)}${extrasCard}</section>
     <section class="step" data-step="3"><div class="card"><div class="sect" style="margin-top:0">Job recap</div>${jsSelect(((typeof Q !== 'undefined' && Q && Q.job) || {}).jobStatus || '')}
     ${[['work', 'Work completed'], ['issues', 'Problems / what took longer'], ['followups', 'Open items / return visit needed'], ['client', 'Client feedback']].map(([k, t]) => `<div class="qmeta" style="margin-top:8px;display:flex;justify-content:space-between;align-items:center">${t}<button type="button" class="qbtn bl" data-k="${k}" style="height:24px;padding:0 8px">• Bullet</button></div><textarea class="rc" data-k="${k}" rows="3" placeholder="${k === 'work' ? 'Required' : 'Optional'}">${esc((j.recap || {})[k] || '')}</textarea>`).join('')}
     </div></section>
     <section class="step" data-step="4"><div class="card">${photoBox(Q).replace('border-top:1px solid var(--line);margin-top:12px;padding-top:10px', '')}${signoffBox(Q)}<div id="jobMsg" class="qmeta"></div></div></section>${actBar()}`;
 }
 function collectJob() {
-  const lines = [...document.querySelectorAll('.ah')].map(el => { const i = Number(el.dataset.i); const it = Q.items[i];
-    const note = document.querySelector(`.an[data-i="${i}"]`).value.trim();
-    const byEl = document.querySelector(`.aw[data-i="${i}"]`);
-    return { i, id: it.id, zone: it.zone || 'General', actualHours: el.value === '' ? null : Number(el.value), note, by: byEl ? byEl.value : '' }; });
-  const log = [...document.querySelectorAll('#logT tr')].slice(1).map(tr => ({ date: tr.querySelector('.ld').value, who: tr.querySelector('.lw').value, hours: Number(tr.querySelector('.lh').value) || 0 })).filter(r => r.date && r.hours);
+  const log = collectLog(), inst = document.querySelectorAll('.pi').length ? [...document.querySelectorAll('.pi:checked')].map(x => x.value) : ((Q.job || {}).installedItems || []);
   const recap = {}; document.querySelectorAll('.rc').forEach(t => recap[t.dataset.k] = t.value.trim());
   const extras = [...document.querySelectorAll('#exT tr')].slice(1).map(tr => ({ desc: tr.querySelector('.exd').value.trim(), hours: Number(tr.querySelector('.exh').value) || 0, by: (tr.querySelector('.exw') || {}).value || '' })).filter(x => x.desc || x.hours);
   const jsEl = document.getElementById('jobStatus');
-  return Object.assign({}, Q.job || {}, { jobStatus: jsEl ? jsEl.value : ((Q.job || {}).jobStatus || ''), lines, log, recap, extras, signoffSkip: signoffSkip(), photos: photosVal() || (Q.job || {}).photos || null, extrasHours: Math.round(extras.reduce((a, x) => a + x.hours, 0) * 100) / 100, savedAt: new Date().toISOString(), savedBy: ME.email });
+  return Object.assign({}, Q.job || {}, { jobStatus: jsEl ? jsEl.value : ((Q.job || {}).jobStatus || ''), lines: [], log, siteHours: siteHours(log), laborHours: laborHours(log), installedItems: inst, recap, extras, signoffSkip: signoffSkip(), photos: photosVal() || (Q.job || {}).photos || null, extrasHours: Math.round(extras.reduce((a, x) => a + x.hours, 0) * 100) / 100, savedAt: new Date().toISOString(), savedBy: ME.email });
 }
 function report(admin, canEdit) {
-  const j = Q.job || {}; const lines = j.lines || [];
-  const rows = (Q.items || []).map((it, i) => { const l = lines.find(x => x.i === i) || {}; const est = lineEst(it); const act = l.actualHours; return { it, est, act, note: l.note, by: l.by, zone: it.zone || 'General' }; });
-  const zones = [...new Set(rows.map(r => r.zone))];
-  const tEst = rows.reduce((a, r) => a + r.est, 0), tAct = rows.reduce((a, r) => a + (Number(r.act) || 0), 0), tLog = (j.log || []).reduce((a, r) => a + (Number(r.hours) || 0), 0);
-  const v = (e, a) => { if (a == null || a === '' || !e) return ''; const d = (a - e) / e * 100; return `<span class="${d > 10 ? 'neg' : d < -10 ? 'pos' : ''}">${d > 0 ? '+' : ''}${Math.round(d)}%</span>`; };
-  const daily = () => `    <div class="card"><div class="sect" style="margin-top:0">Daily time log (${hrs(tLog)} hrs)</div><table><tr><th>Date</th><th>Tech</th><th class="right">Hours</th></tr>
-    ${(j.log || []).map(r => `<tr><td>${esc(fmtDate(r.date))}</td><td>${esc(nameOf(r.who))}</td><td class="right">${hrs(r.hours)}</td></tr>`).join('') || '<tr><td colspan=3>—</td></tr>'}</table>
-    ${(Q.items || []).length && Math.abs(tLog - tAct) > 0.5 && tLog ? `<div class="qmeta" style="color:#ff9f6b">Time log (${hrs(tLog)}) and item hours (${hrs(tAct)}) differ.</div>` : ''}</div>`;
+  const j = Q.job || {}, show = admin || ME.access === 'management';
+  const daily = () => `    <div class="card"><div class="sect" style="margin-top:0">Time on site by day</div><table><tr><th>Date</th><th class="right">Hours on site</th><th>Techs</th><th class="right">Labor hrs</th></tr>
+    ${crewRows(j.log).map(r => `<tr><td>${esc(fmtDate(r.date))}</td><td class="right">${hrs(r.hours)}</td><td>${esc(rowTechs(r).map(nameOf).join(', ') || '—')}</td><td class="right">${hrs(rowLabor(r))}</td></tr>`).join('') || '<tr><td colspan=4>—</td></tr>'}</table></div>`;
   const recapCard = () => `    <div class="card"><div class="sect" style="margin-top:0">Recap ${jsBadge(j.jobStatus)}</div>${[['work', 'Work completed'], ['issues', 'Problems / what took longer'], ['followups', 'Open items / return visit'], ['client', 'Client feedback']].map(([k, t]) => `<div class="qmeta" style="margin-top:6px">${t}</div><div style="white-space:pre-wrap">${esc((j.recap || {})[k] || '—')}</div>`).join('')}
     <div class="qmeta" style="margin-top:10px">Submitted by ${esc(nameOf(j.submittedBy))}${j.submittedAt ? ' · ' + esc(new Date(j.submittedAt).toLocaleString('en-US')) : ''}${j.reviewedAt && (Q.status === 'closed') ? ' · Approved by ' + esc(nameOf(j.reviewedBy)) + ' ' + esc(new Date(j.reviewedAt).toLocaleDateString('en-US')) : ''}</div></div>`;
   const actions = revisionsCard() + `<div class="qactions no-print">${canEdit ? '<button class="qbtn gold" id="editJob">Edit &amp; resubmit</button>' : ''}${canEdit && (Q.project || {}).dtoolsOpportunityId ? `<a class="qbtn" style="display:inline-flex;align-items:center;text-decoration:none" href="?new=1&opp=${encodeURIComponent(Q.project.dtoolsOpportunityId)}&rep=${encodeURIComponent(Q.project.salesManagerName || '')}">+ Another report for this project</a>` : ''}<button class="qbtn" onclick="window.print()">Print / Save PDF</button>
@@ -559,19 +594,7 @@ function report(admin, canEdit) {
   const extrasCard = ex.length ? `<div class="card" style="border-color:#8a4b2f"><div class="sect" style="margin-top:0;color:#ff9f6b">Unplanned / extra work: possible change order (${hrs(ex.reduce((a, x) => a + (Number(x.hours) || 0), 0))} hrs)</div>
     <table><tr><th>What was done</th><th class="right">Hours</th><th>Who</th></tr>${ex.map(x => `<tr><td>${esc(x.desc)}</td><td class="right">${hrs(x.hours)}</td><td>${esc(techLabel(x.by))}</td></tr>`).join('')}</table></div>` : '';
   const parentCard = Q.returnFor ? `<div class="card"><div class="qmeta">Return visit for <b>${esc(Q.returnFor.label || '')}</b>. Open items were:</div><div style="white-space:pre-wrap">${esc(Q.returnFor.openItems || '')}</div></div>` : '';
-  const timeOnly = !(Q.items || []).length;
-  const head = `<div class="print-only"><b>ASBC Job Report</b> · ${esc(label(Q))} · printed ${new Date().toLocaleDateString('en-US')}</div>`;
-  const itemsCard = timeOnly ? `<div class="card">${head}<div class="sect" style="margin-top:0">Total time on site</div><div class="big" style="font-size:24px;font-weight:800;color:var(--gold)">${hrs(tLog)} hrs</div>
-    ${admin && Q.noQuote && !Q.returnFor ? '<div class="qmeta" style="margin-top:6px"><b style="color:#ff9f6b">No labor quote was submitted for this job.</b> Time on site only; nothing to compare against an estimate.</div>' : ''}</div>` : null;
-  if (timeOnly) return parentCard + itemsCard + extrasCard + daily() + recapCard() + punchCard(admin || canEdit) + photoReport(Q) + signoffReport(Q) + actions;
-  return `<div class="card">${head}
-    <div class="sect" style="margin-top:0">Hours by item</div><table><tr><th>Item</th><th>Qty</th>${admin ? '<th class="right">Est</th>' : ''}<th class="right">Actual</th>${admin ? '<th class="right">Var</th>' : ''}<th>Who</th><th>Note</th></tr>
-    ${zones.map(z => { const zr = rows.filter(r => r.zone === z); const ze = zr.reduce((a, r) => a + r.est, 0), za = zr.reduce((a, r) => a + (Number(r.act) || 0), 0);
-      return `<tr><td colspan="${admin ? 7 : 5}" style="color:var(--gold);font-weight:700;padding-top:10px">${esc(z)}${admin ? ` <span class="qmeta">est ${hrs(ze)} · actual ${hrs(za)} ${v(ze, zr.some(r => r.act != null) ? za : null)}</span>` : ''}</td></tr>` +
-      zr.map(r => `<tr><td>${esc(lineName(r.it))}</td><td>${esc(r.it.qty)}</td>${admin ? `<td class="right">${hrs(r.est)}</td>` : ''}<td class="right">${r.act == null ? '—' : hrs(r.act)}</td>${admin ? `<td class="right">${v(r.est, r.act)}</td>` : ''}<td>${esc(techLabel(r.by))}</td><td>${esc(r.note || '')}</td></tr>`).join(''); }).join('')}
-    <tr><td><b>Total</b></td><td></td>${admin ? `<td class="right"><b>${hrs(tEst)}</b></td>` : ''}<td class="right"><b>${hrs(tAct)}</b></td>${admin ? `<td class="right"><b>${v(tEst, tAct)}</b></td>` : ''}<td></td><td></td></tr></table>
-    ${admin ? '<div class="qmeta" style="margin-top:6px">' + (Q.noQuote ? '<b style="color:#ff9f6b">No labor quote was submitted for this job.</b> Estimates shown are catalog hours for the items the tech picked; "Other" items have no estimate.' : 'Estimates are catalog labor hours (before site conditions, PM and commissioning).') + '</div>' : ''}</div>
-${extrasCard}${daily()}${recapCard()}${punchCard(admin || canEdit)}${photoReport(Q)}${signoffReport(Q)}${actions}`;
+  return parentCard + moneyCard(j, show) + productsReport(j) + extrasCard + daily() + recapCard() + punchCard(admin || canEdit) + photoReport(Q) + signoffReport(Q) + actions;
 }
 function wire() {
   const on = (id, fn) => { const el = document.getElementById(id); if (el) el.addEventListener('click', fn); };
@@ -602,7 +625,10 @@ function wire() {
     if (!confirm('End day: ' + h.toFixed(2) + ' hours on site. Add to the time log?')) return;
     const job = collectJob();
     const day = new Date(c.start); const d = day.getFullYear() + '-' + String(day.getMonth() + 1).padStart(2, '0') + '-' + String(day.getDate()).padStart(2, '0');
-    job.log = (job.log || []).filter(r => r.hours).concat([{ date: d, who: ME.email, hours: h }]);
+    const row = (job.log || []).find(r => r.date === d);
+    if (row) { row.hours = Math.max(Number(row.hours) || 0, h); row.techs = [...new Set((row.techs || []).concat([ME.email]))]; }
+    else job.log = (job.log || []).concat([{ date: d, hours: h, techs: [ME.email] }]);
+    job.siteHours = siteHours(job.log); job.laborHours = laborHours(job.log);
     job.clocks = Object.assign({}, job.clocks); delete job.clocks[ME.email];
     await save(REF, { job }); showJob(qid);
   });
@@ -617,7 +643,8 @@ function wire() {
     await save(REF, { job: Object.assign({}, j, { returnVisitId: id }) });
     location.href = '?quote=' + encodeURIComponent(id);
   });
-  on('addLog', () => { const tr = document.querySelector('#logT tr:last-child').cloneNode(true); tr.querySelector('.lh').value = ''; document.getElementById('logT').appendChild(tr); });
+  on('addLog', () => { const tr = document.querySelector('#logT tr:last-child').cloneNode(true); tr.querySelector('.lh').value = ''; const d = tr.querySelector('.ld'); if (d.value) { const x = new Date(d.value + 'T12:00:00'); x.setDate(x.getDate() + 1); d.value = x.toISOString().slice(0, 10); } document.getElementById('logT').appendChild(tr); });
+  on('allInst', () => { document.querySelectorAll('.pi').forEach(c => c.checked = true); autosave(); });
   on('soOpen', async () => { await save(REF, { job: collectJob() }); location.href = './signoff.html?quote=' + encodeURIComponent(qid); });
   on('saveJob', async () => { clearTimeout(SAVE_T); await save(REF, { job: collectJob() }); saveState('Saved ' + new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })); flash('Saved. You can come back and finish later.'); });
   on('stepNext', () => goStep(STEP + 1));
@@ -679,9 +706,9 @@ function showNew() {
   app().innerHTML = `<div class="card"><div class="qmeta">For an install that had no labor quote in the calculator. Pick the sales rep, then the D-Tools opportunity, then enter time on site and a recap.</div>
     <div class="row2" style="margin-top:8px"><select id="nRep"><option value="">Sales rep…</option>${reps.map(r => `<option>${esc(r)}</option>`).join('')}</select>
     <select id="nOpp" disabled><option value="">Opportunity…</option></select></div><div id="nOppMsg" class="qmeta"></div></div>
-    <div class="card"><div class="sect" style="margin-top:0">Time on site</div><div class="qmeta">One row per tech per day. Total time on site is added up for you.</div>
-    <table id="logT"><tr><th>Date</th><th>Tech</th><th>Hours</th></tr><tr><td><input type="date" class="ld" value="${today}"></td><td><select class="lw"><option value="">—</option>${techs().map(t => `<option value="${esc(t.email)}" ${t.email === ME.email ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select></td><td><input type="number" class="lh" min="0" step="0.25"></td></tr></table>
-    <button type="button" class="qbtn" id="addLog" style="margin-top:6px">+ Add day / tech</button></div>
+    <div class="card"><div class="sect" style="margin-top:0">Time on site</div><div class="qmeta">One row per day: total hours on site, and check every tech who was there.</div>
+    ${logTable([{ date: today, hours: '', techs: ME.role === 'tech' ? [ME.email] : [] }])}
+    <button type="button" class="qbtn" id="addLog" style="margin-top:6px">+ Add day</button></div>
     <div class="card"><div class="sect" style="margin-top:0">Job recap</div>${jsSelect(((typeof Q !== 'undefined' && Q && Q.job) || {}).jobStatus || '')}
     ${[['work', 'Work completed'], ['issues', 'Problems / what took longer'], ['followups', 'Open items / return visit needed'], ['client', 'Client feedback']].map(([k, t]) => `<div class="qmeta" style="margin-top:8px;display:flex;justify-content:space-between;align-items:center">${t}<button type="button" class="qbtn bl" data-k="${k}" style="height:24px;padding:0 8px">• Bullet</button></div><textarea class="rc" data-k="${k}" rows="3"></textarea>`).join('')}
     ${photoBox({ label: 'Pick the opportunity first', id: NEW.id })}
@@ -731,22 +758,22 @@ async function submitNew(toSign) {  // toSign: save as an open job and go to the
   const msg = t => document.getElementById('nMsg').textContent = t;
   const rep = document.getElementById('nRep').value, oppId = document.getElementById('nOpp').value;
   const opp = NEW.opps.find(o => o.id === oppId);
-  const log = [...document.querySelectorAll('#logT tr')].slice(1).map(tr => ({ date: tr.querySelector('.ld').value, who: tr.querySelector('.lw').value, hours: Number(tr.querySelector('.lh').value) || 0 })).filter(r => r.date && r.hours);
+  const log = collectLog();
   const recap = {}; document.querySelectorAll('.rc').forEach(t => recap[t.dataset.k] = t.value.trim());
   const jobStatus = (document.getElementById('jobStatus') || {}).value || '';
   const skip = signoffSkip();
   const must = [];  // v8.24.0: one slide-up list of everything missing
   if (!rep) must.push(['Pick the sales rep', '#nRep']); else if (!oppId) must.push(['Pick the D-Tools opportunity', '#nOpp']);
-  if (!log.length) must.push(['Enter time on site (date, tech and hours)', '#logT']);
+  if (!log.length) must.push(['Enter time on site (date and hours)', '#logT']);
   if (!recap.work) must.push(['Fill in "Work completed"', '.rc[data-k="work"]']);
   if (!jobStatus && !toSign) must.push(['Pick a job status', '#jobStatus']);
   if (!toSign) { const soP = signoffProblem(null, jobStatus, skip); if (soP) must.push([soP.replace(/\.$/, ''), '#soCard']); }
   if (must.length) { markMissing(must); return sheet({ title: 'A few things are missing', sub: 'Tap an item to jump to it.', must }); }
   const items = [], lines = [];
-  const job = { jobStatus, lines, log, totalHours: Math.round(log.reduce((a, r) => a + r.hours, 0) * 100) / 100, recap, signoffSkip: skip, savedAt: new Date().toISOString(), savedBy: ME.email, submittedAt: new Date().toISOString(), submittedBy: ME.email, reviewNote: '', revision: 1, photos: photosVal() || null };
+  const job = { jobStatus, lines, log, siteHours: siteHours(log), laborHours: laborHours(log), totalHours: laborHours(log), recap, signoffSkip: skip, savedAt: new Date().toISOString(), savedBy: ME.email, submittedAt: new Date().toISOString(), submittedBy: ME.email, reviewNote: '', revision: 1, photos: photosVal() || null };
   if (toSign) { delete job.submittedAt; delete job.submittedBy; }
   const dates = [...new Set(log.map(r => r.date))].sort();
-  const techList = [...new Set(log.map(r => r.who).filter(Boolean).concat(ME.role === 'tech' ? [ME.email] : []))];
+  const techList = [...new Set(log.flatMap(rowTechs).filter(Boolean).concat(ME.role === 'tech' ? [ME.email] : []))];
   const id = NEW.id || ('job-' + Date.now());
   await db.collection('quotes').doc(id).set({
     id, label: opp.name, noQuote: true, status: toSign ? 'scheduled' : 'closed', items,
@@ -812,6 +839,7 @@ firebase.auth().onAuthStateChanged(async (u) => {
   if (!p) { app().innerHTML = '<div class="empty">' + esc(email) + ' is not approved yet. Ask Anthony.</div>'; return; }
   ME = { email, name: p.name, role: p.role || 'rep', allQuotes: !!p.allQuotes, access: ASBCRoles.accessOf(p, email) };
   if (!ASBCRoles.can(ME.access, 'recaps')) return ASBCRoles.deny('recaps', app());  // v8.29.0 roles
+  if (['admin', 'management'].includes(ME.access)) { try { const st = await db.collection('config').doc('settings').get(); SETTINGS = (st.exists && st.data()) || {}; } catch (e) {} }  // v10.0.0 rates for revenue/loss
     try { if (qid) await showJob(qid); else if (new URLSearchParams(location.search).get('new') && ME.role !== 'rep') showNew(); else await showList(); } catch (e) { app().innerHTML = '<div class="empty">Could not load: ' + esc(e.message) + '</div>'; }
 });
 </script>
