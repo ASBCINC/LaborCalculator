@@ -20,10 +20,14 @@
 //   RAMP_CLIENT_ID / RAMP_CLIENT_SECRET  Ramp developer app "Labor Calculator" (client credentials; scopes transactions:read,
 //                 receipts:read/write, memos:read/write, users:read). Nothing here can move money or change cards.
 //                 (if not set: every config/users entry with role "admin")
+// 5) /photo (v10.6.0) install photos taken in the app, kept in Workers KV (binding PHOTOS; free plan: 1 GB, 1,000 saves a day).
+//    POST {action:'put', quote, image: JPEG data URL}  caller must be able to read that job in Firestore (or it is a brand-new job-<time> id)
+//    POST {action:'del', k}                            the tech who took it, or an admin
+//    GET  /photo/<job id>/<random id>.jpg              serves the photo; the random id makes the link unguessable (like an "anyone with the link" share)
 const WORKFLOW = 'https://api.github.com/repos/ASBCINC/LaborCalculator/actions/workflows/sync-opportunities.yml/dispatches';
 const FS = 'https://firestore.googleapis.com/v1/projects/asbc-calculator/databases/(default)/documents/';
 const APP_ORIGIN = 'https://asbcinc.github.io';
-const CORS = { 'Access-Control-Allow-Origin': APP_ORIGIN, 'Access-Control-Allow-Methods': 'POST, OPTIONS',
+const CORS = { 'Access-Control-Allow-Origin': APP_ORIGIN, 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization', 'Access-Control-Max-Age': '86400' };
 
 async function startSync(env, why) {
@@ -276,6 +280,47 @@ async function rampRoute(request, env) {
     return json({ error: 'unknown action' }, 400);
   } catch (e) { console.log('ramp error', e.message); return json({ error: e.message }, 502); }
 }
+const PHOTO_KEY = /^[\w-]{1,100}\/[0-9a-f-]{36}\.jpg$/;
+async function photoRoute(request, env) {
+  const json = (o, s) => new Response(JSON.stringify(o), { status: s || 200, headers: { ...CORS, 'Content-Type': 'application/json' } });
+  if (!env.PHOTOS) return json({ error: 'photo storage is not set up' }, 500);
+  const token = (request.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
+  let b = {}; try { b = await request.json(); } catch (e) {}
+  if (!token) return json({ error: 'sign in first' }, 401);
+  let users = {};
+  try { users = (await getDoc('config/users', token)).users || {}; } catch (e) { return json({ error: 'not approved' }, 403); }
+  const caller = jwtEmail(token), admin = caller === String(env.ADMIN_EMAIL || '-').toLowerCase() || (users[caller] || {}).role === 'admin';
+  if (!users[caller] && !admin) return json({ error: 'not approved' }, 403);
+  if (b.action === 'put') {
+    const id = String(b.quote || ''); if (!/^[\w-]{1,100}$/.test(id)) return json({ error: 'bad job id' }, 400);
+    let ok = false;
+    try { await getDoc('quotes/' + encodeURIComponent(id), token); ok = true; }
+    catch (e) { const t = Number((/^job-(\d{13})$/.exec(id) || [])[1]); ok = t > 0 && Math.abs(Date.now() - t) < 7 * 864e5; }  // new job report not saved yet
+    if (!ok) return json({ error: 'you cannot add photos to that job' }, 403);
+    const m = /^data:image\/jpeg;base64,(.+)$/.exec(String(b.image || '')); if (!m) return json({ error: 'not a photo' }, 400);
+    const bytes = Uint8Array.from(atob(m[1]), c => c.charCodeAt(0)); if (bytes.length > 3e6) return json({ error: 'photo too big' }, 413);
+    const k = id + '/' + crypto.randomUUID() + '.jpg';
+    await env.PHOTOS.put(k, bytes, { metadata: { by: caller, at: new Date().toISOString() } });
+    console.log('photo put', k, caller, bytes.length);
+    return json({ ok: true, k, url: new URL(request.url).origin + '/photo/' + k });
+  }
+  if (b.action === 'del') {
+    const k = String(b.k || ''); if (!PHOTO_KEY.test(k)) return json({ error: 'bad photo id' }, 400);
+    const l = await env.PHOTOS.list({ prefix: k, limit: 1 }), meta = ((l.keys || [])[0] || {}).metadata || {};
+    if (!(l.keys || []).length) return json({ ok: true, gone: true });
+    if (!admin && meta.by !== caller) return json({ error: 'only the person who took it (or Anthony) can remove it' }, 403);
+    await env.PHOTOS.delete(k); console.log('photo del', k, caller);
+    return json({ ok: true });
+  }
+  return json({ error: 'unknown action' }, 400);
+}
+async function photoGet(path, env) {
+  const k = decodeURIComponent(path.slice('/photo/'.length));
+  if (!env.PHOTOS || !PHOTO_KEY.test(k)) return new Response('Not found', { status: 404 });
+  const v = await env.PHOTOS.get(k, 'arrayBuffer');
+  if (!v) return new Response('Not found', { status: 404 });
+  return new Response(v, { headers: { 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=31536000, immutable', 'Access-Control-Allow-Origin': APP_ORIGIN } });
+}
 export default {
   async fetch(request, env) {
     const path = new URL(request.url).pathname;
@@ -289,6 +334,12 @@ export default {
       if (request.method === 'POST') return rampRoute(request, env);
       return new Response('Not found', { status: 404 });
     }
+    if (path === '/photo') {
+      if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
+      if (request.method === 'POST') return photoRoute(request, env);
+      return new Response('Not found', { status: 404 });
+    }
+    if (path.startsWith('/photo/') && request.method === 'GET') return photoGet(path, env);
     if (path === '/recap') {
       if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
       if (request.method === 'POST') return recap(request, env);

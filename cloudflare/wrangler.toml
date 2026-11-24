@@ -5,3 +5,8 @@ main = "dtools-sync-relay.js"
 compatibility_date = "2025-01-01"
 workers_dev = true
 keep_vars = true
+
+# v10.6.0 install photos taken in the app (namespace "asbc-job-photos", created Nov 24, 2026)
+[[kv_namespaces]]
+binding = "PHOTOS"
+id = "8f990b31eb7d4b43b6bb91549803d66c"

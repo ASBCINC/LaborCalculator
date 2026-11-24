@@ -1,5 +1,5 @@
-// ASBC Labor Calculator service worker (v10.5.0): offline-ready, network-first.
-const CACHE_NAME = 'asbc-calc-v10.5.0';
+// ASBC Labor Calculator service worker (v10.6.0): offline-ready, network-first.
+const CACHE_NAME = 'asbc-calc-v10.6.0';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -52,7 +52,7 @@ self.addEventListener('fetch', (event) => {
   const request = event.request;
   if (request.method !== 'GET') return;
   const url = new URL(request.url);
-  if (url.hostname === 'firestore.googleapis.com' || url.hostname === 'script.google.com') return;
+  if (url.hostname === 'firestore.googleapis.com' || url.hostname === 'script.google.com' || url.hostname.endsWith('.workers.dev')) return;  // v10.6.0 job photos stay out of the offline cache
 
   event.respondWith(
     // v8.25.0: same-origin files always ask GitHub "has this changed?" so a push reaches phones right away (no 10-minute cache)
