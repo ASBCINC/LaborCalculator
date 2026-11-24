@@ -279,7 +279,7 @@ async function hideJob(id) {
 }
 
 // ---------- v8.24.0: steps, missing-field sheet, steppers, autosave, edit & resubmit ----------
-let STEP = 1, EDIT = false, SAVE_T = null;
+let STEP = 1, EDIT = false, SAVE_T = null, ADD_DAY = false;  // v10.1.0 ADD_DAY: edit opened from "Log another day"
 const STEP_NAMES = ['Time', 'Products', 'Recap', 'Photos & sign-off'];
 function stepNav(hasItems) { return `<div class="steps no-print">${STEP_NAMES.map((t, i) => `<button type="button" data-go="${i + 1}"><b>${i + 1}</b>${t}</button>`).join('')}</div>`; }
 function goStep(n) {
@@ -551,7 +551,10 @@ function logForm() {
   // v8.32.0: a new report starts with one row per scheduled day per assigned tech (from the Calendar / D-Tools)
   const sc0 = Q.schedule || {}, who0 = (sc0.techs || []).length ? sc0.techs : (ME.role === 'tech' ? [ME.email] : []);
   const pre = (sc0.dates || []).map(d => ({ date: d, hours: '', techs: who0.slice() }));
-  const log = (j.log && j.log.length ? crewRows(j.log) : pre.length ? pre : [{ date: new Date().toISOString().slice(0, 10), hours: '', techs: who0.slice() }]);
+  let log = (j.log && j.log.length ? crewRows(j.log) : pre.length ? pre : [{ date: new Date().toISOString().slice(0, 10), hours: '', techs: who0.slice() }]);
+  // v10.1.0 multi-day jobs: every scheduled day gets a row, and "Log another day" adds the next one (next scheduled day without hours, else today)
+  if (j.log && j.log.length) { const have = new Set(log.map(r => r.date)); (sc0.dates || []).filter(d => !have.has(d)).forEach(d => log.push({ date: d, hours: '', techs: who0.slice() })); log.sort((a, b) => String(a.date).localeCompare(String(b.date))); }
+  if (ADD_DAY) { const today = new Date().toISOString().slice(0, 10); if (!log.some(r => r.date === today)) log.push({ date: today, hours: '', techs: who0.slice() }); ADD_DAY = false; }
   const tOpts = sel => techs().map(t => `<option value="${esc(t.email)}" ${t.email === sel ? 'selected' : ''}>${esc(t.name)}</option>`).join('');
   const clock = ((j.clocks || {})[ME.email]) || null;
   const extras = (j.extras && j.extras.length) ? j.extras : [{ desc: '', hours: '' }];
@@ -567,7 +570,7 @@ function logForm() {
   return stepNav(true) + parent + `<section class="step" data-step="1">` + timer + `
     <div class="card"><div class="sect" style="margin-top:0">Time on site</div><div class="qmeta">One row per day: total hours on site, and check every tech who was there. Labor hours = hours × techs.</div>
     ${logTable(log)}
-    <button type="button" class="qbtn" id="addLog" style="margin-top:6px">+ Add day</button></div></section>
+    <button type="button" class="qbtn" id="addLog" style="margin-top:6px">+ Add another day</button>${(sc0.dates || []).length > 1 ? `<div class="qmeta" style="margin-top:6px">Scheduled days: ${esc((sc0.dates || []).map(fmtDate).join(', '))}. Leave a day blank if nobody went; you can save now and come back to add the next day.</div>` : ''}</div></section>
     <section class="step" data-step="2">${productsCard(j)}${extrasCard}</section>
     <section class="step" data-step="3"><div class="card"><div class="sect" style="margin-top:0">Job recap</div>${jsSelect(((typeof Q !== 'undefined' && Q && Q.job) || {}).jobStatus || '')}
     ${[['work', 'Work completed'], ['issues', 'Problems / what took longer'], ['followups', 'Open items / return visit needed'], ['client', 'Client feedback']].map(([k, t]) => `<div class="qmeta" style="margin-top:8px;display:flex;justify-content:space-between;align-items:center">${t}<button type="button" class="qbtn bl" data-k="${k}" style="height:24px;padding:0 8px">• Bullet</button></div><textarea class="rc" data-k="${k}" rows="3" placeholder="${k === 'work' ? 'Required' : 'Optional'}">${esc((j.recap || {})[k] || '')}</textarea>`).join('')}
@@ -587,7 +590,7 @@ function report(admin, canEdit) {
     ${crewRows(j.log).map(r => `<tr><td>${esc(fmtDate(r.date))}</td><td class="right">${hrs(r.hours)}</td><td>${esc(rowTechs(r).map(nameOf).join(', ') || '—')}</td><td class="right">${hrs(rowLabor(r))}</td></tr>`).join('') || '<tr><td colspan=4>—</td></tr>'}</table></div>`;
   const recapCard = () => `    <div class="card"><div class="sect" style="margin-top:0">Recap ${jsBadge(j.jobStatus)}</div>${[['work', 'Work completed'], ['issues', 'Problems / what took longer'], ['followups', 'Open items / return visit'], ['client', 'Client feedback']].map(([k, t]) => `<div class="qmeta" style="margin-top:6px">${t}</div><div style="white-space:pre-wrap">${esc((j.recap || {})[k] || '—')}</div>`).join('')}
     <div class="qmeta" style="margin-top:10px">Submitted by ${esc(nameOf(j.submittedBy))}${j.submittedAt ? ' · ' + esc(new Date(j.submittedAt).toLocaleString('en-US')) : ''}${j.reviewedAt && (Q.status === 'closed') ? ' · Approved by ' + esc(nameOf(j.reviewedBy)) + ' ' + esc(new Date(j.reviewedAt).toLocaleDateString('en-US')) : ''}</div></div>`;
-  const actions = revisionsCard() + `<div class="qactions no-print">${canEdit ? '<button class="qbtn gold" id="editJob">Edit &amp; resubmit</button>' : ''}${canEdit && (Q.project || {}).dtoolsOpportunityId ? `<a class="qbtn" style="display:inline-flex;align-items:center;text-decoration:none" href="?new=1&opp=${encodeURIComponent(Q.project.dtoolsOpportunityId)}&rep=${encodeURIComponent(Q.project.salesManagerName || '')}">+ Another report for this project</a>` : ''}<button class="qbtn" onclick="window.print()">Print / Save PDF</button>
+  const actions = revisionsCard() + `<div class="qactions no-print">${canEdit ? '<button class="qbtn gold" id="addDayJob">+ Log another day</button><button class="qbtn" id="editJob">Edit &amp; resubmit</button>' : ''}${canEdit && (Q.project || {}).dtoolsOpportunityId ? `<a class="qbtn" style="display:inline-flex;align-items:center;text-decoration:none" href="?new=1&opp=${encodeURIComponent(Q.project.dtoolsOpportunityId)}&rep=${encodeURIComponent(Q.project.salesManagerName || '')}">+ Another report for this project</a>` : ''}<button class="qbtn" onclick="window.print()">Print / Save PDF</button>
     ${admin && (j.recap || {}).followups && !j.returnVisitId ? '<button class="qbtn" id="makeReturn" style="border-color:#8a6d2f;color:#ffd479">Create return visit</button>' : ''}${admin && j.returnVisitId ? '<a class="qbtn" style="display:inline-flex;align-items:center;text-decoration:none" href="?quote=' + encodeURIComponent(j.returnVisitId) + '">Open return visit</a>' : ''}
     ${admin && Q.status === 'submitted' ? '<button class="qbtn gold" id="approveJob">Approve &amp; close</button><button class="qbtn qbtn-del" id="sendBack">Send back</button>' : ''}</div><div id="revMsg" class="qmeta no-print"></div>`;
   const ex = (j.extras || []).filter(x => x.desc || x.hours);
@@ -650,6 +653,7 @@ function wire() {
   on('stepNext', () => goStep(STEP + 1));
   on('stepBack', () => goStep(STEP - 1));
   on('editJob', () => { EDIT = true; STEP = 1; showJob(qid); });
+  on('addDayJob', () => { EDIT = true; ADD_DAY = true; STEP = 1; showJob(qid); });  // v10.1.0
   on('cancelEdit', async () => {
     clearTimeout(SAVE_T);
     if (!confirm('Discard your edits? The report stays as it was last submitted.')) return;

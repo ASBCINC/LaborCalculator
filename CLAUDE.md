@@ -241,3 +241,7 @@ D-Tools handoff panel (paste-ready labor block); Quote Log search wording.
 
 ## v10.0.1 Calculator defaults (Nov 23, 2026)
 - New quotes start with Trip charge = No, Recycling = No (config/settings.defaultRecyclingToggle set to "no"), Crew size = 2. Saved quotes keep their own values.
+
+## v10.1.0 Multi-day recaps (Nov 24, 2026)
+- Recap time log shows a row for every scheduled day (also when reopening a saved/submitted report), lists the scheduled days, "+ Add another day" button.
+- Submitted report: "+ Log another day" opens edit with today added (resubmits as the next revision; techs/rep notified as a revision).
