@@ -191,13 +191,14 @@ function signoffReport(q) {
 const PHOTO_URL = 'https://yellow-cloud-830a.a-ward-612.workers.dev/photo';
 let PHOTOS = [], PHOTO_JOB = '';
 const photoSrc = k => PHOTO_URL + '/' + k;
-const photoThumbs = (list, del) => list.map(p => `<a href="${photoSrc(p.k)}" target="_blank" rel="noopener" style="position:relative;display:inline-block"><img src="${photoSrc(p.k)}" loading="lazy" alt="Install photo" style="width:96px;height:96px;object-fit:cover;border-radius:6px;border:1px solid var(--line)">${del ? `<button type="button" class="qbtn" data-delph="${esc(p.k)}" title="Remove photo" style="position:absolute;top:3px;right:3px;height:22px;padding:0 7px">✕</button>` : ''}</a>`).join('');
+const photoLive = p => !p.at || Date.now() - Date.parse(p.at) < 548 * 864e5;  // photos expire after 18 months in Cloudflare
+const photoThumbs = (list, del) => list.filter(photoLive).map(p => `<a href="${photoSrc(p.k)}" target="_blank" rel="noopener" style="position:relative;display:inline-block"><img src="${photoSrc(p.k)}" loading="lazy" alt="Install photo" style="width:96px;height:96px;object-fit:cover;border-radius:6px;border:1px solid var(--line)">${del ? `<button type="button" class="qbtn" data-delph="${esc(p.k)}" title="Remove photo" style="position:absolute;top:3px;right:3px;height:22px;padding:0 7px">✕</button>` : ''}</a>`).join('');
 function photoBox(q) {
   const ph = ((q && q.job) || {}).photos || {};
   PHOTOS = (ph.list || []).slice();
   PHOTO_JOB = (typeof Q !== 'undefined' && q && q === Q && REF) ? REF.id : ((q && q.id) || '');
   return `<div class="no-print" style="border-top:1px solid var(--line);margin-top:12px;padding-top:10px"><div class="sect" style="margin-top:0">Install photos <span id="phCount" class="qmeta">${PHOTOS.length ? '(' + PHOTOS.length + ')' : ''}</span></div>
-    <div class="qmeta">Tap Take photo to open the camera. Each photo saves as soon as you take it; tap ✕ to remove one.</div>
+    <div class="qmeta">Tap Take photo to open the camera. Each photo saves as soon as you take it; tap ✕ to remove one. Photos are kept for 18 months.</div>
     ${ph.uploaded && !ph.list ? '<div class="qmeta">Earlier photos for this job were sent with the Microsoft Forms link (saved in Anthony\'s OneDrive).</div>' : ''}
     <div id="phGrid" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">${photoThumbs(PHOTOS, true)}</div>
     <div class="qactions"><label class="qbtn gold" style="display:inline-flex;align-items:center;cursor:pointer">Take photo<input type="file" id="phCam" accept="image/*" capture="environment" hidden></label></div>
@@ -236,7 +237,7 @@ document.addEventListener('click', async e => {
   catch (err) { msg('Could not remove: ' + err.message); }
 }, true);
 const photoReport = q => { const ph = (q.job || {}).photos; if (!ph || !ph.uploaded) return '';
-  if ((ph.list || []).length) return `<div class="card"><div class="sect" style="margin-top:0">Install photos (${ph.list.length})</div><div style="display:flex;flex-wrap:wrap;gap:6px">${photoThumbs(ph.list, false)}</div><div class="qmeta" style="margin-top:6px">Tap a photo to open it full size.</div></div>`;
+  if ((ph.list || []).length) { const live = ph.list.filter(photoLive).length; return `<div class="card"><div class="sect" style="margin-top:0">Install photos (${live})</div>${live < ph.list.length ? `<div class="qmeta">${ph.list.length - live} photo(s) older than 18 months have expired.</div>` : ''}<div style="display:flex;flex-wrap:wrap;gap:6px">${photoThumbs(ph.list, false)}</div><div class="qmeta" style="margin-top:6px">Tap a photo to open it full size. Photos are kept for 18 months after they're taken; save any you need longer.</div></div>`; }
   return `<div class="card"><div class="sect" style="margin-top:0">Install photos</div><div>Uploaded by ${esc(nameOf(ph.by))} · ${esc(new Date(ph.at).toLocaleString('en-US'))}</div><div class="qmeta">Saved in Anthony's OneDrive (ASBC Job Photos form), under job: ${esc(label(q))}</div></div>`; };
 // v8.21.0: who did each task (item lines and extra work)
 const jobTechs = () => { const ids = ((typeof Q !== 'undefined' && Q && Q.schedule) || {}).techs || []; const list = techs().filter(t => ids.includes(t.email)); return list.length ? list : techs(); };

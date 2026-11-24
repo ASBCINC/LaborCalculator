@@ -288,6 +288,26 @@ async function rampRoute(request, env) {
     return json({ error: 'unknown action' }, 400);
   } catch (e) { console.log('ramp error', e.message); return json({ error: e.message }, 502); }
 }
+// Photos delete themselves after PHOTO_KEEP_DAYS (KV expiration). A running total per month (KV key "usage", photo bytes by the
+// month taken) counts only months still inside the keep window, so expired photos drop out; at 80% of the 1 GB free plan
+// Anthony gets a Teams message (at most once a week).
+const PHOTO_KEEP_DAYS = 548, PHOTO_LIMIT = 1e9;
+async function photoUsage(env, month, delta, users) {
+  const u = (await env.PHOTOS.get('usage', 'json')) || { months: {} };
+  u.months[month] = Math.max(0, (u.months[month] || 0) + delta);
+  const cut = new Date(Date.now() - PHOTO_KEEP_DAYS * 864e5).toISOString().slice(0, 7);
+  Object.keys(u.months).forEach(m => { if (m < cut) delete u.months[m]; });
+  const live = Object.values(u.months).reduce((a, b) => a + b, 0); u.live = live;
+  if (users && live > 0.8 * PHOTO_LIMIT && (!u.warnedAt || Date.now() - Date.parse(u.warnedAt) > 7 * 864e5)) {
+    const admins = (env.ADMIN_EMAIL ? [String(env.ADMIN_EMAIL)] : Object.keys(users).filter(e => (users[e] || {}).role === 'admin')).map(e => e.trim().toLowerCase()).filter(e => /@asbc\.us$/.test(e));
+    const pct = Math.round(live / PHOTO_LIMIT * 100), card = { type: 'AdaptiveCard', $schema: 'http://adaptivecards.io/schemas/adaptive-card.json', version: '1.4', body: [
+      { type: 'TextBlock', weight: 'Bolder', size: 'Medium', wrap: true, color: 'Attention', text: 'Job photo storage is ' + pct + '% full' },
+      { type: 'TextBlock', wrap: true, text: 'About ' + Math.round(live / 1e6) + ' MB of the 1 GB free Cloudflare plan is used by install photos. Photos delete themselves after 18 months; to make room sooner, shorten the keep time, move to Cloudflare R2 (10 GB free) or the $5/month Workers plan.' }] };
+    for (const a of admins) await postTeams(env, a, card);
+    u.warnedAt = new Date().toISOString();
+  }
+  await env.PHOTOS.put('usage', JSON.stringify(u));
+}
 async function photoRoute(request, env) {
   const json = (o, s) => new Response(JSON.stringify(o), { status: s || 200, headers: { ...CORS, 'Content-Type': 'application/json' } });
   if (!env.PHOTOS) return json({ error: 'photo storage is not set up' }, 500);
@@ -306,9 +326,10 @@ async function photoRoute(request, env) {
     if (!ok) return json({ error: 'you cannot add photos to that job' }, 403);
     const m = /^data:image\/jpeg;base64,(.+)$/.exec(String(b.image || '')); if (!m) return json({ error: 'not a photo' }, 400);
     const bytes = Uint8Array.from(atob(m[1]), c => c.charCodeAt(0)); if (bytes.length > 3e6) return json({ error: 'photo too big' }, 413);
-    const k = id + '/' + crypto.randomUUID() + '.jpg';
-    await env.PHOTOS.put(k, bytes, { metadata: { by: caller, at: new Date().toISOString() } });
+    const k = id + '/' + crypto.randomUUID() + '.jpg', at = new Date().toISOString();
+    await env.PHOTOS.put(k, bytes, { expirationTtl: PHOTO_KEEP_DAYS * 86400, metadata: { by: caller, at, size: bytes.length } });
     console.log('photo put', k, caller, bytes.length);
+    try { await photoUsage(env, at.slice(0, 7), bytes.length, users); } catch (e) { console.log('photo usage', e.message); }
     return json({ ok: true, k, url: new URL(request.url).origin + '/photo/' + k });
   }
   if (b.action === 'del') {
@@ -317,6 +338,7 @@ async function photoRoute(request, env) {
     if (!(l.keys || []).length) return json({ ok: true, gone: true });
     if (!admin && meta.by !== caller) return json({ error: 'only the person who took it (or Anthony) can remove it' }, 403);
     await env.PHOTOS.delete(k); console.log('photo del', k, caller);
+    if (meta.size && meta.at) { try { await photoUsage(env, String(meta.at).slice(0, 7), -meta.size, null); } catch (e) {} }
     return json({ ok: true });
   }
   return json({ error: 'unknown action' }, 400);
