@@ -190,9 +190,10 @@ function signoffReport(q) {
 // Older jobs that used the Microsoft Forms link keep {uploaded: true} with no list (their photos are in Anthony's OneDrive).
 const PHOTO_URL = 'https://yellow-cloud-830a.a-ward-612.workers.dev/photo';
 let PHOTOS = [], PHOTO_JOB = '';
-const photoSrc = k => PHOTO_URL + '/' + k;
+const PHOTO_LOCAL = {};  // v10.7.0 photos taken this visit show from the phone's own copy (a just-saved photo can take a moment to be readable)
+const photoSrc = k => PHOTO_LOCAL[k] || (PHOTO_URL + '/' + k);
 const photoLive = p => !p.at || Date.now() - Date.parse(p.at) < 548 * 864e5;  // photos expire after 18 months in Cloudflare
-const photoThumbs = (list, del) => list.filter(photoLive).map(p => `<a href="${photoSrc(p.k)}" target="_blank" rel="noopener" style="position:relative;display:inline-block"><img src="${photoSrc(p.k)}" loading="lazy" alt="Install photo" style="width:96px;height:96px;object-fit:cover;border-radius:6px;border:1px solid var(--line)">${del ? `<button type="button" class="qbtn" data-delph="${esc(p.k)}" title="Remove photo" style="position:absolute;top:3px;right:3px;height:22px;padding:0 7px">✕</button>` : ''}</a>`).join('');
+const photoThumbs = (list, del) => list.filter(photoLive).map(p => `<a href="${PHOTO_URL + '/' + p.k}" target="_blank" rel="noopener" style="position:relative;display:inline-block"><img src="${photoSrc(p.k)}" loading="lazy" alt="Install photo" style="width:96px;height:96px;object-fit:cover;border-radius:6px;border:1px solid var(--line)">${del ? `<button type="button" class="qbtn" data-delph="${esc(p.k)}" title="Remove photo" style="position:absolute;top:3px;right:3px;height:22px;padding:0 7px">✕</button>` : ''}</a>`).join('');
 function photoBox(q) {
   const ph = ((q && q.job) || {}).photos || {};
   PHOTOS = (ph.list || []).slice();
@@ -229,7 +230,7 @@ document.addEventListener('change', async e => {
   for (const [i, f] of files.entries()) {  // v10.6.0 one at a time so a phone on a weak signal isn't flooded
     try { msg('Saving photo ' + (i + 1) + ' of ' + files.length + '…'); const image = await asbcRamp.shrink(f);
       const o = await photoCall({ action: 'put', quote: PHOTO_JOB, image });
-      PHOTOS.push({ k: o.k, at: new Date().toISOString(), by: ME.email }); drawPhotos(); ok++;
+      PHOTO_LOCAL[o.k] = image; PHOTOS.push({ k: o.k, at: new Date().toISOString(), by: ME.email }); drawPhotos(); ok++;
     } catch (err) { bad++; console.warn('photo', err); }
   }
   try { if (ok) await savePhotos(); } catch (err) { console.warn('photo list', err); }
@@ -244,6 +245,61 @@ document.addEventListener('click', async e => {
 const photoReport = q => { const ph = (q.job || {}).photos; if (!ph || !ph.uploaded) return '';
   if ((ph.list || []).length) { const live = ph.list.filter(photoLive).length; return `<div class="card"><div class="sect" style="margin-top:0">Install photos (${live})</div>${live < ph.list.length ? `<div class="qmeta">${ph.list.length - live} photo(s) older than 18 months have expired.</div>` : ''}<div style="display:flex;flex-wrap:wrap;gap:6px">${photoThumbs(ph.list, false)}</div><div class="qmeta" style="margin-top:6px">Tap a photo to open it full size. Photos are kept for 18 months after they're taken; save any you need longer.</div></div>`; }
   return `<div class="card"><div class="sect" style="margin-top:0">Install photos</div><div>Uploaded by ${esc(nameOf(ph.by))} · ${esc(new Date(ph.at).toLocaleString('en-US'))}</div><div class="qmeta">Saved in Anthony's OneDrive (ASBC Job Photos form), under job: ${esc(label(q))}</div></div>`; };
+// v10.6.0 Export PDF: the job report and its photos as one PDF to attach to the D-Tools project for records.
+// Built in the browser with jsPDF (loaded only when the button is tapped); photos come from the relay.
+function loadJsPdf() { return window.jspdf ? Promise.resolve() : new Promise((res, rej) => { const t = document.createElement('script'); t.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'; t.onload = res; t.onerror = () => rej(new Error('could not load the PDF tool')); document.head.appendChild(t); }); }
+async function imgData(url) { const r = await fetch(url); if (!r.ok) throw new Error('photo ' + r.status); const b = await r.blob(); return new Promise(res => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.readAsDataURL(b); }); }
+async function jobPdf(btn) {
+  if (!Q) return; const j = Q.job || {}, p = Q.project || {}, was = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Building PDF…'; }
+  try {
+    await loadJsPdf();
+    const doc = new window.jspdf.jsPDF({ unit: 'pt', format: 'letter' }), W = 612, H = 792, M = 40; let y = M;
+    const need = h => { if (y + h > H - M) { doc.addPage(); y = M; } };
+    const text = (t, o = {}) => { const sz = o.size || 10; doc.setFont('helvetica', o.bold ? 'bold' : 'normal'); doc.setFontSize(sz); doc.setTextColor(o.color || '#111111');
+      doc.splitTextToSize(String(t == null ? '' : t), W - 2 * M - (o.indent || 0)).forEach(l => { need(sz * 1.4); doc.text(l, M + (o.indent || 0), y + sz); y += sz * 1.4; }); };
+    const head = t => { y += 10; need(30); doc.setDrawColor('#C7A66A'); doc.setLineWidth(1); doc.line(M, y, W - M, y); y += 6; text(t, { bold: true, size: 12 }); y += 2; };
+    const when = v => { try { return v ? new Date(v).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''; } catch (e) { return ''; } };
+    text('ASBC Job Report', { bold: true, size: 18 }); text(label(Q), { bold: true, size: 13 }); y += 4;
+    [['Client', p.dtoolsClientName || p.customerName], ['D-Tools #', p.dtoolsOppNumber], ['Sales rep', p.salesManagerName], ['Job status', j.jobStatus],
+     ['Techs', ((Q.schedule || {}).techs || []).map(nameOf).join(', ')], ['Submitted', j.submittedBy ? nameOf(j.submittedBy) + ' · ' + when(j.submittedAt) : ''],
+     ['Exported', when(new Date().toISOString()) + ' by ' + ((ME && ME.name) || '')]].filter(([, v]) => v).forEach(([k, v]) => text(k + ': ' + v));
+    const rows = crewRows(j.log || []);
+    if (rows.length) { head('Time on site');
+      rows.forEach(r => { const t = rowTechs(r); text(fmtDate(r.date) + ': ' + hrs(r.hours) + ' hrs on site × ' + Math.max(1, t.length) + ' tech' + (t.length > 1 ? 's' : '') + ' = ' + hrs(rowLabor(r)) + ' labor hrs' + (t.length ? ' (' + t.map(nameOf).join(', ') + ')' : '')); });
+      text('Total labor: ' + hrs(rows.reduce((a, r) => a + rowLabor(r), 0)) + ' hrs', { bold: true }); }
+    const rc = j.recap || {};
+    if (Object.values(rc).some(v => String(v || '').trim())) { head('Recap');
+      [['work', 'Work completed'], ['issues', 'Problems / what took longer'], ['followups', 'Open items / return visit'], ['client', 'Client feedback']].forEach(([k, t]) => { if (String(rc[k] || '').trim()) { text(t, { bold: true }); text(rc[k], { indent: 10 }); y += 3; } }); }
+    const P = prodList(Q), inst = j.installedItems || [];
+    if (P.length) { head('Products'); const done = P.filter(x => inst.includes(x.name)), left = P.filter(x => !inst.includes(x.name));
+      if (done.length) { text('Installed (' + done.length + ')', { bold: true }); done.forEach(x => text('- ' + x.name + (Number(x.qty) > 1 ? ' x' + x.qty : ''), { indent: 10 })); }
+      if (left.length) { text('Not marked installed (' + left.length + ')', { bold: true, color: '#9a4b00' }); left.forEach(x => text('- ' + x.name + (Number(x.qty) > 1 ? ' x' + x.qty : ''), { indent: 10 })); } }
+    const ex = (j.extras || []).filter(x => x && (x.desc || x.hours));
+    if (ex.length) { head('Unplanned / extra work (possible change order)'); ex.forEach(x => text('- ' + (x.desc || '') + (x.hours ? ' (' + hrs(x.hours) + ' hrs)' : '') + (x.by ? ', ' + nameOf(x.by) : ''), { indent: 10 })); }
+    const so = Q.signoff || {}, sk = j.signoffSkip || {};
+    if (isSigned(Q)) { head('Customer sign-off'); const a = so.answers || {};
+      SO_Q.forEach(([k, t]) => text(t + ': ' + (a[k] === 'yes' ? 'Yes' : a[k] === 'no' ? 'No' : '-')));
+      if (so.issuesText) text('Issue described by the client: ' + so.issuesText); if (so.comments) text('Client comments: ' + so.comments);
+      text('Signed by ' + (so.name || '') + ' · ' + when(so.signedAt) + (so.collectedBy ? ' · collected by ' + nameOf(so.collectedBy) : ''));
+      if (/^data:image\/png;base64,/.test(so.signature || '')) { try { need(90); doc.addImage(so.signature, 'PNG', M, y + 4, 220, 80); y += 90; } catch (e) {} } }
+    else if (sk.status) { head('Customer sign-off'); text((SKIP[sk.status] || sk.status) + (sk.reason ? ': ' + sk.reason : '')); }
+    const pics = (((j.photos || {}).list) || []).filter(photoLive);
+    if (pics.length) { need(290); head('Install photos (' + pics.length + ')'); const cw = (W - 2 * M - 12) / 2, maxH = 230; let col = 0, rowH = 0, bad = 0;
+      for (const [i, ph] of pics.entries()) {
+        if (btn) btn.textContent = 'Adding photo ' + (i + 1) + ' of ' + pics.length + '…';
+        let d; try { d = await imgData(photoSrc(ph.k)); } catch (e) { bad++; continue; }
+        const pr = doc.getImageProperties(d), k = Math.min(cw / pr.width, maxH / pr.height), w = pr.width * k, h = pr.height * k;
+        if (col === 0) { need(maxH + 8); rowH = 0; }
+        doc.addImage(d, 'JPEG', M + col * (cw + 12) + (cw - w) / 2, y, w, h); rowH = Math.max(rowH, h);
+        if (col === 1) { y += rowH + 8; col = 0; } else col = 1;
+      }
+      if (col === 1) y += rowH + 8; if (bad) text(bad + ' photo(s) could not be added.', { color: '#9a4b00' }); }
+    const pages = doc.getNumberOfPages(); for (let i = 1; i <= pages; i++) { doc.setPage(i); doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor('#777777'); doc.text(label(Q) + ' · page ' + i + ' of ' + pages, M, H - 20); }
+    doc.save(String(label(Q)).replace(/[\\/:*?"<>|]+/g, '-').slice(0, 80) + ' - Job Report.pdf');
+  } catch (e) { alert('Could not build the PDF: ' + e.message); }
+  if (btn) { btn.disabled = false; btn.textContent = was || 'Export PDF'; }
+}
 // v8.21.0: who did each task (item lines and extra work)
 const jobTechs = () => { const ids = ((typeof Q !== 'undefined' && Q && Q.schedule) || {}).techs || []; const list = techs().filter(t => ids.includes(t.email)); return list.length ? list : techs(); };
 const techPick = (cls, attrs, sel) => { const cur = sel != null && sel !== '' ? sel : (ME && ME.role === 'tech' ? ME.email : '');
@@ -637,7 +693,7 @@ function report(admin, canEdit) {
     ${crewRows(j.log).map(r => `<tr><td>${esc(fmtDate(r.date))}</td><td class="right">${hrs(r.hours)}</td><td>${esc(rowTechs(r).map(nameOf).join(', ') || '—')}</td><td class="right">${hrs(rowLabor(r))}</td></tr>`).join('') || '<tr><td colspan=4>—</td></tr>'}</table></div>`;
   const recapCard = () => `    <div class="card"><div class="sect" style="margin-top:0">Recap ${jsBadge(j.jobStatus)}</div>${[['work', 'Work completed'], ['issues', 'Problems / what took longer'], ['followups', 'Open items / return visit'], ['client', 'Client feedback']].map(([k, t]) => `<div class="qmeta" style="margin-top:6px">${t}</div><div style="white-space:pre-wrap">${esc((j.recap || {})[k] || '—')}</div>`).join('')}
     <div class="qmeta" style="margin-top:10px">Submitted by ${esc(nameOf(j.submittedBy))}${j.submittedAt ? ' · ' + esc(new Date(j.submittedAt).toLocaleString('en-US')) : ''}${j.reviewedAt && (Q.status === 'closed') ? ' · Approved by ' + esc(nameOf(j.reviewedBy)) + ' ' + esc(new Date(j.reviewedAt).toLocaleDateString('en-US')) : ''}</div></div>`;
-  const actions = revisionsCard() + `<div class="qactions no-print">${canEdit ? '<button class="qbtn gold" id="addDayJob">+ Log another day</button><button class="qbtn" id="editJob">Edit &amp; resubmit</button>' : ''}${canEdit && (Q.project || {}).dtoolsOpportunityId ? `<a class="qbtn" style="display:inline-flex;align-items:center;text-decoration:none" href="?new=1&opp=${encodeURIComponent(Q.project.dtoolsOpportunityId)}&rep=${encodeURIComponent(Q.project.salesManagerName || '')}">+ Another report for this project</a>` : ''}<button class="qbtn" onclick="window.print()">Print / Save PDF</button>
+  const actions = revisionsCard() + `<div class="qactions no-print"><button class="qbtn" id="pdfJob">Export PDF</button>${canEdit ? '<button class="qbtn gold" id="addDayJob">+ Log another day</button><button class="qbtn" id="editJob">Edit &amp; resubmit</button>' : ''}${canEdit && (Q.project || {}).dtoolsOpportunityId ? `<a class="qbtn" style="display:inline-flex;align-items:center;text-decoration:none" href="?new=1&opp=${encodeURIComponent(Q.project.dtoolsOpportunityId)}&rep=${encodeURIComponent(Q.project.salesManagerName || '')}">+ Another report for this project</a>` : ''}<button class="qbtn" onclick="window.print()">Print / Save PDF</button>
     ${admin && (j.recap || {}).followups && !j.returnVisitId ? '<button class="qbtn" id="makeReturn" style="border-color:#8a6d2f;color:#ffd479">Create return visit</button>' : ''}${admin && j.returnVisitId ? '<a class="qbtn" style="display:inline-flex;align-items:center;text-decoration:none" href="?quote=' + encodeURIComponent(j.returnVisitId) + '">Open return visit</a>' : ''}
     ${admin && Q.status === 'submitted' ? '<button class="qbtn gold" id="approveJob">Approve &amp; close</button><button class="qbtn qbtn-del" id="sendBack">Send back</button>' : ''}</div><div id="revMsg" class="qmeta no-print"></div>`;
   const ex = (j.extras || []).filter(x => x.desc || x.hours);
@@ -699,6 +755,7 @@ function wire() {
   on('saveJob', async () => { clearTimeout(SAVE_T); await save(REF, { job: collectJob() }); saveState('Saved ' + new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })); flash('Saved. You can come back and finish later.'); });
   on('stepNext', () => goStep(STEP + 1));
   on('stepBack', () => goStep(STEP - 1));
+  on('pdfJob', () => jobPdf(document.getElementById('pdfJob')));  // v10.6.0
   on('editJob', () => { EDIT = true; STEP = 1; showJob(qid); });
   on('addDayJob', () => { EDIT = true; ADD_DAY = true; STEP = 1; showJob(qid); });  // v10.1.0
   on('cancelEdit', async () => {

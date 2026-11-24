@@ -347,7 +347,7 @@ async function photoGet(path, env) {
   const k = decodeURIComponent(path.slice('/photo/'.length));
   if (!env.PHOTOS || !PHOTO_KEY.test(k)) return new Response('Not found', { status: 404 });
   const v = await env.PHOTOS.get(k, 'arrayBuffer');
-  if (!v) return new Response('Not found', { status: 404 });
+  if (!v) return new Response('Not found', { status: 404, headers: { 'Access-Control-Allow-Origin': APP_ORIGIN, 'Cache-Control': 'no-store' } });
   return new Response(v, { headers: { 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=31536000, immutable', 'Access-Control-Allow-Origin': APP_ORIGIN } });
 }
 export default {
