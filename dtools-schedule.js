@@ -253,6 +253,15 @@
       await ref.set({ dtoolsStage: r.ok ? { done: true, result: r.from + ' → ' + r.want, appliedAt: new Date().toISOString() } : { done: t + 1 >= 3, tries: t + 1, result: 'failed: ' + (r.err || '') } }, { merge: true }); }
     return (results || []).map(r => r.name + ': ' + (r.ok ? r.from + ' → ' + r.want : 'FAILED ' + r.err));
   }
+  // v10.3.0 the "ASBC sync" bookmark's compact rows -> the same {projects, extra} the scheduled pull builds
+  function rawToProjects(raw, MINE) {
+    const by = {};
+    for (const r of raw.E || []) { const [pid, name, number, client, stage, id, taskId, tname, d, st, et, status, res, desc, address] = r;
+      const k = pid || ('x' + id), p = by[k] || (by[k] = { pid, name, number, client, stage, rep: MINE[pid] || '', mine: pid in MINE, tasks: [] }), all = st === '00:00:00' && et === '00:00:00';
+      p.tasks.push({ id: 'ev' + id, taskId, name: tname, start: all ? d : d + ' ' + String(st).slice(0, 5), end: all ? '' : d + ' ' + String(et).slice(0, 5), status, assignees: res || [], desc, address }); }
+    return { projects: Object.values(by), extra: { meetings: (raw.M || []).map(([id, title, allDay, start, end, location, people]) => ({ id, title, allDay, start, end, location, people })), holidays: (raw.HO || []).map(([date, name]) => ({ date, name })).filter(x => x.date) } };
+  }
+  window.asbcRawToProjects = rawToProjects;
   window.asbcPendingStages = pendingStages;
   window.asbcStagesDone = stagesDone;
   window.asbcPrepReminders = prepReminders;

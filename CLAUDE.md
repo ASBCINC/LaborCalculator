@@ -249,3 +249,8 @@ D-Tools handoff panel (paste-ready labor block); Quote Log search wording.
 ## v10.2.0 Time quoted vs time on site + bid points (Nov 24, 2026)
 - Report card shows quoted hours vs actual labor hours (site hrs × techs), hrs over/under and %, verdict; no dollars on the report (pipeline Job profit unchanged).
 - Rep bid points (leaderboard-core accuracyPoints): within ±10% = +10, 10%+ under quote = +5, 10–25% over = −5, >25% over = −10. Scored once when a report is submitted with status Complete (quote.accScored), so multi-day jobs score on the final total.
+
+## v10.3.0 Calendar: D-Tools links, who is free, on-demand sync (Nov 24, 2026)
+- Job/event cards: "Open in D-Tools" (pipeline/data project url, matched by project name; admin/management/director).
+- "Crew / who is free" view: Free cells on open weekdays, a Free crews row (SF/LA team free when both techs are), next fully free day per team (90 days), date picker to jump weeks.
+- "Sync from D-Tools" (admin): "ASBC sync" bookmarklet run on a signed-in d-tools.cloud page reads GetEvents3 + getGlobalCalendar + holidays (same as the pull, -7..+60 days), returns to calendar.html#dtsync=<json> (fragment only), page confirms (15-min freshness) and runs asbcRawToProjects + asbcImportSchedule. MINE keyed by pipeline project num (numeric D-Tools id) and GUID. No Claude usage. Tested the read side live: 8 items, 5 events, ~16 KB.
