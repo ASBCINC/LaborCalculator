@@ -243,7 +243,7 @@
       if (!p) { await close('no open D-Tools project found'); continue; }
       if (String(p.stage || '').toLowerCase() === String(w.want).toLowerCase()) { await close('already ' + w.want); continue; }
       if (/completed/i.test(p.stage || '')) { await close('project already Completed; not reopened'); continue; }
-      out.push({ quote: s.id, project: p.id, name: p.name, want: w.want, from: p.stage || '' });
+      out.push({ quote: s.id, project: p.num || p.id, name: p.name, want: w.want, from: p.stage || '' });  // v10.4.1 D-Tools' own stage calls take the numeric project id (the GUID gave 400)
     }
     return out;
   }
