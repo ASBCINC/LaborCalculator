@@ -8,7 +8,7 @@
     'Brian Chan': 'Palo Alto', 'Timothy Parks': 'Palo Alto', 'Matthew Stachnik': 'Palo Alto',
     'Tom Virasak': 'none'   // company president: not ranked
   };
-  const STORES = ['San Francisco', 'Palo Alto', 'West Hollywood'];
+  const STORES = ['San Francisco', 'Palo Alto', 'West Hollywood', 'Costa Mesa'];  // v10.5.0 Costa Mesa added
   const ALIASES = { 'stephen sandberg': 'Stefn Sandberg', 'tim parks': 'Timothy Parks', 'kwame yeboah': 'Kwamé Yeboah',
     'matt': 'Matthew Stachnik', 'josh silva bang & olufsen sf': 'Josh Silva', 'joshua silva': 'Josh Silva' };
   function monthKey(d) {

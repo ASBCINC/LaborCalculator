@@ -80,14 +80,14 @@ details[open] summary { margin-bottom:8px; }
   <div id="stores" class="stores"><div class="empty">Loading…</div></div>
   <div id="reps"></div>
   <div id="admin"></div>
-  <p class="small" style="margin-top:18px">Score = 10 points per quote + bid points when the job report comes in: actual labor hours within 10% of the quote = +10, job took 10%+ less than quoted = +5, job ran 10–25% over the quote = −5, more than 25% over = −10. Accuracy = actual vs estimated hours on approved jobs. Counts each real quote once: first save, at least one item, one quote per D-Tools opportunity; templates and re-saves don't count. Coverage = share of a rep's open D-Tools opportunities that have a labor quote.</p>
+  <p class="small" style="margin-top:18px">Score = 10 points per quote + bid points when the job report comes in: actual labor hours within 10% of the quote = +10, job took 10%+ less than quoted = +5, job ran 10–25% over the quote = −5, more than 25% over = −10. Accuracy = actual vs estimated hours on approved jobs. Counts each real quote once: first save, at least one item, one quote per D-Tools opportunity; templates and re-saves don't count. Coverage = share of a rep's open D-Tools opportunities with installation labor (a labor or install SKU on the D-Tools quote) that have a labor quote here. Retail-only deals are left out.</p>
 </div>
 <script>
 firebase.initializeApp({ apiKey: "AIzaSyCSf560VkBf2esIH5rC-_Vcx349o7iIC-0", authDomain: "asbc-calculator.firebaseapp.com", projectId: "asbc-calculator" });
 const db = firebase.firestore(), B = ASBCBoard;
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money = v => '$' + Math.round(v || 0).toLocaleString('en-US');
-let ME = null, USERS = {}, OPPS = [], QUOTED = {}, period = 'month';
+let ME = null, USERS = {}, OPPS = [], QUOTED = {}, LAB = {}, period = 'month';
 const MK = B.monthKey();
 function keysFor(p) { if (p === 'month') return [MK]; if (p === 'last') return [B.shiftMonth(MK, -1)];
   const [y, m] = MK.split('-').map(Number); const q0 = Math.floor((m - 1) / 3) * 3 + 1; return [0,1,2].map(i => y + '-' + String(q0 + i).padStart(2,'0')).filter(k => k <= MK); }
@@ -96,8 +96,10 @@ async function totalsFor(p) {
   for (const k of keysFor(p)) { const r = await B.readMonth(db, k); for (const [n, v] of Object.entries(r)) { sum[n] = sum[n] || { quotes: 0, total: 0, jobs: 0, accPts: 0, est: 0, act: 0 }; ['quotes', 'total', 'jobs', 'accPts', 'est', 'act'].forEach(k => sum[n][k] += v[k] || 0); } }
   return sum;
 }
+// v10.5.0 only opportunities with labor SKUs need a labor quote (retail-only deals are left out); unknown = counted
+const needsLabor = o => !Object.keys(LAB).length || !LAB[o.id] || LAB[o.id].labor !== false;
 function coverage(name) {
-  const open = OPPS.filter(o => o.owner === name && B.isOpenOpp(o));
+  const open = OPPS.filter(o => o.owner === name && B.isOpenOpp(o) && needsLabor(o));
   const done = open.filter(o => QUOTED[o.id]);
   return { open: open.length, done: done.length, pct: open.length ? Math.round(100 * done.length / open.length) : null, missing: open.filter(o => !QUOTED[o.id]) };
 }
@@ -105,7 +107,7 @@ async function render() {
   const admin = ME.role === 'admin';
   const reps = B.ranked(await totalsFor(period), USERS);
   // everyone on the approved list shows up, even with 0
-  Object.values(USERS).forEach(u => { if (u.role !== 'admin' && B.storeOf(u.name, USERS) !== 'none' && !reps.find(r => r.name === u.name)) reps.push({ name: u.name, quotes: 0, total: 0, jobs: 0, accPts: 0, score: 0, variance: null, store: B.storeOf(u.name, USERS) }); });
+  Object.entries(USERS).forEach(([e, u]) => { if (['manager', 'director'].includes(ASBCRoles.accessOf(u, e)) && B.storeOf(u.name, USERS) !== 'none' && !reps.find(r => r.name === u.name)) reps.push({ name: u.name, quotes: 0, total: 0, jobs: 0, accPts: 0, score: 0, variance: null, store: B.storeOf(u.name, USERS) }); });
   reps.forEach(r => r.cov = coverage(r.name));
   // personal card
   const meRow = reps.find(r => r.name === ME.name); const meIdx = reps.findIndex(r => r.name === ME.name);
@@ -151,6 +153,7 @@ async function rebuild() {
   // approved job reports -> accuracy, by approval month
   for (const q of docs) {
     const a = q.actuals, j = q.job || {}; if (q.status !== 'closed' || !a || !(a.totalEstHours > 0)) continue;
+    if (j.jobStatus !== 'Complete' && !q.accScored) continue;  // v10.5.0 only finished jobs score (same rule as the job report)
     const when = j.reviewedAt || a.savedAt; if (!when) continue; const mk = B.monthKey(new Date(when)); if (!tally[mk]) continue;
     const rep = (q.project || {}).salesManagerName; if (!rep) continue;
     const t = tally[mk][rep] = tally[mk][rep] || { quotes: 0, total: 0 };
@@ -162,7 +165,8 @@ async function rebuild() {
   btn.textContent = 'Rebuilt'; await load();
 }
 async function load() {
-  const [u, o, q] = await Promise.all([db.collection('config').doc('users').get(), db.collection('opportunities').get(), db.collection('stats').doc('quotedOpps').get()]);
+  const [u, o, q, l] = await Promise.all([db.collection('config').doc('users').get(), db.collection('opportunities').get(), db.collection('stats').doc('quotedOpps').get(), db.collection('config').doc('oppLaborSku').get().catch(() => null)]);
+  try { LAB = (l && l.exists) ? JSON.parse(l.data().json || '{}') : {}; } catch (e) { LAB = {}; }
   USERS = (u.exists && u.data().users) || {}; OPPS = o.docs.map(d => ({ id: d.id, ...d.data() })); QUOTED = (q.exists && q.data().opps) || {};
   await render();
 }

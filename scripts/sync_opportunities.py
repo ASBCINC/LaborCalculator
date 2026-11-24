@@ -9,7 +9,7 @@ fields: name, clientName, owner (normalized to rep name when it matches),
 stage, stageGroup, total, price, modifiedDate, isArchived, updatedAt.
 Docs that no longer exist in D-Tools (or are archived) are removed.
 """
-import json, os, sys, datetime, hashlib, traceback, urllib.request, urllib.parse, unicodedata
+import json, re, os, sys, datetime, hashlib, traceback, urllib.request, urllib.parse, unicodedata
 sys.path.insert(0, os.path.dirname(__file__))
 import fs  # Firestore helper (service-account auth when FIREBASE_SA is set)
 
@@ -131,6 +131,36 @@ def main():
         'lastRun': {'timestampValue': now}, 'total': fs.typed(len(keep)),
         'changed': fs.typed(changed), 'deleted': fs.typed(deleted), 'fingerprint': fs.typed(fp)}})
     print(f'::notice::D-Tools sync: {len(keep)} open opportunities, {changed} changed, {deleted} removed')
+    # v10.5.0 which open opportunities carry labor SKUs (= installer projects; retail-only deals don't need a labor quote).
+    # Checked once per opportunity per D-Tools modifiedDate, at most 60 API calls a run; stored in config/oppLaborSku {json}.
+    try:
+        lab = json.loads((fs.fields(fs.call('config/oppLaborSku')) or {}).get('json') or '{}')
+    except Exception:
+        lab = {}
+    def labor_item(i):
+        txt = ' '.join(str(i.get(k) or '') for k in ('partNumber', 'name', 'model')).upper()
+        return i.get('type') == 'Labor' or i.get('allowanceType') == 'Labor' or bool(i.get('laborTypeId')) or bool(re.search(r'INSTALL|LABOR|SRV-|PROGRAMMING|SERVICE CALL', txt))
+    open_ids = [oid for oid, f in keep.items() if not re.search(r'lost|won|closed', str(f.get('stage') or ''), re.I)]
+    calls, lab_changed = 0, False
+    for oid in open_ids:
+        f = keep[oid]; cur = lab.get(oid) or {}
+        if cur.get('mod') == f.get('modifiedDate') and cur.get('labor') is not None: continue
+        if calls >= 60: break
+        try:
+            d = http(f'{BASE}/Opportunities/GetOpportunity?' + urllib.parse.urlencode({'id': oid}), headers=headers); calls += 1
+            qids = (d or {}).get('quoteIds') or []; has = False
+            for qid in qids[:4]:
+                qd = http(f'{BASE}/Quotes/GetQuote?' + urllib.parse.urlencode({'id': qid}), headers=headers); calls += 1
+                if any(labor_item(i) for i in ((qd or {}).get('items') or [])): has = True; break
+            lab[oid] = {'mod': f.get('modifiedDate'), 'labor': has, 'quotes': len(qids)}
+        except Exception as e:
+            print(f'::warning::labor SKU check {f.get("name")}: {e}')
+            lab[oid] = {'mod': f.get('modifiedDate'), 'labor': None, 'err': str(e)[:120]}
+        lab_changed = True
+    for oid in [k for k in lab if k not in keep]: del lab[oid]; lab_changed = True
+    if lab_changed:
+        fs.call('config/oppLaborSku', method='PATCH', body={'fields': {'json': fs.typed(json.dumps(lab)), 'at': {'timestampValue': now}}})
+    print(f'::notice::labor SKU check: {calls} API calls, {sum(1 for v in lab.values() if v.get("labor"))} of {len(lab)} open opportunities have labor')
     # Nothing changed in D-Tools: skip the quote updates that depend on it (saves Firestore reads).
     # The job-report notifications below still run every time.
     quiet = not changed and not deleted

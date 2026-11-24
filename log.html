@@ -177,35 +177,24 @@ function quotePrice(q, hours) {
   return { labor: r.labor, materials: r.materials, trip: r.trip, recycling: r.recycling, total: r.total, billedHours: r.billedHours };
 }
 
-function renderCalib() {
-  const agg = new Map();
-  QUOTES.forEach(r => {
-    if (!r.actuals || !Array.isArray(r.actuals.lines)) return;
-    r.actuals.lines.forEach(l => {
-      if (!CATALOG.has(l.id)) return;
-      const cur = agg.get(l.id) || { name: l.name, jobs: 0, est: 0, act: 0 };
-      cur.jobs += 1;
-      cur.est += Number(l.estHours) || 0;
-      cur.act += Number(l.actualHours) || 0;
-      agg.set(l.id, cur);
-    });
-  });
+function renderCalib() {  // v10.5.0 per job: quoted hours vs actual labor hours (hours on site × techs) on finished jobs
   const box = document.getElementById('calib');
-  const rows = [...agg.values()]
-    .filter(a => a.act > 0)
-    .map(a => Object.assign(a, { delta: a.est ? ((a.act - a.est) / a.est) * 100 : 100 }))
-    .sort((x, y) => Math.abs(y.delta) - Math.abs(x.delta));
-  if (!rows.length) { box.innerHTML = '<div class="empty" style="padding:12px 0 0">No actuals logged yet. Log them from the calculator: open a saved quote, tap Actuals.</div>'; return; }
-  box.innerHTML = `<table><tr><th>Item</th><th>Jobs</th><th>Est hrs</th><th>Actual hrs</th><th>Delta</th></tr>
-  ${rows.map(a => `<tr><td>${esc(a.name)}</td><td>${a.jobs}</td><td>${a.est.toFixed(2)}</td><td>${a.act.toFixed(2)}</td><td class="${a.delta > 10 ? 'neg' : a.delta < -10 ? 'pos' : ''}">${a.delta >= 0 ? '+' : ''}${a.delta.toFixed(0)}%</td></tr>`).join('')}</table>`;
+  const rows = QUOTES.filter(r => !r.isTemplate && r.actuals && Number(r.actuals.totalEstHours) > 0 && (((r.job || {}).jobStatus === 'Complete') || r.accScored))
+    .map(r => { const e = Number(r.actuals.totalEstHours), a = Number(r.actuals.totalActualHours) || 0; return { name: (r.project && r.project.dtoolsProjectName) || r.label, rep: (r.project && r.project.salesManagerName) || '', e, a, d: (a - e) / e * 100 }; })
+    .sort((x, y) => Math.abs(y.d) - Math.abs(x.d));
+  if (!rows.length) { box.innerHTML = '<div class="empty" style="padding:12px 0 0">No finished job reports with a labor quote yet.</div>'; return; }
+  const te = rows.reduce((s, r) => s + r.e, 0), ta = rows.reduce((s, r) => s + r.a, 0), td = (ta - te) / te * 100;
+  box.innerHTML = `<table><tr><th>Job</th><th>Rep</th><th>Quoted hrs</th><th>Actual labor hrs</th><th>Delta</th></tr>
+  ${rows.map(r => `<tr><td>${esc(r.name)}</td><td>${esc(r.rep)}</td><td>${r.e.toFixed(2)}</td><td>${r.a.toFixed(2)}</td><td class="${r.d > 10 ? 'neg' : r.d < -10 ? 'pos' : ''}">${r.d >= 0 ? '+' : ''}${r.d.toFixed(0)}%</td></tr>`).join('')}
+  <tr><td><b>All finished jobs</b></td><td></td><td><b>${te.toFixed(2)}</b></td><td><b>${ta.toFixed(2)}</b></td><td><b>${td >= 0 ? '+' : ''}${td.toFixed(0)}%</b></td></tr></table>`;
 }
-
 function renderList() {
   const q = document.getElementById('search').value.trim().toLowerCase();
   const mode = document.getElementById('filter').value;
   const items = QUOTES.filter(r => {
     if (mode === 'templates' && !r.isTemplate) return false;
     if (mode === 'quotes' && r.isTemplate) return false;
+    if (r.counted === 'dtools-schedule' && !(r.items || []).length && mode !== 'templates' && !q) return false;  // v10.5.0 hide D-Tools-created install jobs with no labor quote (they live on Jobs); search still finds them
     const cust = String(r.label || (r.project && r.project.customerName) || '').toLowerCase();
     const mgr = String((r.project && r.project.salesManagerName) || '').toLowerCase();
     return !q || cust.includes(q) || mgr.includes(q);

@@ -201,8 +201,8 @@ function infoJob(id) {
     pdf: p.proposalPdf, files: p.files || [], parts: partsTxt(q.parts), dt: PURL[pfold(p.dtoolsProjectName)] || PURL[pfold(label(q))] });
 }
 // v9.3.0 parts readiness from D-Tools item statuses
-function partsTxt(pt) { if (!pt || !pt.total) return ''; if (pt.ready >= pt.total) return `<span style="color:#7ee2a0">All ${pt.total} items received or staged</span>`;
-  return `<span style="color:#ff8b8b">${pt.total - pt.ready} of ${pt.total} not received or staged</span>${(pt.notReady || []).length ? '<br><span style="color:#8b8f98;font-size:12px">' + esc(pt.notReady.join(', ')) + '</span>' : ''}`;
+function partsTxt(pt) { if (!pt || !pt.total) return ''; if (pt.ready >= pt.total) return `<span style="color:#7ee2a0">All ${pt.total} items staged</span>`;
+  return `<span style="color:#ff8b8b">${pt.total - pt.ready} of ${pt.total} not staged</span>${(pt.notReady || []).length ? '<br><span style="color:#8b8f98;font-size:12px">' + esc(pt.notReady.join(', ')) + '</span>' : ''}`;
 }
 function infoEv(id) {
   const e = EVENTS.find(x => x.id === id); if (!e) return;

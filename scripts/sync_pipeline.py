@@ -96,7 +96,7 @@ def main():
                 push(rec, 'stage', f"Stage: {old.get('stage') or '—'} → {p.get('stage')}")
             if old.get('price') is not None and abs(money(old.get('price')) - rec['price']) >= 0.01:
                 push(rec, 'value', f"Contract value ${old['price']:,.2f} → ${rec['price']:,.2f}")
-        if not old or old.get('modified') != rec['modified'] or not old.get('detailAt') or 'parts' not in old or 'files' not in old or 'items' not in (old.get('parts') or {}):  # v9.3.0/9.4.0: one-time refetch for parts, proposal PDF, all files
+        if not old or old.get('modified') != rec['modified'] or not old.get('detailAt') or 'parts' not in old or 'files' not in old or (old.get('parts') or {}).get('rule') != 'staged':  # v9.3.0/9.4.0: one-time refetch for parts, proposal PDF, all files
             try:
                 d = api('Projects/GetProject', {'id': pid})
                 rec.update({'rep': d.get('salesperson'), 'start': utc(d.get('startDate')), 'end': utc(d.get('endDate')),
@@ -117,8 +117,8 @@ def main():
                 rec['proposalPdf'] = rec['pdfs'][0]['url'] if rec['pdfs'] else None
                 rec['files'] = file_list(d)  # v9.4.0: every file attached to the project/opportunity
                 prods = [i for i in (d.get('items') or []) if i.get('type') == 'Product' and not i.get('isClientSupplied') and str(i.get('category') or '') != 'Installation Supplies' and not str(i.get('partNumber') or '').upper().startswith('INSTALL')]  # v9.3.1: skip materials/consumables fee lines
-                ready = lambda i: str(i.get('installStatus') or '').lower() in ('staged', 'delivered', 'installed', 'received') or str(i.get('orderStatus') or '').lower() in ('received', 'in stock', 'delivered', 'installed')
-                rec['parts'] = {'total': sum(int(i.get('quantity') or 1) for i in prods), 'ready': sum(int(i.get('quantity') or 1) for i in prods if ready(i)), 'known': bool(d.get('items') is not None),
+                ready = lambda i: str(i.get('installStatus') or '').lower() in ('staged', 'delivered', 'installed')  # v10.5.0 ready = set to Staged (or later) in D-Tools; In Stock alone isn't staged
+                rec['parts'] = {'rule': 'staged', 'total': sum(int(i.get('quantity') or 1) for i in prods), 'ready': sum(int(i.get('quantity') or 1) for i in prods if ready(i)), 'known': bool(d.get('items') is not None),
                                 'notReady': [{'name': i.get('model') or i.get('name') or 'Item', 'qty': i.get('quantity') or 1, 'order': i.get('orderStatus') or '', 'install': i.get('installStatus') or ''} for i in prods if not ready(i)][:10],
                                 'names': [i.get('model') or i.get('name') or '' for i in prods][:20],
                                 # v10.0.0: every product line, for the techs' install checklist on the job report

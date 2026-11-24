@@ -33,7 +33,7 @@
   const numOf = q => { const m = /(\d{5})\s*$/.exec(String((q.project || {}).dtoolsOppNumber || '')); return m ? m[1] : ''; };
   // Words in the D-Tools project name / client name that identify a job in a memo ("Janet Petros install", "MS-Aztech-01654").
   const GENERIC = /^(beolab|beosound|beovision|install|installation|stereo|system|speaker|speakers|court|drive|street|place|trail|kings|mission|phase|rev\d*|v\d+)$/i;
-  const keysOf = q => [...new Set((((q.project || {}).dtoolsProjectName || q.label || '') + ' ' + ((q.project || {}).dtoolsClientName || '')).split(/[^A-Za-z0-9]+/)
+  const keysOf = q => [...new Set((((q.project || {}).dtoolsProjectName || q.label || '') + ' ' + String((q.project || {}).dtoolsClientName || '').trim().split(/\s+/).pop()).split(/[^A-Za-z0-9]+/)  // v10.5.0 client LAST name only (a first name like Janet matched another client)
     .filter(w => w.length >= 5 && !/^\d+$/.test(w) && !GENERIC.test(w)).map(w => w.toLowerCase()))];
   const exp = (t, extra) => Object.assign({ id: t.id, amount: t.amount, date: t.date, merchant: t.merchant, who: t.who || '', email: t.email || '', memo: t.memo || '', receipt: t.receipts > 0, status: 'ramp', at: new Date().toISOString() }, extra || {});
 

@@ -261,3 +261,12 @@ D-Tools handoff panel (paste-ready labor block); Quote Log search wording.
 - sync-opportunities.yml no longer publishes jobs.enc; it deletes the old `data` branch. JOBS_KEY secret can be deleted. jobs.json is still written locally for sync_pipeline.py.
 - D-Tools pull: old step 5 (decrypt jobs.enc hourly) retired; 7g uses asbcPendingTasks()/asbcTasksDone() (quote.dtoolsTasks.for = job.submittedAt) on the 3 daily runs. Existing closed reports were marked handled.
 - v10.4.1: asbcPendingStages returns the numeric D-Tools project id (pipeline p.num); the first real stage change (Gillis, Sales Follow up -> Delayed) failed 400 with the GUID.
+
+## v10.5.0 System test fixes (Nov 24, 2026)
+- Old reports (no installedItems) say the checklist wasnt on the form instead of 0 of N installed.
+- Leaderboard: Costa Mesa store added; only managers/directors listed (management like Tom Virasak no longer shows as a rep); rebuild scores only Complete/accScored jobs.
+- Parts readiness = D-Tools install status Staged/Delivered/Installed only (In Stock no longer counts); parts.rule=staged forces one refetch.
+- Quote Log calibration = per job quoted vs actual labor hours on finished jobs; D-Tools-created no-quote jobs hidden from the log unless searched.
+- Ramp memo matching uses the client LAST name only.
+- Calculator speed: index.html no longer loads the Tailwind CDN; it uses prebuilt ./tailwind.css (cached in sw.js). If you add NEW Tailwind classes to index.html/pricing.js/leaderboard-core.js/roles.js, rebuild it: cd tools/tailwind && npx tailwindcss@3 -c tailwind.config.js -i in.css -o ../../tailwind.css --minify (content = those 4 files; colors brandGold #C7A66A, bgDark #050505, bgPanel #0D0D0D, textMuted #929292). Classes missing from the build silently render unstyled.
+- Labor coverage: sync_opportunities.py checks each open opp's D-Tools quote for labor/install SKUs (cached by modifiedDate, max 60 calls/run) into config/oppLaborSku. Leaderboard coverage counts only opps with labor (unknown = counted). Retail-only deals are excluded.

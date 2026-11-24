@@ -13,23 +13,9 @@
     <meta name="theme-color" content="#050505">
     <title>Labor Calculator | ASBC</title>
 
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="./tailwind.css"><!-- v10.5.0 prebuilt Tailwind (was the cdn.tailwindcss.com runtime); rebuild: see CLAUDE.md -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        brandGold: '#C7A66A',
-                        bgDark: '#050505',
-                        bgPanel: '#0D0D0D',
-                        textMuted: '#929292'
-                    }
-                }
-            }
-        };
-    </script>
 
     <style>
         html { -webkit-text-size-adjust: 100%; }
@@ -717,7 +703,7 @@
               }
           });
 
-        const APP_VERSION = '10.4.1';
+        const APP_VERSION = '10.5.0';
         const BUILD_DATE = '2026-11-23';
         let HOURLY_RATE = 200;
 
