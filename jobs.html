@@ -198,10 +198,10 @@ function photoBox(q) {
   PHOTOS = (ph.list || []).slice();
   PHOTO_JOB = (typeof Q !== 'undefined' && q && q === Q && REF) ? REF.id : ((q && q.id) || '');
   return `<div class="no-print" style="border-top:1px solid var(--line);margin-top:12px;padding-top:10px"><div class="sect" style="margin-top:0">Install photos <span id="phCount" class="qmeta">${PHOTOS.length ? '(' + PHOTOS.length + ')' : ''}</span></div>
-    <div class="qmeta">Tap Take photo to open the camera. Each photo saves as soon as you take it; tap ✕ to remove one. Photos are kept for 18 months.</div>
+    <div class="qmeta">Tap Take photo to open the camera, or Upload photos to pick several from the phone. Each photo saves right away; tap ✕ to remove one. Photos are kept for 18 months.</div>
     ${ph.uploaded && !ph.list ? '<div class="qmeta">Earlier photos for this job were sent with the Microsoft Forms link (saved in Anthony\'s OneDrive).</div>' : ''}
     <div id="phGrid" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">${photoThumbs(PHOTOS, true)}</div>
-    <div class="qactions"><label class="qbtn gold" style="display:inline-flex;align-items:center;cursor:pointer">Take photo<input type="file" id="phCam" accept="image/*" capture="environment" hidden></label></div>
+    <div class="qactions"><label class="qbtn gold" style="display:inline-flex;align-items:center;cursor:pointer">Take photo<input type="file" class="phIn" id="phCam" accept="image/*" capture="environment" hidden></label><label class="qbtn" style="display:inline-flex;align-items:center;cursor:pointer">Upload photos<input type="file" class="phIn" id="phLib" accept="image/*" multiple hidden></label></div>
     <div id="phMsg" class="qmeta"></div></div>`;
 }
 function photosObj() {
@@ -221,14 +221,19 @@ async function savePhotos() {  // an existing job saves its photo list right awa
   const photos = photosObj(); await REF.set({ job: { photos } }, { merge: true }); Q.job = Object.assign({}, Q.job || {}, { photos });
 }
 document.addEventListener('change', async e => {
-  if (!e.target || e.target.id !== 'phCam') return;
-  const f = e.target.files && e.target.files[0]; e.target.value = ''; if (!f) return;
+  if (!e.target || !e.target.classList || !e.target.classList.contains('phIn')) return;
+  const files = [...(e.target.files || [])].filter(f => /^image\//.test(f.type) || !f.type).slice(0, 30); e.target.value = ''; if (!files.length) return;
   const msg = t => { const m = document.getElementById('phMsg'); if (m) m.textContent = t; };
   if (!PHOTO_JOB) return msg('Open the job first.');
-  try { msg('Saving photo…'); const image = await asbcRamp.shrink(f);
-    const o = await photoCall({ action: 'put', quote: PHOTO_JOB, image });
-    PHOTOS.push({ k: o.k, at: new Date().toISOString(), by: ME.email }); drawPhotos(); await savePhotos(); msg('Photo saved (' + PHOTOS.length + ').');
-  } catch (err) { msg('Photo not saved: ' + err.message + '. Try again.'); }
+  let ok = 0, bad = 0;
+  for (const [i, f] of files.entries()) {  // v10.6.0 one at a time so a phone on a weak signal isn't flooded
+    try { msg('Saving photo ' + (i + 1) + ' of ' + files.length + '…'); const image = await asbcRamp.shrink(f);
+      const o = await photoCall({ action: 'put', quote: PHOTO_JOB, image });
+      PHOTOS.push({ k: o.k, at: new Date().toISOString(), by: ME.email }); drawPhotos(); ok++;
+    } catch (err) { bad++; console.warn('photo', err); }
+  }
+  try { if (ok) await savePhotos(); } catch (err) { console.warn('photo list', err); }
+  msg((ok ? ok + ' photo' + (ok > 1 ? 's' : '') + ' saved.' : '') + (bad ? ' ' + bad + ' not saved; try those again.' : ''));
 });
 document.addEventListener('click', async e => {
   const b = e.target.closest && e.target.closest('[data-delph]'); if (!b) return; e.preventDefault(); e.stopPropagation();
