@@ -344,7 +344,7 @@ function quotedHrs(q) {
     prog += ((Number(c.programmingHours) || 0) + (it.addon ? Number(it.addon.programmingHours) || 0 : 0)) * n; });
   if (inst + prog > 0) return { est: r(inst + prog), inst: r(inst), prog: r(prog), src: 'labor quote' + (q.laborQuote && q.laborQuote.label ? ' (' + q.laborQuote.label + ')' : '') };
   const d = (q && q.dtoolsLabor) || {}, df = Number(d.flat) || 0, di = (Number(d.install) || 0) + df, dp = Number(d.prog) || 0;
-  if (di + dp > 0) return { est: r(di + dp), inst: r(di), prog: r(dp), src: 'D-Tools proposal' + (df ? ' (incl. ' + r(df) + ' hrs estimated from the old Labor (Flat Rate) line at $200/hr)' : '') };
+  if (di + dp > 0) return { est: r(di + dp), inst: r(di), prog: r(dp), src: 'D-Tools proposal' + (df ? ' (incl. ' + r(df) + ' hrs estimated from an older install line (Labor Flat Rate / Installation) at $200/hr)' : '') };
   return { est: 0, inst: 0, prog: 0, src: '' };
 }
 function lineEst(it) {

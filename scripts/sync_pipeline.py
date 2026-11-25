@@ -55,9 +55,11 @@ def labor_q(items):
     flat = 0.0
     for i in (items or []):
         nm = ' '.join(str(i.get(k) or '') for k in ('name', 'shortName')).upper()
-        if (i.get('allowanceType') == 'Labor' or 'FLAT RATE' in nm) and 'INSTALL_SERVICE' not in nm and 'SRV-PROG' not in nm and not (i.get('isOptional') and not i.get('isOptionalRecommended')):
+        pn = {str(i.get('partNumber') or '').strip().upper(), str(i.get('model') or '').strip().upper()}
+        old_line = i.get('allowanceType') == 'Labor' or 'FLAT RATE' in nm or bool(pn & {'INSTALLATION', 'INSTALL'})  # "Labor (Flat Rate)", "Bang & Olufsen Installation" (part # Installation)
+        if old_line and 'SUPPLIES' not in str(i.get('category') or '').upper() and 'INSTALL_SERVICE' not in nm and 'SRV-PROG' not in nm and not (i.get('isOptional') and not i.get('isOptionalRecommended')):
             flat += float(i.get('quantity') or 1) * float(i.get('unitPrice') or 0) / 200
-    return {'install': hours('INSTALL_SERVICE'), 'prog': hours('SRV-PROG'), 'flat': round(flat, 2), 'v': 2}
+    return {'install': hours('INSTALL_SERVICE'), 'prog': hours('SRV-PROG'), 'flat': round(flat, 2), 'v': 3}
 
 def utc(s):
     """D-Tools dates come without a zone and are UTC."""
@@ -95,7 +97,7 @@ def other_jobs_labor():
     done = 0
     for d in docs:
         f = fs.fields(d)
-        if f.get('dtoolsLaborAt') or f.get('status') not in ('scheduled', 'submitted'): continue
+        if (f.get('dtoolsLaborAt') and (f.get('dtoolsLabor') or {}).get('v') == 3) or f.get('status') not in ('scheduled', 'submitted'): continue
         if done >= 8: break
         pr = f.get('project') or {}
         name, number = pr.get('dtoolsProjectName') or f.get('label') or '', pr.get('dtoolsOppNumber') or ''
@@ -110,7 +112,7 @@ def other_jobs_labor():
         mask = ['dtoolsLaborAt']
         if det.get('salesperson') and not pr.get('salesManagerName'):  # the rep, for bid scoring and alerts
             body['fields']['project'] = {'mapValue': {'fields': {'salesManagerName': {'stringValue': det['salesperson']}}}}; mask.append('project.salesManagerName')
-        if lab: body['fields']['dtoolsLabor'] = {'mapValue': {'fields': {k: {'doubleValue': float(v)} for k, v in lab.items()}}}; mask.append('dtoolsLabor')
+        if lab: body['fields']['dtoolsLabor'] = {'mapValue': {'fields': {k: ({'integerValue': str(v)} if k == 'v' else {'doubleValue': float(v)}) for k, v in lab.items()}}}; mask.append('dtoolsLabor')
         fs.call('quotes/' + fs.doc_id(d), method='PATCH', body=body, params={'updateMask.fieldPaths': mask})
         print(f'::notice::labor for {name}: {lab}')
         done += 1
@@ -145,7 +147,7 @@ def main():
                 push(rec, 'stage', f"Stage: {old.get('stage') or '—'} → {p.get('stage')}")
             if old.get('price') is not None and abs(money(old.get('price')) - rec['price']) >= 0.01:
                 push(rec, 'value', f"Contract value ${old['price']:,.2f} → ${rec['price']:,.2f}")
-        if not old or old.get('modified') != rec['modified'] or not old.get('detailAt') or 'parts' not in old or 'files' not in old or (old.get('parts') or {}).get('rule') != 'staged' or (old.get('laborQ') or {}).get('v') != 2:  # v9.3.0/9.4.0: one-time refetch for parts, proposal PDF, all files
+        if not old or old.get('modified') != rec['modified'] or not old.get('detailAt') or 'parts' not in old or 'files' not in old or (old.get('parts') or {}).get('rule') != 'staged' or (old.get('laborQ') or {}).get('v') != 3:  # v9.3.0/9.4.0: one-time refetch for parts, proposal PDF, all files
             try:
                 d = api('Projects/GetProject', {'id': pid})
                 rec.update({'rep': d.get('salesperson'), 'start': utc(d.get('startDate')), 'end': utc(d.get('endDate')),
