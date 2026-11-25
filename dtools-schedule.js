@@ -21,6 +21,16 @@
 //   meetings = [{ id, title, allDay, start: 'YYYY-MM-DDTHH:MM:SS', end, location, people: [names] }]  (D-Tools "Scheduled Events")
 //   holidays = [{ date: 'YYYY-MM-DD', name }]  (D-Tools company holidays; the Calendar adds US holidays itself)
 // Meetings are stored with the other events (kind 'event') so they show on the Install Calendar with their team color.
+// v10.9.0 THE D-TOOLS CALENDAR IS THE TRUTH (Anthony, Nov 25 2026):
+//   - every project scheduled with a crew becomes a job (not only Anthony's), unless the install is already done;
+//   - its labor quote attaches automatically: exact D-Tools id / project number / project name only (newest or locked quote wins);
+//     a quote that only matches by client name is offered as job.quoteSuggest for Anthony to confirm on the Jobs page;
+//   - a quote saved after the techs already reported on the placeholder job is attached to that job (items + laborQuote)
+//     and the quote itself is hidden from the Jobs list (mergedInto), so there is never a second job;
+//   - quoted labor from the D-Tools project (INSTALL_SERVICE / SRV-PROG lines, QTY = hours) is copied to job.dtoolsLabor;
+//   - a future install whose D-Tools events are gone gets schedule.dtoolsMissing (shown under Needs attention);
+//     an empty placeholder job is hidden; it all comes back if the events return.
+//   - D-Tools "Scheduled Events" (company requests, no labor or revenue) stay calendar-only.
 (function () {
   const pad = n => String(n).padStart(2, '0');
   function parse(v) {  // -> { date: 'YYYY-MM-DD', time: 'HH:MM' | '' }
@@ -41,6 +51,7 @@
       return r.status; } catch (e) { return 'error'; }
   }
   const todayPT = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
+  const label0 = q => (q.project || {}).dtoolsProjectName || q.label || (q.project || {}).customerName || '';
   const cleanAddr = a => String(a || '').replace(/\r?\n/g, ', ').replace(/,\s*United States$/i, '').trim();
 
   async function importSchedule(projects, extra) {
@@ -66,14 +77,24 @@
       const finished = /installed|completed/i.test(p.stage || stageOf[dtoolsId] || '');
       const crew = tasks.filter(t => t.techs.length);
       // ---- find the job: labor quote first, then a placeholder this importer made
-      const cand = all.filter(d => { const q = d.data(), pr = q.project || {};
-        return (dtoolsId && pr.dtoolsOpportunityId === dtoolsId) || (p.number && pr.dtoolsOppNumber === p.number) || q.label === p.name || pr.customerName === p.name ||
-          (p.client && !(pr.dtoolsOpportunityId && dtoolsId && pr.dtoolsOpportunityId !== dtoolsId) && [q.label, pr.customerName, pr.dtoolsClientName].some(v => v && fold(v) === fold(p.client))); });
+      const strongM = q => { const pr = q.project || {}; return !q.mergedInto && ((dtoolsId && pr.dtoolsOpportunityId === dtoolsId) || (p.number && pr.dtoolsOppNumber === p.number) || q.label === p.name || pr.customerName === p.name || pr.dtoolsProjectName === p.name); };
+      const weakM = q => { const pr = q.project || {}; return !q.mergedInto && p.client && !(pr.dtoolsOpportunityId && dtoolsId && pr.dtoolsOpportunityId !== dtoolsId) && [q.label, pr.customerName, pr.dtoolsClientName].some(v => v && fold(v) === fold(p.client)); };
+      const cand = all.filter(d => strongM(d.data()));
       const placeholder = d => d.data().counted === 'dtools-schedule';
       const rank = q => ({ scheduled: 0, won: 1, submitted: 2, closed: 3, draft: 4 }[q.status] ?? 5);
-      const real = cand.filter(d => !placeholder(d)).sort((a, b) => rank(a.data()) - rank(b.data()));
+      const tms = q => { const v = q.updatedAt || q.savedAt; return v && v.toMillis ? v.toMillis() : (Date.parse(v || '') || 0); };
+      const real = cand.filter(d => !placeholder(d)).sort((a, b) => rank(a.data()) - rank(b.data()) || (b.data().isLocked ? 1 : 0) - (a.data().isLocked ? 1 : 0) || tms(b.data()) - tms(a.data()));
       const holders = cand.filter(placeholder);
-      let doc = real[0] || holders[0] || null;
+      const reported = holders.find(h => { const hq = h.data(); return hq.job || hq.signoff; });
+      let doc = (reported && real[0]) ? reported : (real[0] || holders[0] || null);
+      if (reported && real[0] && (reported.data().laborQuote || {}).id !== real[0].id) {  // v10.9.0 quote arrived after the techs reported: attach it to that job
+        const rq = real[0].data();
+        await reported.ref.set({ items: rq.items || [], options: rq.options || {}, laborQuote: { id: real[0].id, label: rq.label || '', at: new Date().toISOString() } }, { merge: true });
+        await real[0].ref.set({ jobHidden: true, mergedInto: reported.id }, { merge: true });
+        out.linked.push(p.name + ' (labor quote attached to the existing job)');
+      }
+      const weak = !real.length ? all.filter(d => !placeholder(d) && !strongM(d.data()) && weakM(d.data())).sort((a, b) => tms(b.data()) - tms(a.data()))[0] : null;
+      const ppL = (pipeByName[fold(p.name)] || {}).laborQ || null;
       const evBase = t => ({ id: t.id, date: t.when.date, start: t.when.time, end: t.until && t.until.time > t.when.time ? t.until.time : '', name: p.name, client: p.client || '', number: p.number || '',
         techs: t.techs, people: t.assignees || [], desc: String(t.desc || '').trim(), address: cleanAddr(t.address), status: t.status || '', stage: p.stage || '' });
       const crewNames = t => (t.assignees || []).filter(n => techByName[fold(n)]);
@@ -104,6 +125,12 @@
         if ((pp.files || []).length && JSON.stringify(pp.files) !== JSON.stringify(pr.files || [])) link['files'] = pp.files;  // v9.4.0 all project files
         const partsNow = pp.parts && pp.parts.known ? { total: pp.parts.total, ready: pp.parts.ready, notReady: (pp.parts.notReady || []).map(x => x.name + (x.qty > 1 ? ' ×' + x.qty : '')), items: (pp.parts.items || []).map(x => ({ name: x.name, qty: x.qty || 1, install: x.install || '' })) } : null;  // v10.0.0 items = tech checklist
         const partsChanged = partsNow && JSON.stringify(partsNow) !== JSON.stringify(q.parts || null);
+        const extraSet = {};  // v10.9.0
+        if (ppL && JSON.stringify(ppL) !== JSON.stringify(q.dtoolsLabor || null)) extraSet.dtoolsLabor = ppL;
+        if (placeholder(doc) && !(q.items || []).length) { const sug = weak ? { id: weak.id, label: weak.data().label || (weak.data().project || {}).customerName || '', client: p.client || '' } : null;
+          if (JSON.stringify(sug) !== JSON.stringify(q.quoteSuggest || null) && !(sug && q.quoteSuggestNo === sug.id)) extraSet.quoteSuggest = sug; }
+        if (sc.dtoolsMissing) { extraSet.schedule = { dtoolsMissing: null }; extraSet.jobHidden = false; }
+        if (Object.keys(extraSet).length) await ref.set(extraSet, { merge: true });
         if (Object.keys(link).some(k => k !== 'dtoolsProjectName')) out.linked.push(p.name);
         if (sc.dtoolsHash === sig && !Object.keys(link).length && !partsChanged) { out.unchanged++; }
         else if (sc.dtoolsHash === sig) { await ref.set(Object.assign({ project: Object.assign({}, pr, link) }, partsChanged ? { parts: partsNow } : {}), { merge: true }); out.unchanged++; }
@@ -114,7 +141,7 @@
           const schedule = Object.assign({}, sc, {
             dates: [...new Set(keepDates.concat(dates))].sort(), techs: [...new Set(keepTechs.concat(techs))],
             start: start || sc.start || '', end: end || (start ? '' : sc.end || ''), times, notes, address: address || sc.address || '',
-            dtoolsHash: sig, dtoolsImport: { dates, techs, at: now }, dtoolsEventIds: crew.map(t => t.id), fromDtools: true, updatedAt: now, updatedBy: 'D-Tools calendar' });
+            dtoolsHash: sig, dtoolsImport: { dates, techs, at: now }, dtoolsEventIds: crew.map(t => t.id), fromDtools: true, dtoolsMissing: null, updatedAt: now, updatedBy: 'D-Tools calendar' });
           const st = open && ['draft', 'won', undefined, ''].includes(q.status) ? 'scheduled' : q.status;
           await ref.set(Object.assign({ schedule, status: st, project: Object.assign({}, pr, link) }, open ? { jobHidden: false } : {}, partsChanged ? { parts: partsNow } : {}), { merge: true });
           out.updated.push(p.name);
@@ -126,10 +153,11 @@
           if (open && was !== now2 && schedule.dates.some(d => d >= todayPT())) toNotify.push({ quote: ref.id, change: (sc.dates || []).length ? 'updated' : 'new', name: p.name });
         }
         tasks.forEach(t => pushEv(t, doc.id));
-      } else if (p.mine && open) {
+      } else if (open && p.name && (p.pid || p.number || p.dtoolsId)) {  // v10.9.0 any D-Tools PROJECT on the calendar with a crew (was: only Anthony's); tasks with no project stay calendar-only
         const id = 'job-dt-' + (dtoolsId || fold(p.name).replace(/[^a-z0-9]+/g, '-')).slice(0, 60);
         await db.collection('quotes').doc(id).set({
           id, label: p.name, noQuote: true, status: 'scheduled', items: [], isTemplate: false, counted: 'dtools-schedule', updatedAt: new Date(),
+          dtoolsLabor: ppL, quoteSuggest: weak ? { id: weak.id, label: weak.data().label || (weak.data().project || {}).customerName || '', client: p.client || '' } : null,
           project: { customerName: p.name, dtoolsProjectName: p.name, salesManagerName: p.rep || '', dtoolsOpportunityId: dtoolsId, dtoolsOppNumber: p.number || '', dtoolsClientName: p.client || '', proposalPdf: (pipeByName[fold(p.name)] || {}).proposalPdf || '', files: (pipeByName[fold(p.name)] || {}).files || [] },
           schedule: { dates, techs, start, end, times, notes, address, dtoolsHash: sig, dtoolsImport: { dates, techs, at: now }, dtoolsEventIds: crew.map(t => t.id), fromDtools: true, updatedAt: now, updatedBy: 'D-Tools calendar' }
         }, { merge: true });
@@ -138,8 +166,22 @@
         if (dates.some(d => d >= todayPT())) toNotify.push({ quote: id, change: 'new', name: p.name });
       } else {
         tasks.forEach(t => pushEv(t, ''));   // not ours / install done: show on the Calendar only
-        out.skipped.push(p.name + (finished ? ' (install done)' : ' (no quote, not your project)') + ': shown as calendar event');
+        out.skipped.push(p.name + ' (install done): shown as calendar event');
       }
+    }
+    // v10.9.0 installs removed from the D-Tools calendar: future-only, inside the dates this import covered, never once a report exists
+    const seen = new Set(), seenDates = [];
+    (projects || []).forEach(p => (p.tasks || []).forEach(t => { seen.add(t.id); const w = parse(t.start) || parse(t.due); if (w) seenDates.push(w.date); }));
+    seenDates.sort(); const d0w = seenDates[0], d1w = seenDates[seenDates.length - 1], today = todayPT();
+    out.missing = [];
+    if (d0w) for (const d of all) {
+      const q = d.data(), sc = q.schedule || {}, ids = sc.dtoolsEventIds || [], ds = (sc.dtoolsImport || {}).dates || [];
+      if (!sc.fromDtools || q.status !== 'scheduled' || (q.job || {}).submittedAt || !ids.length || !ds.length || sc.dtoolsMissing) continue;
+      if (ids.some(i => seen.has(i))) continue;
+      if (!ds.every(x => x >= today && x >= d0w && x <= d1w)) continue;
+      const hide = q.counted === 'dtools-schedule' && !q.job && !q.signoff;
+      await d.ref.set(Object.assign({ schedule: { dtoolsMissing: new Date().toISOString() } }, hide ? { jobHidden: true } : {}), { merge: true });
+      out.missing.push(label0(q));
     }
     // D-Tools scheduled events (store work, warehouse pickups, holds…): one entry per day they cover
     for (const m of ((extra || {}).meetings || [])) {

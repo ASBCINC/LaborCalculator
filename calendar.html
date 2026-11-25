@@ -54,7 +54,7 @@ h1 { font-size:20px; margin:0; } h1 span { color:var(--gold); }
 .icr { display:flex; gap:12px; padding:9px 0; border-top:1px solid #1d2027; font-size:14px; } .ick { flex:0 0 96px; color:#8b8f98; font-size:12px; text-transform:uppercase; letter-spacing:.05em; font-weight:700; padding-top:2px; } .icv { flex:1; min-width:0; line-height:1.4; } .icv a { color:#C7A66A; }
 @media (max-width:700px) { .icbg { align-items:flex-end; padding:0; } .ic { border-radius:16px 16px 0 0; padding-bottom:calc(16px + env(safe-area-inset-bottom)); } }
 .hol { display:block; font-size:10px; font-weight:700; color:#2dd4bf; margin-top:3px; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; } .aev.holr { border-left-color:#2dd4bf; cursor:default; }
-.ev.dt { cursor:default; border-left-style:dashed; } .aev.dt { cursor:default; } .aev .desc { color:#e9dcc0; font-size:12px; margin-top:3px; white-space:pre-wrap; } .dtb { font-size:9px; font-weight:800; color:#C7A66A; letter-spacing:.05em; margin-right:4px; }
+.ev.dt { cursor:default; border-left-style:dashed; } .ev.dt.cev, .aev.dt.cev { border-left-color:#a78bfa !important; border-left-style:dotted; box-shadow:none; } /* v10.9.0 company events (no labor) */ .aev.dt { cursor:default; } .aev .desc { color:#e9dcc0; font-size:12px; margin-top:3px; white-space:pre-wrap; } .dtb { font-size:9px; font-weight:800; color:#C7A66A; letter-spacing:.05em; margin-right:4px; }
 .more { font-size:10px; color:var(--muted); margin-top:3px; }
 .agenda { margin-top:12px; }
 .agenda h3 { font-size:14px; margin:0 0 6px; color:var(--gold); }
@@ -89,7 +89,7 @@ select { background:#101216; border:1px solid var(--line); color:#fff; border-ra
     <button class="btn" id="crewBtn" title="Who is booked or free each day">Crew / who's free</button>
     <button class="btn" id="syncBtn" style="display:none" title="Pull the D-Tools calendar into the app right now">Sync from D-Tools</button>
     <select id="teamF" aria-label="Filter by team"><option value="">All teams</option><option value="SF">SF Team</option><option value="LA">LA Team</option></select>
-    <div class="legend"><span><i style="background:var(--sf)"></i>SF Team (Joseph, Eugene)</span><span><i style="background:var(--la)"></i>LA Team (Ivan, Mina)</span><span><i style="background:var(--none)"></i>Other / not assigned</span><span><b style="color:#C7A66A;font-size:10px">D-T</b> D-Tools calendar event (no job in the calculator)</span><span><b style="color:#2dd4bf;font-size:10px">Holiday</b></span><span><b style="color:#C7A66A;font-size:10px">EVT</b> D-Tools scheduled event (store work, pickups, holds)</span></div>
+    <div class="legend"><span><i style="background:var(--sf)"></i>SF Team (Joseph, Eugene)</span><span><i style="background:var(--la)"></i>LA Team (Ivan, Mina)</span><span><i style="background:var(--none)"></i>Other / not assigned</span><span><i style="background:#a78bfa"></i>Company event (no labor, calendar only)</span><span><b style="color:#2dd4bf;font-size:10px">Holiday</b></span><span><b style="color:#C7A66A;font-size:10px">EVT</b> D-Tools scheduled event (store work, pickups, holds)</span></div>
   </div>
   <div id="conf"></div>
   <div id="cal"><div class="empty">Loading…</div></div>
@@ -149,7 +149,7 @@ function render() {
     if (i === 35 && d.getMonth() !== m) break;
     html += `<div class="day ${d.getMonth() !== m ? 'out' : ''} ${k === today ? 'today' : ''} ${k === SEL ? 'sel' : ''}" data-day="${k}"><span class="num">${d.getDate()}</span>` +
       evs.filter(q => q._hol).map(q => `<span class="hol" title="${esc(q._hol)}">${esc(q._hol)}</span>`).join('') +
-      evs.filter(q => !q._hol).slice(0, 4).map(q => q._ev ? `<div class="ev dt ${q._team} ${/complete/i.test(q._ev.status) || /installed|completed/i.test(q._ev.stage) ? 'done' : ''}" data-ev="${esc(q._ev.id)}" style="cursor:pointer" title="${esc(q._ev.name)} · ${esc(q._win)}${q._ev.desc ? ' · ' + esc(q._ev.desc) : ''}"><b><span class="dtb">${q._ev.kind === 'event' ? 'EVT' : 'D-T'}</span>${esc(q._ev.name)}</b><span class="t">${esc(q._win)}</span></div>`
+      evs.filter(q => !q._hol).slice(0, 4).map(q => q._ev ? `<div class="ev dt ${q._team} ${q._ev.kind === 'event' ? 'cev' : ''} ${/complete/i.test(q._ev.status) || /installed|completed/i.test(q._ev.stage) ? 'done' : ''}" data-ev="${esc(q._ev.id)}" style="cursor:pointer" title="${esc(q._ev.name)} · ${esc(q._win)}${q._ev.desc ? ' · ' + esc(q._ev.desc) : ''}"><b><span class="dtb">${q._ev.kind === 'event' ? 'EVT' : 'D-T'}</span>${esc(q._ev.name)}</b><span class="t">${esc(q._win)}</span></div>`
         : `<a class="ev ${q._team} ${['submitted', 'closed'].includes(q.status) ? 'done' : ''}" href="./jobs.html?quote=${encodeURIComponent(q._id)}" data-q="${esc(q._id)}" title="${esc(label(q))} · ${esc(q._win)}${((q.schedule || {}).notes || []).length ? ' · ' + esc(q.schedule.notes.join(' / ')) : ''}"><b>${CONF.some(c => c.date === k && [c.a, c.b].includes(label(q))) ? '<span class="warn">⚠</span>' : ''}${esc(label(q))}</b><span class="t">${esc(q._win)}</span></a>`).join('') +
       (evs.filter(q => !q._hol).length > 4 ? `<div class="more">+${evs.filter(q => !q._hol).length - 4} more</div>` : '') + '</div>';
   }
@@ -167,7 +167,7 @@ function renderAgenda(byDay) {
   box.innerHTML = `<h3>${esc(title)}${SEL ? ' <button class="btn" style="height:28px;font-size:11px;margin-left:6px" onclick="SEL=null;render()">Show whole month</button>' : ''}</h3>` +
     (days.flatMap(k => (byDay[k] || []).map(q => ({ k, q }))).map(({ k, q }) => { const day = SEL ? '' : esc(new Date(k + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })) + ' · ';
       if (q._hol) return `<div class="aev holr"><div style="flex:1;min-width:0"><div class="nm" style="color:#2dd4bf">${esc(q._hol)}</div><div class="meta">${day}Holiday</div></div></div>`;
-      if (q._ev) { const e = q._ev; return `<div class="aev dt ${q._team}" data-ev="${esc(e.id)}" style="cursor:pointer"><div style="flex:1;min-width:0"><div class="nm"><span class="dtb">${e.kind === 'event' ? 'D-TOOLS EVENT' : 'D-TOOLS'}</span>${esc(e.name)}</div>
+      if (q._ev) { const e = q._ev; return `<div class="aev dt ${q._team} ${e.kind === 'event' ? 'cev' : ''}" data-ev="${esc(e.id)}" style="cursor:pointer"><div style="flex:1;min-width:0"><div class="nm"><span class="dtb">${e.kind === 'event' ? 'COMPANY EVENT · NO LABOR' : 'D-TOOLS'}</span>${esc(e.name)}</div>
         <div class="meta">${day}${esc(q._win)} · ${esc(e.people.join(', ') || 'Nobody assigned')}${e.client ? ' · ' + esc(e.client) : ''}${e.address ? ' · ' + esc(e.address) : ''}</div>${e.desc ? `<div class="desc">${esc(e.desc)}</div>` : ''}</div>${teamTag(q._team)}</div>`; }
       const sc = q.schedule || {};
       return `<a class="aev ${q._team}" href="./jobs.html?quote=${encodeURIComponent(q._id)}" data-q="${esc(q._id)}"><div style="flex:1;min-width:0"><div class="nm">${esc(label(q))}</div>

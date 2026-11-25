@@ -96,7 +96,7 @@ def main():
                 push(rec, 'stage', f"Stage: {old.get('stage') or '—'} → {p.get('stage')}")
             if old.get('price') is not None and abs(money(old.get('price')) - rec['price']) >= 0.01:
                 push(rec, 'value', f"Contract value ${old['price']:,.2f} → ${rec['price']:,.2f}")
-        if not old or old.get('modified') != rec['modified'] or not old.get('detailAt') or 'parts' not in old or 'files' not in old or (old.get('parts') or {}).get('rule') != 'staged':  # v9.3.0/9.4.0: one-time refetch for parts, proposal PDF, all files
+        if not old or old.get('modified') != rec['modified'] or not old.get('detailAt') or 'parts' not in old or 'files' not in old or (old.get('parts') or {}).get('rule') != 'staged' or 'laborQ' not in old:  # v9.3.0/9.4.0: one-time refetch for parts, proposal PDF, all files
             try:
                 d = api('Projects/GetProject', {'id': pid})
                 rec.update({'rep': d.get('salesperson'), 'start': utc(d.get('startDate')), 'end': utc(d.get('endDate')),
@@ -125,6 +125,15 @@ def main():
                                 'items': [{'name': i.get('model') or i.get('name') or 'Item', 'qty': i.get('quantity') or 1, 'install': i.get('installStatus') or ''} for i in prods][:40],
                                 # v9.9.0: products not yet set to Staged (or later) in D-Tools, for the rep's 2-day warning
                                 'notStaged': [{'name': i.get('model') or i.get('name') or 'Item', 'qty': i.get('quantity') or 1, 'install': i.get('installStatus') or ''} for i in prods if str(i.get('installStatus') or '').lower() not in ('staged', 'delivered', 'installed')][:15]}
+                # v10.9.0 quoted labor from Anthony's labor SKUs (QTY = hours): Installation Service (INSTALL_SERVICE), Programming (SRV-PROG)
+                def lab_hours(code):
+                    t = 0.0
+                    for i in (d.get('items') or []):
+                        txt = ' '.join(str(i.get(k) or '') for k in ('name', 'shortName', 'partNumber', 'model')).upper()
+                        if code in txt and not (i.get('isOptional') and not i.get('isOptionalRecommended')):
+                            t += float(i.get('quantity') or 0) * float(i.get('unitLaborTime') or 3600) / 3600
+                    return round(t, 2)
+                rec['laborQ'] = {'install': lab_hours('INSTALL_SERVICE'), 'prog': lab_hours('SRV-PROG')}
                 rec['paid'] = round(sum(x['paid'] for x in pays), 2)
                 cos = api('ChangeOrders/GetChangeOrders', {'projectId': pid})
                 cos = cos if isinstance(cos, list) else (cos.get('changeOrders') or [])
