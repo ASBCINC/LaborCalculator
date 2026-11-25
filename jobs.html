@@ -343,8 +343,8 @@ function quotedHrs(q) {
     inst += ((Number(c.installHours) || 0) + (it.addon ? Number(it.addon.installHours) || 0 : 0)) * n;
     prog += ((Number(c.programmingHours) || 0) + (it.addon ? Number(it.addon.programmingHours) || 0 : 0)) * n; });
   if (inst + prog > 0) return { est: r(inst + prog), inst: r(inst), prog: r(prog), src: 'labor quote' + (q.laborQuote && q.laborQuote.label ? ' (' + q.laborQuote.label + ')' : '') };
-  const d = (q && q.dtoolsLabor) || {}, di = Number(d.install) || 0, dp = Number(d.prog) || 0;
-  if (di + dp > 0) return { est: r(di + dp), inst: r(di), prog: r(dp), src: 'D-Tools proposal' };
+  const d = (q && q.dtoolsLabor) || {}, df = Number(d.flat) || 0, di = (Number(d.install) || 0) + df, dp = Number(d.prog) || 0;
+  if (di + dp > 0) return { est: r(di + dp), inst: r(di), prog: r(dp), src: 'D-Tools proposal' + (df ? ' (incl. ' + r(df) + ' hrs estimated from the old Labor (Flat Rate) line at $200/hr)' : '') };
   return { est: 0, inst: 0, prog: 0, src: '' };
 }
 function lineEst(it) {
@@ -426,7 +426,7 @@ function attentionCard(jobs) {
     if (q.quoteSuggest && q.quoteSuggest.id && !(q.items || []).length) items.push(`<div class="row"><div><b>${nm}</b><div class="qmeta">Possible labor quote: “${esc(q.quoteSuggest.label || q.quoteSuggest.id)}” (same client name). Is it this job?</div></div><div style="display:flex;gap:6px"><button class="qbtn gold" onclick="attachQuote('${q._id}')">Attach</button><button class="qbtn" onclick="noSuggest('${q._id}')">Not it</button></div></div>`);
     if (sc.dtoolsMissing && !q.missingAck) items.push(`<div class="row"><div><b>${nm}</b><div class="qmeta">Removed from the D-Tools calendar (${esc(ds.map(fmtDate).join(', '))}). ${q.job ? 'Hours were already logged, so the job was kept.' : 'Hidden from the techs.'}</div></div><div style="display:flex;gap:6px">${open(q)}<button class="qbtn" onclick="ackMissing('${q._id}')">OK</button></div></div>`);
     if ((q.unscheduled || q.counted === 'no-quote') && !sc.fromDtools && !q.unschedAck && ['submitted', 'closed', 'scheduled'].includes(q.status)) items.push(`<div class="row"><div><b>${nm}</b><div class="qmeta">Unscheduled visit by ${esc(nameOf((q.job || {}).submittedBy || (sc.techs || [])[0] || ''))}${ds.length ? ' on ' + esc(fmtDate(ds[0])) : ''}: add it to the D-Tools calendar so the records match.</div></div><div style="display:flex;gap:6px">${open(q)}<button class="qbtn" onclick="ackUnsched('${q._id}')">It’s on D-Tools</button></div></div>`);
-    if (q.status === 'scheduled' && ds.length && ds[0] <= soon && !(q.quoteSuggest && q.quoteSuggest.id) && quotedHrs(q).est === 0 && !q.noLaborAck) items.push(`<div class="row"><div><b>${nm}</b><div class="qmeta">No labor quoted (no calculator quote, no INSTALL_SERVICE / SRV-PROG hours in D-Tools) · ${esc(fmtDate(ds.find(d => d >= t) || ds[ds.length - 1]))} · Rep: ${esc((q.project || {}).salesManagerName || '—')}</div></div><div style="display:flex;gap:6px">${open(q)}<button class="qbtn" onclick="ackNoLabor('${q._id}')">OK</button></div></div>`);
+    if (q.status === 'scheduled' && ds.length && ds[0] <= soon && !(q.quoteSuggest && q.quoteSuggest.id) && quotedHrs(q).est === 0 && !q.noLaborAck) items.push(`<div class="row"><div><b>${nm}</b><div class="qmeta">No labor quoted (no calculator quote, no INSTALL_SERVICE / SRV-PROG / flat-rate labor in D-Tools) · ${esc(fmtDate(ds.find(d => d >= t) || ds[ds.length - 1]))} · Rep: ${esc((q.project || {}).salesManagerName || '—')}</div></div><div style="display:flex;gap:6px">${open(q)}<button class="qbtn" onclick="ackNoLabor('${q._id}')">OK</button></div></div>`);
   });
   return items.length ? `<div class="sect" style="color:#ffd479">Needs attention (${items.length})</div><div class="attn">${items.join('')}</div>` : '';
 }
@@ -736,7 +736,7 @@ function moneyCard(j, show) {  // v10.2.0 time quoted vs time on site (no dollar
     <div><div class="qmeta">Actual labor (${hrs(site)} hrs on site × techs)</div><div style="font-size:22px;font-weight:800;color:var(--gold)">${hrs(lab)} hrs</div></div>
     <div><div class="qmeta">Days</div><div style="font-size:22px;font-weight:800">${days}</div></div></div>
     ${est ? `<div style="margin-top:10px;font-size:15px"><b class="${verdict[1]}">${verdict[0]}</b>: ${diff > 0 ? hrs(diff) + ' hrs over' : diff < 0 ? hrs(-diff) + ' hrs under' : 'right on'} (${d > 0 ? '+' : ''}${Math.round(d * 100)}%)${show ? ` · <span class="${pts >= 0 ? 'pl' : 'mi'}">${pts > 0 ? '+' : ''}${pts} pts</span> to ${esc((Q.project || {}).salesManagerName || 'the rep')}` : ''}</div>`
-      : `<div class="qmeta" style="margin-top:6px"><b style="color:#ff9f6b">No labor quoted</b>: no calculator labor quote and no INSTALL_SERVICE / SRV-PROG hours on the D-Tools proposal, so there is no quoted time to compare.</div>`}</div>`;
+      : `<div class="qmeta" style="margin-top:6px"><b style="color:#ff9f6b">No labor quoted</b>: no calculator labor quote and no INSTALL_SERVICE / SRV-PROG / flat-rate labor on the D-Tools proposal, so there is no quoted time to compare.</div>`}</div>`;
 }
 function logForm() {
   const j = Q.job || {}; const lines = j.lines || [];

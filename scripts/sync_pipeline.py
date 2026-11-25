@@ -42,6 +42,23 @@ def api(path, params):
         body = r.read().decode()
         return json.loads(body) if body else {}
 
+def labor_q(items):
+    """v10.9.0 quoted labor from Anthony's labor SKUs (QTY = hours): Installation Service (INSTALL_SERVICE), Programming (SRV-PROG)."""
+    def hours(code):
+        t = 0.0
+        for i in (items or []):
+            txt = ' '.join(str(i.get(k) or '') for k in ('name', 'shortName', 'partNumber', 'model')).upper()
+            if code in txt and not (i.get('isOptional') and not i.get('isOptionalRecommended')):
+                t += float(i.get('quantity') or 0) * float(i.get('unitLaborTime') or 3600) / 3600
+        return round(t, 2)
+    # older proposals (being phased out): a "Labor (Flat Rate)" allowance in dollars -> estimated hours at $200/hr (Anthony, Nov 25)
+    flat = 0.0
+    for i in (items or []):
+        nm = ' '.join(str(i.get(k) or '') for k in ('name', 'shortName')).upper()
+        if (i.get('allowanceType') == 'Labor' or 'FLAT RATE' in nm) and 'INSTALL_SERVICE' not in nm and 'SRV-PROG' not in nm and not (i.get('isOptional') and not i.get('isOptionalRecommended')):
+            flat += float(i.get('quantity') or 1) * float(i.get('unitPrice') or 0) / 200
+    return {'install': hours('INSTALL_SERVICE'), 'prog': hours('SRV-PROG'), 'flat': round(flat, 2), 'v': 2}
+
 def utc(s):
     """D-Tools dates come without a zone and are UTC."""
     if not s: return None
@@ -65,6 +82,38 @@ def load_prev():
     except fs.FirestoreError as e:
         if e.code == 404: return {}
         raise
+
+def run_query(body):
+    headers, extra = fs._auth()
+    url = fs.ROOT + ':runQuery' + ('?' + urllib.parse.urlencode(extra) if extra else '')
+    req = urllib.request.Request(url, method='POST', headers={**headers, 'Content-Type': 'application/json'}, data=json.dumps(body).encode())
+    with urllib.request.urlopen(req, timeout=60) as r:
+        return [x['document'] for x in json.loads(r.read().decode()) if 'document' in x]
+
+def other_jobs_labor():
+    docs = run_query({'structuredQuery': {'from': [{'collectionId': 'quotes'}], 'where': {'fieldFilter': {'field': {'fieldPath': 'counted'}, 'op': 'EQUAL', 'value': {'stringValue': 'dtools-schedule'}}}, 'limit': 200}})
+    done = 0
+    for d in docs:
+        f = fs.fields(d)
+        if f.get('dtoolsLaborAt') or f.get('status') not in ('scheduled', 'submitted'): continue
+        if done >= 8: break
+        pr = f.get('project') or {}
+        name, number = pr.get('dtoolsProjectName') or f.get('label') or '', pr.get('dtoolsOppNumber') or ''
+        if not name: continue
+        res = api('Projects/GetProjects', {'search': number or name, 'includeArchived': 'false', 'page': 1, 'pageSize': 10})
+        hit = next((p for p in (res.get('projects') or []) if p.get('name') == name or (number and p.get('number') == number)), None)
+        if not hit:  # try again next run (search found nothing); no write
+            print(f'::warning::labor for {name}: project not found by D-Tools search'); done += 1; continue
+        det = api('Projects/GetProject', {'id': hit['id']})
+        lab = labor_q(det.get('items'))
+        body = {'fields': {'dtoolsLaborAt': {'timestampValue': NOW}}}
+        mask = ['dtoolsLaborAt']
+        if det.get('salesperson') and not pr.get('salesManagerName'):  # the rep, for bid scoring and alerts
+            body['fields']['project'] = {'mapValue': {'fields': {'salesManagerName': {'stringValue': det['salesperson']}}}}; mask.append('project.salesManagerName')
+        if lab: body['fields']['dtoolsLabor'] = {'mapValue': {'fields': {k: {'doubleValue': float(v)} for k, v in lab.items()}}}; mask.append('dtoolsLabor')
+        fs.call('quotes/' + fs.doc_id(d), method='PATCH', body=body, params={'updateMask.fieldPaths': mask})
+        print(f'::notice::labor for {name}: {lab}')
+        done += 1
 
 def main():
     prev = load_prev()
@@ -96,7 +145,7 @@ def main():
                 push(rec, 'stage', f"Stage: {old.get('stage') or '—'} → {p.get('stage')}")
             if old.get('price') is not None and abs(money(old.get('price')) - rec['price']) >= 0.01:
                 push(rec, 'value', f"Contract value ${old['price']:,.2f} → ${rec['price']:,.2f}")
-        if not old or old.get('modified') != rec['modified'] or not old.get('detailAt') or 'parts' not in old or 'files' not in old or (old.get('parts') or {}).get('rule') != 'staged' or 'laborQ' not in old:  # v9.3.0/9.4.0: one-time refetch for parts, proposal PDF, all files
+        if not old or old.get('modified') != rec['modified'] or not old.get('detailAt') or 'parts' not in old or 'files' not in old or (old.get('parts') or {}).get('rule') != 'staged' or (old.get('laborQ') or {}).get('v') != 2:  # v9.3.0/9.4.0: one-time refetch for parts, proposal PDF, all files
             try:
                 d = api('Projects/GetProject', {'id': pid})
                 rec.update({'rep': d.get('salesperson'), 'start': utc(d.get('startDate')), 'end': utc(d.get('endDate')),
@@ -125,15 +174,7 @@ def main():
                                 'items': [{'name': i.get('model') or i.get('name') or 'Item', 'qty': i.get('quantity') or 1, 'install': i.get('installStatus') or ''} for i in prods][:40],
                                 # v9.9.0: products not yet set to Staged (or later) in D-Tools, for the rep's 2-day warning
                                 'notStaged': [{'name': i.get('model') or i.get('name') or 'Item', 'qty': i.get('quantity') or 1, 'install': i.get('installStatus') or ''} for i in prods if str(i.get('installStatus') or '').lower() not in ('staged', 'delivered', 'installed')][:15]}
-                # v10.9.0 quoted labor from Anthony's labor SKUs (QTY = hours): Installation Service (INSTALL_SERVICE), Programming (SRV-PROG)
-                def lab_hours(code):
-                    t = 0.0
-                    for i in (d.get('items') or []):
-                        txt = ' '.join(str(i.get(k) or '') for k in ('name', 'shortName', 'partNumber', 'model')).upper()
-                        if code in txt and not (i.get('isOptional') and not i.get('isOptionalRecommended')):
-                            t += float(i.get('quantity') or 0) * float(i.get('unitLaborTime') or 3600) / 3600
-                    return round(t, 2)
-                rec['laborQ'] = {'install': lab_hours('INSTALL_SERVICE'), 'prog': lab_hours('SRV-PROG')}
+                rec['laborQ'] = labor_q(d.get('items'))  # v10.9.0
                 rec['paid'] = round(sum(x['paid'] for x in pays), 2)
                 cos = api('ChangeOrders/GetChangeOrders', {'projectId': pid})
                 cos = cos if isinstance(cos, list) else (cos.get('changeOrders') or [])
@@ -211,6 +252,9 @@ def main():
         work = (sub.get('work') or '').replace('\n', ' ').strip()
         push(rec, 'job', f"Job report ({sub.get('jobStatus') or 'no status'}) by {sub.get('submittedBy') or 'tech'}: {work[:140]}", sub.get('link'))
 
+    # v10.9.0 jobs the D-Tools calendar created for projects Anthony is NOT the PM on: fetch their quoted labor once
+    try: other_jobs_labor()
+    except Exception as e: print(f'::warning::labor for other jobs: {e}')
     data = {'projects': projects, 'opps': opps, 'oppChecked': checked}
     if json.dumps(data, sort_keys=True) == json.dumps({k: prev.get(k) for k in data}, sort_keys=True):
         print(f'::notice::Pipeline unchanged ({len(projects)} projects, {len(opps)} opportunities, {calls} D-Tools calls)'); return

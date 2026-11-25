@@ -140,12 +140,12 @@ def main():
     def labor_item(i):
         # v10.9.0 only Anthony's two labor SKUs count: Installation Service (INSTALL_SERVICE) and Programming & System Configuration (SRV-PROG)
         txt = ' '.join(str(i.get(k) or '') for k in ('partNumber', 'name', 'shortName', 'model')).upper()
-        return bool(re.search(r'INSTALL_SERVICE|SRV-PROG', txt))
+        return bool(re.search(r'INSTALL_SERVICE|SRV-PROG', txt)) or i.get('allowanceType') == 'Labor' or 'FLAT RATE' in txt  # + the older "Labor (Flat Rate)" line being phased out
     open_ids = [oid for oid, f in keep.items() if not re.search(r'lost|won|closed', str(f.get('stage') or ''), re.I)]
     calls, lab_changed = 0, False
     for oid in open_ids:
         f = keep[oid]; cur = lab.get(oid) or {}
-        if cur.get('mod') == f.get('modifiedDate') and cur.get('labor') is not None and cur.get('rule') == 'sku2': continue  # v10.9.0 recheck with the exact SKUs
+        if cur.get('mod') == f.get('modifiedDate') and cur.get('labor') is not None and cur.get('rule') == 'sku3': continue  # v10.9.0 recheck with the exact SKUs
         if calls >= 60: break
         try:
             d = http(f'{BASE}/Opportunities/GetOpportunity?' + urllib.parse.urlencode({'id': oid}), headers=headers); calls += 1
@@ -153,7 +153,7 @@ def main():
             for qid in qids[:4]:
                 qd = http(f'{BASE}/Quotes/GetQuote?' + urllib.parse.urlencode({'id': qid}), headers=headers); calls += 1
                 if any(labor_item(i) for i in ((qd or {}).get('items') or [])): has = True; break
-            lab[oid] = {'mod': f.get('modifiedDate'), 'labor': has, 'quotes': len(qids), 'rule': 'sku2'}
+            lab[oid] = {'mod': f.get('modifiedDate'), 'labor': has, 'quotes': len(qids), 'rule': 'sku3'}
         except Exception as e:
             print(f'::warning::labor SKU check {f.get("name")}: {e}')
             lab[oid] = {'mod': f.get('modifiedDate'), 'labor': None, 'err': str(e)[:120]}
