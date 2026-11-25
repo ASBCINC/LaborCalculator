@@ -626,6 +626,7 @@
         </div>
     </div>
 
+    <script src="./diag.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
     <style>
         .admin-edit-btn { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; padding: 2px 10px; border: 1px solid #C7A66A; color: #C7A66A; border-radius: 9999px; background: transparent; cursor: pointer; font-weight: 600; }
@@ -703,7 +704,7 @@
               }
           });
 
-        const APP_VERSION = '10.7.0';
+        const APP_VERSION = '10.8.0';
         const BUILD_DATE = '2026-11-24';
         let HOURLY_RATE = 200;
 
@@ -1930,6 +1931,7 @@
         }
         document.getElementById('authModeToggle').addEventListener('click', () => setAuthMode(authMode === 'create' ? 'signin' : 'create'));
         function showAuthGate(show, msg) {
+            if (show && window.ASBCDiag) ASBCDiag.ready('sign-in screen');  // v10.8.0
             const g = document.getElementById('authGate');
             g.classList.toggle('hidden', !show); g.classList.toggle('flex', show);
             if (show) g.classList.add('ready');  // v8.33.0: the sign-in form only appears once we know nobody is signed in (no flash)
@@ -2067,6 +2069,7 @@
                     db.collection('quotes').where('status', '==', 'submitted').get().then(sn => { if (sn.size) jl.textContent = 'Jobs (' + sn.size + ' to review)'; }).catch(() => {});
                 }
                 applySignedInUser();
+                window.ASBCDiag && ASBCDiag.ready('calculator');  // v10.8.0 error log
                 refreshSavedEstimateList();
                 loadRepLeaderboard();
                 if (typeof _bootQuoteId !== 'undefined' && _bootQuoteId) { const q = _bootQuoteId; _bootQuoteId = null; loadQuoteById(q); }

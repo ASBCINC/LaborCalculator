@@ -9,6 +9,7 @@
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<script src="./diag.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
@@ -934,8 +935,9 @@ document.addEventListener('keydown', e => {
 })();
 
 firebase.auth().onAuthStateChanged(async (u) => {
-  if (!u || !u.emailVerified) { app().innerHTML = '<div class="empty">Sign in (and confirm your email) on the <a href="./" style="text-decoration:underline">calculator</a> first, then reopen Jobs.</div>'; return; }
+  if (!u || !u.emailVerified) { window.ASBCDiag && ASBCDiag.ready('signed out'); app().innerHTML = '<div class="empty">Sign in (and confirm your email) on the <a href="./" style="text-decoration:underline">calculator</a> first, then reopen Jobs.</div>'; return; }
  try { if (!(await u.getIdTokenResult()).claims.email_verified) { await u.reload(); await u.getIdToken(true); } } catch (e) {}  // v8.28.1: refresh a sign-in token issued before the email was confirmed
+  window.ASBCDiag && ASBCDiag.stage('loading users and catalog');
   const [us, cs] = await Promise.all([db.collection('config').doc('users').get().catch(() => null), db.collection('config').doc('catalog').get().catch(() => null)]);
   USERS = (us && us.exists && us.data().users) || {};
   if (cs && cs.exists) (cs.data().items || []).forEach(i => CATALOG.set(i.id, i));
@@ -945,7 +947,9 @@ firebase.auth().onAuthStateChanged(async (u) => {
   ME = { email, name: p.name, role: p.role || 'rep', allQuotes: !!p.allQuotes, access: ASBCRoles.accessOf(p, email) };
   if (!ASBCRoles.can(ME.access, 'recaps')) return ASBCRoles.deny('recaps', app());  // v8.29.0 roles
   if (['admin', 'management'].includes(ME.access)) { try { const st = await db.collection('config').doc('settings').get(); SETTINGS = (st.exists && st.data()) || {}; } catch (e) {} }  // v10.0.0 rates for revenue/loss
-    try { if (qid) await showJob(qid); else if (new URLSearchParams(location.search).get('new') && ME.role !== 'rep') showNew(); else await showList(); } catch (e) { app().innerHTML = '<div class="empty">Could not load: ' + esc(e.message) + '</div>'; }
+    window.ASBCDiag && ASBCDiag.stage(qid ? 'opening job' : 'loading job list');
+    try { if (qid) await showJob(qid); else if (new URLSearchParams(location.search).get('new') && ME.role !== 'rep') showNew(); else await showList(); window.ASBCDiag && ASBCDiag.ready(qid ? 'job' : 'list'); }
+    catch (e) { app().innerHTML = '<div class="empty">Could not load: ' + esc(e.message) + '</div>'; window.ASBCDiag && ASBCDiag.fail('Could not load: ' + e.message); }  // v10.8.0 error log
 });
 </script>
 </body>

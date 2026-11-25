@@ -54,6 +54,11 @@ service cloud.firestore {
       allow read: if approved() && !installer();
       allow write: if approved();
     }
+    // v10.8.0 App error log (diag.js): approved people add their own entries; admins read and clear them.
+    match /clientLogs/{id} {
+      allow create: if approved() && request.resource.data.email == em() && request.resource.data.size() < 30;
+      allow read, delete: if admin();
+    }
     // Weekly labor report: fetched by its secret id for the Friday meeting sheet; never listable, never writable here.
     match /reports/{id} {
       allow get: if true;

@@ -8,6 +8,7 @@
 <title>User Roles | ASBC</title>
 <link rel="icon" href="./favicon.svg">
 <link rel="manifest" href="./manifest.json">
+<script src="./diag.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
@@ -72,9 +73,31 @@ function render(msg) {
     <table class="ulist"><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Store (leaderboard)</th><th></th></tr></thead><tbody>
     ${ROWS.map((r, i) => r.removed ? '' : rowHtml(r, i)).join('')}</tbody></table>
     <button class="btn" id="add" style="margin-top:10px">+ Add person</button></div>
+    <div id="probs"></div>
     <div id="bar"><button class="btn gold" id="save">Save changes</button><span class="muted" id="msg">${esc(msg || '')}</span></div>`;
+  loadProbs();
   document.getElementById('add').onclick = () => { ROWS.push({ email: '', name: '', access: 'manager', store: '', isNew: true, dirty: true }); render(); };
   document.getElementById('save').onclick = save;
+}
+// v10.8.0 App problems: entries from diag.js (Firestore clientLogs) for the last 30 days; older ones are cleared when this page opens.
+let LOGS = null;
+async function loadProbs() {
+  if (!LOGS) {
+    const cut = new Date(Date.now() - 30 * 864e5).toISOString();
+    try { const sn = await db.collection('clientLogs').where('at', '>=', cut).orderBy('at', 'desc').limit(300).get(); LOGS = sn.docs.map(d => d.data()); }
+    catch (e) { LOGS = []; LOGS.err = e.code || e.message; }
+    db.collection('clientLogs').where('at', '<', cut).limit(100).get().then(sn => sn.docs.forEach(d => d.ref.delete().catch(() => {}))).catch(() => {});
+  }
+  const box = document.getElementById('probs'); if (!box) return;
+  const who = e => (USERS[e] || {}).name || e || '';
+  const dev = ua => /iPhone|iPad/.test(ua) ? 'iPhone/iPad' : /Android/.test(ua) ? 'Android' : /Windows/.test(ua) ? 'Windows' : /Mac/.test(ua) ? 'Mac' : 'other';
+  const when = v => { try { return new Date(v).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); } catch (e) { return v; } };
+  const KIND = { error: 'Error', failed: 'Could not load', slow: 'Slow (10 s+)', late: 'Loaded late', offline: 'Went offline' };
+  box.innerHTML = `<div class="card"><div class="sect">App problems (last 30 days: ${LOGS.length})</div>
+    <div class="muted" style="margin-bottom:8px">Errors, pages that could not load, and pages not ready after 10 seconds, from everyone's phones and computers. ${LOGS.err ? 'Could not read the log: ' + esc(LOGS.err) : ''}</div>
+    ${LOGS.length ? `<div style="overflow-x:auto"><table class="ulist"><thead><tr><th>When</th><th>Who</th><th>Page</th><th>What</th><th>Secs</th><th>Device</th><th>Connection</th><th>Version</th></tr></thead><tbody>
+    ${LOGS.map(x => `<tr><td>${esc(when(x.at))}</td><td>${esc(who(x.email))}</td><td>${esc(x.page || '')}</td><td><b>${esc(KIND[x.kind] || x.kind || '')}</b> ${esc(x.msg || '')}${x.stage ? ' <span class="muted">(' + esc(x.stage) + ')</span>' : ''}${x.where ? ' <span class="muted">' + esc(x.where) + '</span>' : ''}</td><td>${esc(String(x.secs ?? ''))}</td><td>${esc(dev(x.ua || ''))} · ${esc(x.app || '')}</td><td>${esc(x.online === false ? 'OFFLINE' : (x.net || '—'))}</td><td>${esc(x.ver || '')}</td></tr>`).join('')}
+    </tbody></table></div>` : '<div class="muted">Nothing logged. </div>'}</div>`;
 }
 document.addEventListener('input', e => upd(e)); document.addEventListener('change', e => upd(e));
 function upd(e) {
