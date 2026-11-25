@@ -66,6 +66,7 @@
     try { const s = await db.collection('pipeline').doc('data').get(); if (s.exists) pipe = (JSON.parse(s.data().json || '{}').projects) || {}; } catch (e) {}
     const idByName = {}, stageOf = {}, pipeByName = {}; Object.values(pipe).forEach(p => { idByName[fold(p.name)] = p.id; stageOf[p.id] = p.stage || ''; pipeByName[fold(p.name)] = p; });
     const all = (await db.collection('quotes').get()).docs.filter(d => { const q = d.data(); return !q.isTemplate && !q.jobDeleted; });
+    const phIdByName = {}; all.forEach(d => { const q = d.data(), pr = q.project || {}; if (q.counted === 'dtools-schedule' && pr.dtoolsOpportunityId && pr.dtoolsProjectName) phIdByName[fold(pr.dtoolsProjectName)] = pr.dtoolsOpportunityId; });
     const out = { updated: [], created: [], linked: [], removed: [], unchanged: 0, events: 0, notified: [], skipped: [] };
     const toNotify = [];
     const events = [];
@@ -73,7 +74,7 @@
       const tasks = (p.tasks || []).map(t => ({ ...t, techs: (t.assignees || []).map(n => techByName[fold(n)]).filter(Boolean), when: parse(t.start) || parse(t.due), until: parse(t.end) }))
         .filter(t => t.when);
       if (!tasks.length) continue;
-      const dtoolsId = p.dtoolsId || idByName[fold(p.name)] || '';
+      const dtoolsId = p.dtoolsId || idByName[fold(p.name)] || phIdByName[fold(p.name)] || '';  // v10.9.4 other PMs' projects: the id the GitHub sync stored on the job
       const finished = /installed|completed/i.test(p.stage || stageOf[dtoolsId] || '');
       const crew = tasks.filter(t => t.techs.length);
       // ---- find the job: labor quote first, then a placeholder this importer made
@@ -96,7 +97,7 @@
       const weak = !real.length ? all.filter(d => !placeholder(d) && !strongM(d.data()) && weakM(d.data())).sort((a, b) => tms(b.data()) - tms(a.data()))[0] : null;
       const ppL = (pipeByName[fold(p.name)] || {}).laborQ || null;
       const evBase = t => ({ id: t.id, date: t.when.date, start: t.when.time, end: t.until && t.until.time > t.when.time ? t.until.time : '', name: p.name, client: p.client || '', number: p.number || '',
-        techs: t.techs, people: t.assignees || [], desc: String(t.desc || '').trim(), address: cleanAddr(t.address), status: t.status || '', stage: p.stage || '' });
+        pid: p.pid || null, techs: t.techs, people: t.assignees || [], desc: String(t.desc || '').trim(), address: cleanAddr(t.address), status: t.status || '', stage: p.stage || '' });
       const crewNames = t => (t.assignees || []).filter(n => techByName[fold(n)]);
       const pushEv = (t, job) => events.push(Object.assign(evBase(t), { job: job || '', crew: crewNames(t) }));
       if (!crew.length) { tasks.forEach(t => pushEv(t, doc ? doc.id : '')); continue; }
@@ -120,6 +121,7 @@
         if (p.client && !pr.dtoolsClientName) link['dtoolsClientName'] = p.client;
         if (p.rep && !pr.salesManagerName) link['salesManagerName'] = p.rep;
         if (p.name && pr.dtoolsProjectName !== p.name) link['dtoolsProjectName'] = p.name;
+        if (p.pid && pr.dtoolsNum !== p.pid) link['dtoolsNum'] = p.pid;  // v10.9.4 numeric D-Tools project id -> Open in D-Tools link
         const pp = pipeByName[fold(p.name)] || {};  // v9.3.0 proposal PDF + parts readiness from the pipeline sync
         if (pp.proposalPdf && pr.proposalPdf !== pp.proposalPdf) link['proposalPdf'] = pp.proposalPdf;
         if ((pp.files || []).length && JSON.stringify(pp.files) !== JSON.stringify(pr.files || [])) link['files'] = pp.files;  // v9.4.0 all project files
@@ -131,7 +133,7 @@
           if (JSON.stringify(sug) !== JSON.stringify(q.quoteSuggest || null) && !(sug && q.quoteSuggestNo === sug.id)) extraSet.quoteSuggest = sug; }
         if (sc.dtoolsMissing) { extraSet.schedule = { dtoolsMissing: null }; extraSet.jobHidden = false; }
         if (Object.keys(extraSet).length) await ref.set(extraSet, { merge: true });
-        if (Object.keys(link).some(k => k !== 'dtoolsProjectName')) out.linked.push(p.name);
+        if (Object.keys(link).some(k => !['dtoolsProjectName', 'dtoolsNum'].includes(k))) out.linked.push(p.name);
         if (sc.dtoolsHash === sig && !Object.keys(link).length && !partsChanged) { out.unchanged++; }
         else if (sc.dtoolsHash === sig) { await ref.set(Object.assign({ project: Object.assign({}, pr, link) }, partsChanged ? { parts: partsNow } : {}), { merge: true }); out.unchanged++; }
         else {
@@ -158,7 +160,7 @@
         await db.collection('quotes').doc(id).set({
           id, label: p.name, noQuote: true, status: 'scheduled', items: [], isTemplate: false, counted: 'dtools-schedule', updatedAt: new Date(),
           dtoolsLabor: ppL, quoteSuggest: weak ? { id: weak.id, label: weak.data().label || (weak.data().project || {}).customerName || '', client: p.client || '' } : null,
-          project: { customerName: p.name, dtoolsProjectName: p.name, salesManagerName: p.rep || '', dtoolsOpportunityId: dtoolsId, dtoolsOppNumber: p.number || '', dtoolsClientName: p.client || '', proposalPdf: (pipeByName[fold(p.name)] || {}).proposalPdf || '', files: (pipeByName[fold(p.name)] || {}).files || [] },
+          project: { customerName: p.name, dtoolsProjectName: p.name, dtoolsNum: p.pid || null, salesManagerName: p.rep || '', dtoolsOpportunityId: dtoolsId, dtoolsOppNumber: p.number || '', dtoolsClientName: p.client || '', proposalPdf: (pipeByName[fold(p.name)] || {}).proposalPdf || '', files: (pipeByName[fold(p.name)] || {}).files || [] },
           schedule: { dates, techs, start, end, times, notes, address, dtoolsHash: sig, dtoolsImport: { dates, techs, at: now }, dtoolsEventIds: crew.map(t => t.id), fromDtools: true, updatedAt: now, updatedBy: 'D-Tools calendar' }
         }, { merge: true });
         out.created.push(p.name);

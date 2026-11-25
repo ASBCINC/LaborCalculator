@@ -112,6 +112,7 @@ function usHolidays(y) {
   return [[f(0, 1), "New Year's Day"], [nth(0, 1, 3), 'MLK Jr. Day'], [nth(1, 1, 3), "Presidents' Day"], [last(4, 1), 'Memorial Day'], [f(5, 19), 'Juneteenth'], [f(6, 4), 'Independence Day'],
     [nth(8, 1, 1), 'Labor Day'], [f(10, 11), 'Veterans Day'], [tg, 'Thanksgiving'], [after, 'Day after Thanksgiving'], [f(11, 24), 'Christmas Eve'], [f(11, 25), 'Christmas Day'], [f(11, 31), "New Year's Eve"]];
 }
+const dtLink = n => n ? 'https://d-tools.cloud/?payload=null&tenantId=11110&RedirectToEntity=Project&RedirectToId=' + encodeURIComponent(n) : '';  // v10.9.4 other PMs' projects
 let HOLIDAYS = {}, ALLEV = [], CONF = [], CREW = false, WEEK = null, PURL = {}, PIPE = {};  // v10.3.0 PURL: project name -> D-Tools link
 let ME = null, USERS = {}, JOBS = [], EVENTS = [], VIEW = new Date(), SEL = null;
 VIEW.setDate(1);
@@ -199,7 +200,7 @@ function infoJob(id) {
   const q = JOBS.find(x => x._id === id); if (!q) return; const sc = q.schedule || {}, p = q.project || {};
   infoCard({ title: label(q), client: p.dtoolsClientName || p.customerName || q.label, address: sc.address, when: (sc.dates || []).map(d => dayLbl(d) + ' · ' + windowOf(sc, d)),
     crew: (sc.techs || []).map(nameOf).join(', '), team: teamOf(sc.techs), rep: p.salesManagerName, notes: (sc.notes || []).join(' · '), href: './jobs.html?quote=' + encodeURIComponent(id),
-    pdf: p.proposalPdf, files: p.files || [], parts: partsTxt(q.parts), dt: PURL[pfold(p.dtoolsProjectName)] || PURL[pfold(label(q))] });
+    pdf: p.proposalPdf, files: p.files || [], parts: partsTxt(q.parts), dt: PURL[pfold(p.dtoolsProjectName)] || PURL[pfold(label(q))] || dtLink(p.dtoolsNum) });
 }
 // v9.3.0 parts readiness from D-Tools item statuses
 function partsTxt(pt) { if (!pt || !pt.total) return ''; if (pt.ready >= pt.total) return `<span style="color:#7ee2a0">All ${pt.total} items staged</span>`;
@@ -210,7 +211,7 @@ function infoEv(id) {
   const same = EVENTS.filter(x => x.name === e.name && x.kind === e.kind).sort((a, b) => a.date.localeCompare(b.date));
   infoCard({ title: e.name, client: e.client || (e.kind === 'event' ? 'D-Tools event' : ''), address: e.address,
     when: same.map(x => dayLbl(x.date) + ' · ' + (x.start ? t12(x.start) + (x.end ? '–' + t12(x.end) : '') : 'All day')),
-    crew: (e.people || []).join(', '), team: teamOfNames(e.people), rep: '', notes: e.desc, dt: PURL[pfold(e.name)] });
+    crew: (e.people || []).join(', '), team: teamOfNames(e.people), rep: '', notes: e.desc, dt: PURL[pfold(e.name)] || dtLink(e.pid) });
 }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.icbg').forEach(x => x.remove()); });
 // v9.3.0 Crew week: who is booked each day (leads + installers), hours per day, double-bookings in red

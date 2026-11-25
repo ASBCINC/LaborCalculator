@@ -92,30 +92,53 @@ def run_query(body):
     with urllib.request.urlopen(req, timeout=60) as r:
         return [x['document'] for x in json.loads(r.read().decode()) if 'document' in x]
 
+def to_fs(v):
+    """plain Python -> Firestore REST value (maps and lists too)"""
+    if v is None: return {'nullValue': None}
+    if isinstance(v, bool): return {'booleanValue': v}
+    if isinstance(v, int): return {'integerValue': str(v)}
+    if isinstance(v, float): return {'doubleValue': v}
+    if isinstance(v, dict): return {'mapValue': {'fields': {k: to_fs(x) for k, x in v.items()}}}
+    if isinstance(v, (list, tuple)): return {'arrayValue': {'values': [to_fs(x) for x in v]}}
+    return {'stringValue': str(v)}
+
+def job_parts(d):
+    """product checklist + readiness for a job, same shape the calendar import writes (v10.0.0 / v10.5.0 rules)"""
+    prods = [i for i in (d.get('items') or []) if i.get('type') == 'Product' and not i.get('isClientSupplied') and str(i.get('category') or '') != 'Installation Supplies' and not str(i.get('partNumber') or '').upper().startswith('INSTALL')]
+    ready = lambda i: str(i.get('installStatus') or '').lower() in ('staged', 'delivered', 'installed')
+    q = lambda i: int(i.get('quantity') or 1)
+    nm = lambda i: i.get('model') or i.get('name') or 'Item'
+    return {'total': sum(q(i) for i in prods), 'ready': sum(q(i) for i in prods if ready(i)),
+            'notReady': [nm(i) + (' ×' + str(q(i)) if q(i) > 1 else '') for i in prods if not ready(i)][:10],
+            'items': [{'name': nm(i), 'qty': q(i), 'install': i.get('installStatus') or ''} for i in prods][:40]}
+
 def other_jobs_labor():
+    """v10.9.4 jobs the D-Tools calendar created for projects Anthony is NOT the PM on (not in the pipeline):
+    quoted labor, rep, D-Tools id, files / proposal PDF and the product checklist, refreshed when the project changes."""
     docs = run_query({'structuredQuery': {'from': [{'collectionId': 'quotes'}], 'where': {'fieldFilter': {'field': {'fieldPath': 'counted'}, 'op': 'EQUAL', 'value': {'stringValue': 'dtools-schedule'}}}, 'limit': 200}})
     done = 0
     for d in docs:
         f = fs.fields(d)
-        if (f.get('dtoolsLaborAt') and (f.get('dtoolsLabor') or {}).get('v') == 3) or f.get('status') not in ('scheduled', 'submitted'): continue
-        if done >= 8: break
+        if f.get('status') not in ('scheduled', 'submitted') or done >= 15: continue
         pr = f.get('project') or {}
         name, number = pr.get('dtoolsProjectName') or f.get('label') or '', pr.get('dtoolsOppNumber') or ''
         if not name: continue
-        res = api('Projects/GetProjects', {'search': number or name, 'includeArchived': 'false', 'page': 1, 'pageSize': 10})
+        res = api('Projects/GetProjects', {'search': number or name, 'includeArchived': 'false', 'page': 1, 'pageSize': 10}); done += 1
         hit = next((p for p in (res.get('projects') or []) if p.get('name') == name or (number and p.get('number') == number)), None)
-        if not hit:  # try again next run (search found nothing); no write
-            print(f'::warning::labor for {name}: project not found by D-Tools search'); done += 1; continue
+        if not hit:
+            print(f'::warning::details for {name}: project not found by D-Tools search'); continue
+        if f.get('dtoolsModified') == hit.get('modifiedDate') and (f.get('dtoolsLabor') or {}).get('v') == 3: continue  # nothing changed in D-Tools
         det = api('Projects/GetProject', {'id': hit['id']})
-        lab = labor_q(det.get('items'))
-        body = {'fields': {'dtoolsLaborAt': {'timestampValue': NOW}}}
-        mask = ['dtoolsLaborAt']
-        if det.get('salesperson') and not pr.get('salesManagerName'):  # the rep, for bid scoring and alerts
-            body['fields']['project'] = {'mapValue': {'fields': {'salesManagerName': {'stringValue': det['salesperson']}}}}; mask.append('project.salesManagerName')
-        if lab: body['fields']['dtoolsLabor'] = {'mapValue': {'fields': {k: ({'integerValue': str(v)} if k == 'v' else {'doubleValue': float(v)}) for k, v in lab.items()}}}; mask.append('dtoolsLabor')
-        fs.call('quotes/' + fs.doc_id(d), method='PATCH', body=body, params={'updateMask.fieldPaths': mask})
-        print(f'::notice::labor for {name}: {lab}')
-        done += 1
+        files = file_list(det)
+        pdfs = [x for x in files if str(x.get('name') or '').lower().endswith('.pdf')]
+        proj = {'files': files, 'proposalPdf': pdfs[0]['url'] if pdfs else '', 'dtoolsOpportunityId': hit['id']}
+        if det.get('salesperson') and not pr.get('salesManagerName'): proj['salesManagerName'] = det['salesperson']
+        fields = {'dtoolsLabor': to_fs(labor_q(det.get('items'))), 'dtoolsLaborAt': {'timestampValue': NOW}, 'dtoolsModified': to_fs(hit.get('modifiedDate')),
+                  'project': to_fs(proj)}
+        mask = ['dtoolsLabor', 'dtoolsLaborAt', 'dtoolsModified'] + ['project.' + k for k in proj]
+        if det.get('items') is not None: fields['parts'] = to_fs(job_parts(det)); mask.append('parts')
+        fs.call('quotes/' + fs.doc_id(d), method='PATCH', body={'fields': fields}, params={'updateMask.fieldPaths': mask})
+        print(f'::notice::details for {name}: {len(files)} files, labor {labor_q(det.get("items"))}')
 
 def main():
     prev = load_prev()
