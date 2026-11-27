@@ -301,3 +301,10 @@ D-Tools handoff panel (paste-ready labor block); Quote Log search wording.
 ## v11.3.0 — Design Center links + four in-house tools (2026-11-27)
 - design.html SEED list (SEED_V=1): ProjectorCentral, AVIXA DISCAS, SANUS MountFinder + HeightFinder, AXIS Site Designer, plus the four tools. Shown to everyone until an admin opens the page, which writes them once to config/designCenter (seedV). Bump SEED_V only to push new starter links.
 - New browser-only tools (nothing saved): tool-wire.html (speaker gauge, 8/4 Ω + 70/100 V), tool-poe.html (PoE budget), tool-tv.html (size by viewing angle + mount height), tool-rack.html (RU, BTU/hr, circuit load, print). sidebar.js maps them to 'design'; sw.js caches them.
+
+## v11.4.0 — Shade sheet, lighting count, IP/VLAN plan (2026-11-27)
+- tool-shades.html: 3-point measurements (fractions OK), order size (inside = narrowest W / longest H; outside = widest W + 2×overlap, longest H + overlap), out-of-square and depth flags, schedule, CSV, print. Draft in localStorage 'asbc-shades-v1'.
+- tool-lighting.html: room presets → dimmers/switches/companions/keypads/Picos, wall boxes by gang, >4-gang warning, CSV, print. localStorage 'asbc-lighting-v1'.
+- tool-ip.html: VLANs + devices, Next free IP (skips gateway, DHCP, used), IP/MAC checks. Saves to quotes/{id}.ipPlan {vlans, devices, updatedAt, by} (installers only on their own jobs per rules). Without ?quote= it keeps a local draft and offers a job picker (&draft=1 carries the draft over).
+- jobs.html: ipPlanCard on the recap, IP plan button in report actions, link in edit step 4 (new tab), "Network / IP plan" section in the PDF.
+- design.html SEED_V=2 adds the three tools (seeds now carry v so removed older seeds don't come back).

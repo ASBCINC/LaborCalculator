@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#2F7FD1">
+<meta name="robots" content="noindex">
+<title>IP / VLAN Plan | ASBC Tools</title>
+<link rel="icon" href="./tools-favicon.svg">
+<link rel="manifest" href="./manifest.json">
+<script src="./diag.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+<script src="./roles.js"></script>
+<script src="./nav.js" defer></script>
+<script src="./update-check.js" defer></script>
+<style>
+:root { --gold:#1F6FD1; --bg:#F3F5F8; --card:#FFFFFF; --line:#E3E7EE; --muted:#4B5563; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:#1F2937; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; }
+.wrap { max-width:1000px; margin:0 auto; padding:14px 14px 60px; }
+header { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:6px; flex-wrap:wrap; }
+h1 { font-size:20px; margin:0; } h1 span { color:var(--gold); }
+.back { display:inline-block; margin:0 0 10px; color:#1F6FD1; font-size:14px; font-weight:600; text-decoration:none; }
+.intro { color:var(--muted); font-size:13px; margin:0 0 14px; }
+.box { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:14px; }
+.box h2 { font-size:15px; margin:0 0 10px; }
+.fields { display:grid; grid-template-columns:repeat(auto-fill, minmax(170px, 1fr)); gap:10px; }
+label { display:flex; flex-direction:column; gap:4px; font-size:12px; font-weight:600; color:#374151; }
+input, select { background:#FFFFFF; border:1px solid #D5DBE4; color:#1F2937; border-radius:9px; min-height:42px; padding:0 10px; font-size:15px; width:100%; font-family:inherit; }
+.btn { display:inline-flex; align-items:center; justify-content:center; min-height:40px; padding:0 14px; border-radius:9px; border:1px solid #D5DBE4; color:#1F2937; background:#FFFFFF; font-size:14px; font-weight:600; cursor:pointer; }
+.btn.green { background:#14945C; border-color:#14945C; color:#fff; }
+.tiles { display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:10px; }
+.tile { background:#F8FAFC; border:1px solid var(--line); border-radius:10px; padding:12px; }
+.tile .k { font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); font-weight:700; }
+.tile .v { font-size:22px; font-weight:700; margin-top:4px; } .tile .s { font-size:12px; color:var(--muted); margin-top:2px; }
+.ok { color:#14945C; } .warn { color:#B54708; } .bad { color:#B42318; }
+.tile.ok { border-color:#A6E3C4; background:#F0FBF5; } .tile.warn { border-color:#F7D08A; background:#FFF8EB; } .tile.bad { border-color:#F5B5AE; background:#FEF3F2; }
+table { width:100%; border-collapse:collapse; font-size:14px; }
+th, td { text-align:left; padding:8px 6px; border-bottom:1px solid var(--line); vertical-align:middle; }
+th { font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); }
+td input, td select { min-height:36px; font-size:14px; }
+.tbl { overflow-x:auto; }
+.note { font-size:12px; color:var(--muted); margin-top:10px; line-height:1.5; }
+.pill { display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; font-weight:700; }
+.pill.ok { background:#E7F7EE; } .pill.warn { background:#FFF1D6; } .pill.bad { background:#FDE4E1; }
+.x { background:none; border:0; color:#B42318; font-size:18px; cursor:pointer; min-height:36px; padding:0 8px; }
+@media print { #asbcSide, #asbcBar, #asbcNav, .back, .noprint { display:none !important; } body { background:#fff; } .box { border:0; padding:0; } }
+</style>
+<script>window.ASBC_TOOLS = true;</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./tools.css">
+</head>
+<body>
+<div class="wrap">
+  <header><h1>ASBC <span>IP / VLAN Plan</span></h1><nav id="asbcNav" data-page="design"></nav></header>
+  <a class="back" href="./design.html">‹ Design Center</a>
+  <p class="intro">Plan VLANs and device addresses for a job. Save it to the job and it shows on the job recap and in the PDF export. Don't put passwords here.</p>
+<style>
+.wc { background:#F8FAFC; border:1px solid var(--line); border-radius:10px; padding:12px; margin-bottom:10px; }
+.wc .top { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px; font-weight:700; }
+.wc .fields { grid-template-columns:repeat(auto-fill, minmax(130px, 1fr)); }
+.res { margin-top:8px; font-size:14px; } .res b { font-size:16px; }
+.flag { display:block; font-size:12px; margin-top:4px; }
+.acts { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+.chk { flex-direction:row; align-items:center; gap:8px; min-height:42px; } .chk input { width:20px; min-height:20px; }
+.printhead { display:none; } @media print { .printhead { display:block; margin-bottom:10px; } .wc { break-inside:avoid; } }
+</style>
+  <div class="box"><h2>Job</h2><div id="job" class="note" style="margin-top:0">Loading…</div></div>
+  <div class="box"><div class="printhead"><b id="ph"></b></div><h2>VLANs / networks</h2><div class="tbl"><table><thead><tr><th style="width:80px">VLAN</th><th>Name</th><th>Subnet (CIDR)</th><th>Gateway</th><th>DHCP range</th><th class="noprint"></th></tr></thead><tbody id="vl"></tbody></table></div>
+    <div class="acts noprint"><button type="button" class="btn" id="addV">+ Add VLAN</button></div></div>
+  <div class="box"><h2>Devices</h2><div class="tbl"><table><thead><tr><th>Device</th><th>Room</th><th>Make / model</th><th>MAC</th><th style="width:150px">IP</th><th style="width:120px">VLAN</th><th>Notes</th><th class="noprint"></th></tr></thead><tbody id="dv"></tbody></table></div>
+    <div class="acts noprint"><button type="button" class="btn" id="addD">+ Add device</button></div>
+    <div class="tiles" id="sum" style="margin-top:12px"></div>
+    <div class="acts noprint"><button type="button" class="btn green" id="save">Save to job</button><button type="button" class="btn" onclick="print()">Print / Save PDF</button><button type="button" class="btn" id="csvBtn">Download CSV</button><span id="msg" class="note" style="align-self:center;margin:0"></span></div>
+    <div class="note">Tap <b>Next</b> in the IP box to fill the next free address on that device's VLAN, skipping the gateway, the DHCP range and addresses already used. MACs are tidied to AA:BB:CC:DD:EE:FF. Keep device logins in the password manager, not here.</div></div>
+</div>
+<script>
+// v11.3.0 Design Center tool. Runs entirely in the browser; nothing is saved.
+firebase.initializeApp({ apiKey: "AIzaSyCSf560VkBf2esIH5rC-_Vcx349o7iIC-0", authDomain: "asbc-calculator.firebaseapp.com", projectId: "asbc-calculator" });
+firebase.auth().onAuthStateChanged(u => { if (!u || !u.emailVerified) return location.replace('./index.html'); if (typeof toolUser === 'function') toolUser(u); });
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
+const $ = id => document.getElementById(id), num = id => parseFloat($(id).value) || 0;
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmt = (n, d = 1) => Number(n).toLocaleString('en-US', { maximumFractionDigits: d, minimumFractionDigits: 0 });
+const store = { get(k) { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
+function csv(name, rows) { const t = rows.map(r => r.map(c => '"' + String(c ?? '').replace(/"/g, '""') + '"').join(',')).join('\r\n'); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([t], { type: 'text/csv' })); a.download = name.replace(/[\\/:*?"<>|]+/g, '-') + '.csv'; document.body.appendChild(a); a.click(); a.remove(); }
+const tile = (k, v, s, cls) => `<div class="tile ${cls || ''}"><div class="k">${k}</div><div class="v">${v}</div>${s ? `<div class="s">${s}</div>` : ''}</div>`;
+const db = firebase.firestore(), QID = new URLSearchParams(location.search).get('quote') || '', KEY = 'asbc-ipplan-draft-v1';
+const DEF = () => ({ vlans: [{ vid: '1', name: 'Main', subnet: '192.168.1.0/24', gw: '192.168.1.1', dhcp: '192.168.1.100-192.168.1.199' }], devices: [{ name: '', room: '', model: '', mac: '', ip: '', vlan: '1', notes: '' }] });
+let PLAN = null, JOB = null, ME = '', DIRTY = false;
+const ip2n = s => { const m = String(s || '').trim().match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/); if (!m || m.slice(1).some(x => +x > 255)) return null; return ((+m[1] << 24) >>> 0) + (+m[2] << 16) + (+m[3] << 8) + +m[4]; };
+const n2ip = n => [n >>> 24, (n >>> 16) & 255, (n >>> 8) & 255, n & 255].join('.');
+function net(v) { const m = String(v.subnet || '').trim().match(/^([\d.]+)\/(\d{1,2})$/), b = m && ip2n(m[1]); if (b == null || +m[2] > 30) return null; const bits = +m[2], mask = bits ? (0xFFFFFFFF << (32 - bits)) >>> 0 : 0, lo = (b & mask) >>> 0; return { lo, hi: (lo + 2 ** (32 - bits) - 1) >>> 0 }; }
+function dhcp(v) { const p = String(v.dhcp || '').split(/\s*[-–]\s*/), N = net(v); if (p.length !== 2) return null; let a = ip2n(p[0]), b = ip2n(p[1]);
+  if (a == null && N && /^\d+$/.test(p[0])) a = (N.lo & 0xFFFFFF00) + +p[0]; if (b == null && N && /^\d+$/.test(p[1])) b = ((a != null ? a : N.lo) & 0xFFFFFF00) + +p[1]; return a != null && b != null ? [a, b] : null; }
+const mac = s => { const h = String(s || '').replace(/[^0-9a-f]/gi, '').toUpperCase(); return h.length === 12 ? h.match(/../g).join(':') : String(s || '').trim(); };
+function check() {
+  const out = PLAN.devices.map(() => []), seenIp = {}, seenMac = {};
+  PLAN.devices.forEach((d, i) => { const n = ip2n(d.ip), v = PLAN.vlans.find(x => x.vid === d.vlan), N = v && net(v), D = v && dhcp(v);
+    if (d.ip && n == null) out[i].push(['bad', 'Not a valid IP']);
+    if (n != null) { if (seenIp[n] != null) { out[i].push(['bad', 'Same IP as row ' + (seenIp[n] + 1)]); } else seenIp[n] = i;
+      if (N && (n <= N.lo || n >= N.hi)) out[i].push(['bad', 'Outside ' + v.subnet]); else if (D && n >= D[0] && n <= D[1]) out[i].push(['warn', 'Inside the DHCP range']); if (v && ip2n(v.gw) === n) out[i].push(['bad', 'This is the gateway']); }
+    const m = String(d.mac || '').replace(/[^0-9a-f]/gi, ''); if (d.mac && m.length !== 12) out[i].push(['warn', 'MAC looks incomplete']); if (m.length === 12) { if (seenMac[m] != null) out[i].push(['bad', 'Same MAC as row ' + (seenMac[m] + 1)]); else seenMac[m] = i; } });
+  return out;
+}
+function next(i) { const d = PLAN.devices[i], v = PLAN.vlans.find(x => x.vid === d.vlan), N = v && net(v); if (!N) return alert('Give that VLAN a subnet like 192.168.20.0/24 first.');
+  const used = new Set(PLAN.devices.map(x => ip2n(x.ip)).filter(x => x != null)), D = dhcp(v), gw = ip2n(v.gw);
+  for (let n = N.lo + 1; n < N.hi; n++) if (!used.has(n) && n !== gw && !(D && n >= D[0] && n <= D[1])) { d.ip = n2ip(n); return draw(); } alert('No free addresses left on that VLAN.'); }
+const cell = (arr, i, f, ph, w) => `<td><input data-a="${arr}" data-i="${i}" data-f="${f}" value="${esc(PLAN[arr][i][f])}" placeholder="${ph || ''}" ${w ? 'style="min-width:' + w + 'px"' : ''}></td>`;
+function draw() {
+  $('vl').innerHTML = PLAN.vlans.map((v, i) => `<tr>${cell('vlans', i, 'vid', '20', 60)}${cell('vlans', i, 'name', 'AV / Control', 120)}${cell('vlans', i, 'subnet', '192.168.20.0/24', 150)}${cell('vlans', i, 'gw', '192.168.20.1', 130)}${cell('vlans', i, 'dhcp', '192.168.20.100-199', 170)}<td class="noprint"><button type="button" class="x" data-dv="${i}" aria-label="Remove VLAN">×</button></td></tr>`).join('');
+  const opts = cur => PLAN.vlans.map(v => `<option value="${esc(v.vid)}" ${v.vid === cur ? 'selected' : ''}>${esc(v.vid + (v.name ? ' ' + v.name : ''))}</option>`).join('');
+  $('dv').innerHTML = PLAN.devices.map((d, i) => `<tr>${cell('devices', i, 'name', 'Access point', 130)}${cell('devices', i, 'room', 'Living', 90)}${cell('devices', i, 'model', '', 120)}${cell('devices', i, 'mac', '', 150)}
+    <td><div style="display:flex;gap:4px"><input data-a="devices" data-i="${i}" data-f="ip" value="${esc(d.ip)}" style="min-width:120px"><button type="button" class="btn noprint" data-next="${i}" style="min-height:36px;padding:0 8px">Next</button></div><div id="fl${i}"></div></td>
+    <td><select data-a="devices" data-i="${i}" data-f="vlan" style="min-width:110px">${opts(d.vlan)}</select></td>${cell('devices', i, 'notes', '', 120)}<td class="noprint"><button type="button" class="x" data-dd="${i}" aria-label="Remove device">×</button></td></tr>`).join('');
+  calc();
+}
+function calc() {
+  const fl = check(); fl.forEach((f, i) => { const el = $('fl' + i); if (el) el.innerHTML = f.map(([c, t]) => `<span class="flag ${c}">⚠ ${esc(t)}</span>`).join(''); });
+  const devs = PLAN.devices.filter(d => d.name || d.ip), probs = fl.filter(f => f.some(x => x[0] === 'bad')).length;
+  $('sum').innerHTML = tile('Devices', devs.length, PLAN.devices.filter(d => d.ip).length + ' with an IP') + tile('VLANs', PLAN.vlans.length, '') + tile('Problems', probs, probs ? 'fix before saving' : 'none found', probs ? 'bad' : 'ok');
+  if (!JOB) store.set(KEY, PLAN);
+  $('ph').textContent = 'IP / VLAN plan' + (JOB ? ' · ' + JOB.label : '');
+}
+const clean = () => ({ vlans: PLAN.vlans.map(v => ({ vid: String(v.vid || '').trim(), name: v.name || '', subnet: (v.subnet || '').trim(), gw: (v.gw || '').trim(), dhcp: (v.dhcp || '').trim() })),
+  devices: PLAN.devices.filter(d => Object.entries(d).some(([k, x]) => k !== 'vlan' && String(x || '').trim())).map(d => ({ name: d.name || '', room: d.room || '', model: d.model || '', mac: mac(d.mac), ip: (d.ip || '').trim(), vlan: d.vlan || '', notes: d.notes || '' })) });
+const jobLabel = q => (q.project && q.project.dtoolsProjectName) || q.label || (q.project && q.project.customerName) || 'Untitled';
+async function pickJobs() {
+  $('job').innerHTML = 'Not attached to a job yet; your work is kept on this device. <select id="jp" style="margin-top:8px"><option value="">Loading jobs…</option></select>';
+  try { const us = await db.collection('config').doc('users').get(), acc = ASBCRoles.accessOf(((us.exists && us.data().users) || {})[ME], ME), role = (ASBCRoles.LEGACY[acc] || {}).role;
+    const qs = role === 'tech' ? await db.collection('quotes').where('schedule.techs', 'array-contains', ME).get() : await db.collection('quotes').where('status', 'in', ['won', 'scheduled', 'submitted', 'closed']).get();
+    const list = qs.docs.map(d => ({ id: d.id, ...d.data() })).filter(q => !q.jobDeleted && !q.mergedInto && !q.isTemplate).map(q => ({ id: q.id, l: jobLabel(q), has: !!((q.ipPlan || {}).devices || []).length })).sort((a, b) => a.l.localeCompare(b.l));
+    $('jp').innerHTML = '<option value="">Attach to a job…</option>' + list.map(j => `<option value="${esc(j.id)}">${esc(j.l)}${j.has ? ' (has a plan)' : ''}</option>`).join('');
+    $('jp').onchange = () => { const id = $('jp').value; if (id) location.href = './tool-ip.html?quote=' + encodeURIComponent(id) + '&draft=1'; };
+  } catch (e) { $('job').textContent = 'Could not load your jobs: ' + (e.code || e.message); }
+}
+async function toolUser(u) {
+  ME = (u.email || '').toLowerCase();
+  if (!QID) { PLAN = store.get(KEY) || DEF(); draw(); return pickJobs(); }
+  try { const s = await db.collection('quotes').doc(QID).get(); if (!s.exists) throw new Error('job not found'); const q = s.data(); JOB = { id: QID, label: jobLabel(q) };
+    const saved = q.ipPlan && ((q.ipPlan.devices || []).length || (q.ipPlan.vlans || []).length) ? q.ipPlan : null, draft = new URLSearchParams(location.search).has('draft') ? store.get(KEY) : null;
+    PLAN = saved ? { vlans: saved.vlans || [], devices: (saved.devices || []).concat([]) } : draft || DEF(); if (!PLAN.devices.length) PLAN.devices.push(DEF().devices[0]);
+    if (saved && draft) $('msg').textContent = 'This job already had a plan, so that is shown (your device draft was not used).'; DIRTY = !saved && !!draft;
+    $('job').innerHTML = `<b>${esc(JOB.label)}</b>${saved ? ' · saved ' + esc(new Date(saved.updatedAt).toLocaleString('en-US')) + (saved.by ? ' by ' + esc(saved.by) : '') : ' · no plan saved yet'}<div style="margin-top:6px"><a href="./jobs.html?quote=${encodeURIComponent(QID)}" style="color:#1F6FD1;font-weight:600">‹ Back to the job</a></div>`;
+  } catch (e) { $('job').textContent = 'Could not open that job: ' + (e.code || e.message); PLAN = DEF(); }
+  draw();
+}
+document.addEventListener('input', e => { const a = e.target.dataset.a; if (!a) return; PLAN[a][e.target.dataset.i][e.target.dataset.f] = e.target.value; DIRTY = true; calc(); });
+document.addEventListener('change', e => { const a = e.target.dataset.a; if (!a) return; const f = e.target.dataset.f; if (f === 'mac') { PLAN[a][e.target.dataset.i].mac = mac(e.target.value); e.target.value = PLAN[a][e.target.dataset.i].mac; } else PLAN[a][e.target.dataset.i][f] = e.target.value; if (a === 'vlans') draw(); else calc(); });
+document.addEventListener('click', e => { const t = e.target.closest('[data-next],[data-dv],[data-dd]'); if (!t) return; DIRTY = true;
+  if (t.dataset.next) return next(+t.dataset.next);
+  if (t.dataset.dv) { const v = PLAN.vlans[+t.dataset.dv]; if (PLAN.devices.some(d => d.vlan === v.vid && (d.ip || d.name)) && !confirm('Devices are on VLAN ' + v.vid + '. Remove it anyway?')) return; PLAN.vlans.splice(+t.dataset.dv, 1); }
+  else PLAN.devices.splice(+t.dataset.dd, 1); if (!PLAN.devices.length) PLAN.devices.push(DEF().devices[0]); draw(); });
+$('addV').onclick = () => { const ids = PLAN.vlans.map(v => +v.vid || 0), vid = String(Math.max(0, ...ids) >= 10 ? Math.max(...ids) + 10 : 10); PLAN.vlans.push({ vid, name: '', subnet: '192.168.' + vid + '.0/24', gw: '192.168.' + vid + '.1', dhcp: '' }); DIRTY = true; draw(); };
+$('addD').onclick = () => { const l = PLAN.devices[PLAN.devices.length - 1] || {}; PLAN.devices.push({ name: '', room: l.room || '', model: '', mac: '', ip: '', vlan: l.vlan || (PLAN.vlans[0] || {}).vid || '', notes: '' }); DIRTY = true; draw(); };
+$('save').onclick = async () => {
+  if (!JOB) { $('msg').textContent = 'Pick the job at the top first.'; $('job').scrollIntoView({ behavior: 'smooth' }); return; }
+  if (check().some(f => f.some(x => x[0] === 'bad')) && !confirm('Some rows have problems (marked in red). Save anyway?')) return;
+  const p = Object.assign(clean(), { updatedAt: new Date().toISOString(), by: ME });
+  try { await db.collection('quotes').doc(QID).update({ ipPlan: p }); DIRTY = false; store.set(KEY, null); $('msg').textContent = 'Saved to the job. It shows on the recap and in the PDF.'; }
+  catch (e) { $('msg').textContent = 'Could not save: ' + (e.code || e.message); }
+};
+$('csvBtn').onclick = () => { const c = clean(), vn = id => (c.vlans.find(v => v.vid === id) || {}).name || ''; csv((JOB ? JOB.label : 'Job') + ' - IP plan', [['Device', 'Room', 'Make / model', 'MAC', 'IP', 'VLAN', 'VLAN name', 'Notes']].concat(c.devices.map(d => [d.name, d.room, d.model, d.mac, d.ip, d.vlan, vn(d.vlan), d.notes])).concat([[], ['VLAN', 'Name', 'Subnet', 'Gateway', 'DHCP range']]).concat(c.vlans.map(v => [v.vid, v.name, v.subnet, v.gw, v.dhcp]))); };
+window.addEventListener('beforeunload', e => { if (JOB && DIRTY) { e.preventDefault(); e.returnValue = ''; } });
+
+</script>
+<script src="./sidebar.js" defer></script>
+</body>
+</html>

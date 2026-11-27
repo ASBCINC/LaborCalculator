@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#2F7FD1">
+<meta name="robots" content="noindex">
+<title>Lighting Control Count | ASBC Tools</title>
+<link rel="icon" href="./tools-favicon.svg">
+<link rel="manifest" href="./manifest.json">
+<script src="./diag.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+<script src="./roles.js"></script>
+<script src="./nav.js" defer></script>
+<script src="./update-check.js" defer></script>
+<style>
+:root { --gold:#1F6FD1; --bg:#F3F5F8; --card:#FFFFFF; --line:#E3E7EE; --muted:#4B5563; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:#1F2937; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; }
+.wrap { max-width:1000px; margin:0 auto; padding:14px 14px 60px; }
+header { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:6px; flex-wrap:wrap; }
+h1 { font-size:20px; margin:0; } h1 span { color:var(--gold); }
+.back { display:inline-block; margin:0 0 10px; color:#1F6FD1; font-size:14px; font-weight:600; text-decoration:none; }
+.intro { color:var(--muted); font-size:13px; margin:0 0 14px; }
+.box { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:14px; }
+.box h2 { font-size:15px; margin:0 0 10px; }
+.fields { display:grid; grid-template-columns:repeat(auto-fill, minmax(170px, 1fr)); gap:10px; }
+label { display:flex; flex-direction:column; gap:4px; font-size:12px; font-weight:600; color:#374151; }
+input, select { background:#FFFFFF; border:1px solid #D5DBE4; color:#1F2937; border-radius:9px; min-height:42px; padding:0 10px; font-size:15px; width:100%; font-family:inherit; }
+.btn { display:inline-flex; align-items:center; justify-content:center; min-height:40px; padding:0 14px; border-radius:9px; border:1px solid #D5DBE4; color:#1F2937; background:#FFFFFF; font-size:14px; font-weight:600; cursor:pointer; }
+.btn.green { background:#14945C; border-color:#14945C; color:#fff; }
+.tiles { display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:10px; }
+.tile { background:#F8FAFC; border:1px solid var(--line); border-radius:10px; padding:12px; }
+.tile .k { font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); font-weight:700; }
+.tile .v { font-size:22px; font-weight:700; margin-top:4px; } .tile .s { font-size:12px; color:var(--muted); margin-top:2px; }
+.ok { color:#14945C; } .warn { color:#B54708; } .bad { color:#B42318; }
+.tile.ok { border-color:#A6E3C4; background:#F0FBF5; } .tile.warn { border-color:#F7D08A; background:#FFF8EB; } .tile.bad { border-color:#F5B5AE; background:#FEF3F2; }
+table { width:100%; border-collapse:collapse; font-size:14px; }
+th, td { text-align:left; padding:8px 6px; border-bottom:1px solid var(--line); vertical-align:middle; }
+th { font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); }
+td input, td select { min-height:36px; font-size:14px; }
+.tbl { overflow-x:auto; }
+.note { font-size:12px; color:var(--muted); margin-top:10px; line-height:1.5; }
+.pill { display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; font-weight:700; }
+.pill.ok { background:#E7F7EE; } .pill.warn { background:#FFF1D6; } .pill.bad { background:#FDE4E1; }
+.x { background:none; border:0; color:#B42318; font-size:18px; cursor:pointer; min-height:36px; padding:0 8px; }
+@media print { #asbcSide, #asbcBar, #asbcNav, .back, .noprint { display:none !important; } body { background:#fff; } .box { border:0; padding:0; } }
+</style>
+<script>window.ASBC_TOOLS = true;</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./tools.css">
+</head>
+<body>
+<div class="wrap">
+  <header><h1>ASBC <span>Lighting Control Count</span></h1><nav id="asbcNav" data-page="design"></nav></header>
+  <a class="back" href="./design.html">‹ Design Center</a>
+  <p class="intro">Count the lighting controls for a Lutron bid room by room. Pick a room type for a starting point, then adjust the loads and switch locations. It saves on this device until you start a new count.</p>
+<style>
+.wc { background:#F8FAFC; border:1px solid var(--line); border-radius:10px; padding:12px; margin-bottom:10px; }
+.wc .top { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px; font-weight:700; }
+.wc .fields { grid-template-columns:repeat(auto-fill, minmax(130px, 1fr)); }
+.res { margin-top:8px; font-size:14px; } .res b { font-size:16px; }
+.flag { display:block; font-size:12px; margin-top:4px; }
+.acts { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+.chk { flex-direction:row; align-items:center; gap:8px; min-height:42px; } .chk input { width:20px; min-height:20px; }
+.printhead { display:none; } @media print { .printhead { display:block; margin-bottom:10px; } .wc { break-inside:avoid; } }
+</style>
+  <div class="box"><h2>Project</h2><div class="fields">
+    <label>Project / client<input id="proj"></label><label>System<select id="sys"><option>RadioRA 3</option><option>HomeWorks</option><option>Caséta</option><option>Not decided</option></select></label><label>Prepared by<input id="by"></label>
+  </div></div>
+  <div class="box noprint"><h2>Rooms</h2><div id="rows"></div>
+    <div class="acts"><select id="newType" style="width:auto"></select><button type="button" class="btn green" id="add">+ Add room</button></div></div>
+  <div class="box"><div class="printhead"><b id="ph"></b></div><h2>Device count</h2><div class="tiles" id="sum"></div>
+    <div class="tbl" style="margin-top:12px"><table><thead><tr><th>Room</th><th>Loads</th><th>Dimmers</th><th>Switches</th><th>Companions</th><th>Keypads</th><th>Picos</th><th>Main box</th></tr></thead><tbody id="tb"></tbody><tfoot id="tf"></tfoot></table></div>
+    <div class="acts noprint"><button type="button" class="btn" onclick="print()">Print / Save PDF</button><button type="button" class="btn" id="csvBtn">Download CSV</button><button type="button" class="btn" id="clr">Start a new count</button></div>
+    <div class="note">Loads = separately controlled lighting circuits (cans, pendants, under-cabinet, fan, exterior). Dimmable loads get dimmers, the rest get switches. Multi-location loads need a companion (or Pico) at each extra location. A scene keypad is counted at the main entry. Room types are only starting points. Before pricing, check every load's type (LED, ELV, MLV, 0-10 V) and wattage, and check the system's device limits, in Lutron Designer.</div></div>
+</div>
+<script>
+// v11.3.0 Design Center tool. Runs entirely in the browser; nothing is saved.
+firebase.initializeApp({ apiKey: "AIzaSyCSf560VkBf2esIH5rC-_Vcx349o7iIC-0", authDomain: "asbc-calculator.firebaseapp.com", projectId: "asbc-calculator" });
+firebase.auth().onAuthStateChanged(u => { if (!u || !u.emailVerified) return location.replace('./index.html'); if (typeof toolUser === 'function') toolUser(u); });
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
+const $ = id => document.getElementById(id), num = id => parseFloat($(id).value) || 0;
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmt = (n, d = 1) => Number(n).toLocaleString('en-US', { maximumFractionDigits: d, minimumFractionDigits: 0 });
+const store = { get(k) { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
+function csv(name, rows) { const t = rows.map(r => r.map(c => '"' + String(c ?? '').replace(/"/g, '""') + '"').join(',')).join('\r\n'); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([t], { type: 'text/csv' })); a.download = name.replace(/[\\/:*?"<>|]+/g, '-') + '.csv'; document.body.appendChild(a); a.click(); a.remove(); }
+const tile = (k, v, s, cls) => `<div class="tile ${cls || ''}"><div class="k">${k}</div><div class="v">${v}</div>${s ? `<div class="s">${s}</div>` : ''}</div>`;
+const KEY = 'asbc-lighting-v1';
+const P = { 'Kitchen': [4, 3, 1, 2, 0], 'Living / Family': [3, 3, 1, 2, 1], 'Dining': [2, 2, 0, 1, 0], 'Primary bedroom': [3, 3, 1, 2, 1], 'Bedroom': [2, 2, 1, 2, 0], 'Bathroom': [3, 2, 0, 1, 0], 'Hall / Stairs': [1, 1, 1, 3, 0],
+  'Entry / Foyer': [2, 2, 1, 2, 1], 'Office': [2, 2, 0, 1, 0], 'Theater / Media': [3, 3, 0, 1, 1], 'Closet / Laundry': [1, 0, 0, 1, 0], 'Garage': [2, 0, 1, 2, 0], 'Exterior': [3, 1, 0, 1, 0], 'Other': [1, 1, 0, 1, 0] };
+const mk = t => { const [loads, dim, multi, locs, kp] = P[t] || P.Other; return { room: t, type: t, loads, dim, multi, locs, kp: !!kp, pico: 0 }; };
+let S = store.get(KEY) || { proj: '', sys: 'RadioRA 3', by: '', rows: [mk('Kitchen'), mk('Living / Family'), mk('Primary bedroom')] };
+$('newType').innerHTML = Object.keys(P).map(t => `<option>${t}</option>`).join('');
+const n = v => Math.max(0, Math.floor(+v || 0));
+function room(r) { const loads = n(r.loads), dim = Math.min(n(r.dim), loads), multi = Math.min(n(r.multi), loads), locs = Math.max(1, n(r.locs)), kp = r.kp ? 1 : 0;
+  return { loads, dim, sw: loads - dim, comp: multi * (locs - 1), kp, pico: n(r.pico), main: loads + kp, extra: locs - 1, multi }; }
+const numIn = (f, i, v) => `<input data-i="${i}" data-f="${f}" type="number" min="0" value="${v}" inputmode="numeric">`;
+function drawRows() {
+  $('rows').innerHTML = S.rows.map((r, i) => `<div class="wc"><div class="top"><span>${esc(r.type)}</span><button type="button" class="x" data-del="${i}" aria-label="Remove room">×</button></div><div class="fields">
+    <label>Room name<input data-i="${i}" data-f="room" value="${esc(r.room)}"></label><label>Lighting loads${numIn('loads', i, r.loads)}</label><label>Dimmable loads${numIn('dim', i, r.dim)}</label>
+    <label>Multi-location loads${numIn('multi', i, r.multi)}</label><label>Switch locations (doors)${numIn('locs', i, r.locs)}</label><label>Extra Picos${numIn('pico', i, r.pico)}</label>
+    <label class="chk"><input type="checkbox" data-i="${i}" data-f="kp" ${r.kp ? 'checked' : ''}> Scene keypad at main entry</label></div><div class="res" id="res${i}"></div></div>`).join('');
+  calc();
+}
+function calc() {
+  ['proj', 'sys', 'by'].forEach(k => S[k] = $(k).value); store.set(KEY, S);
+  const R = S.rows.map(room), T = { loads: 0, dim: 0, sw: 0, comp: 0, kp: 0, pico: 0 }, G = {};
+  R.forEach((o, i) => { Object.keys(T).forEach(k => T[k] += o[k]); if (o.main) G[o.main] = (G[o.main] || 0) + 1; if (o.multi) G[o.multi] = (G[o.multi] || 0) + o.extra;
+    const big = o.main > 4, el = $('res' + i); if (el) el.innerHTML = `<b>${o.dim}</b> dimmer${o.dim === 1 ? '' : 's'}, <b>${o.sw}</b> switch${o.sw === 1 ? '' : 'es'}, <b>${o.comp}</b> companion${o.comp === 1 ? '' : 's'}${o.kp ? ', <b>1</b> keypad' : ''}${o.pico ? ', <b>' + o.pico + '</b> Pico' + (o.pico > 1 ? 's' : '') : ''} · main box ${o.main}-gang` + (big ? `<span class="flag warn">⚠ ${o.main}-gang at the main entry: split the location or use a keypad with remote dimming</span>` : '') + (n(S.rows[i].dim) > o.loads ? '<span class="flag warn">⚠ More dimmable loads than loads</span>' : ''); });
+  const wall = T.dim + T.sw + T.comp + T.kp, boxes = Object.values(G).reduce((a, b) => a + b, 0);
+  $('sum').innerHTML = tile('Rooms', S.rows.length, T.loads + ' loads') + tile('Wall devices', wall, T.dim + ' dimmers · ' + T.sw + ' switches · ' + T.comp + ' companions · ' + T.kp + ' keypads') + tile('Picos', T.pico, 'wireless remotes')
+    + tile('Total devices', wall + T.pico, 'check against ' + S.sys + ' limits') + tile('Wall boxes', boxes, Object.keys(G).sort((a, b) => a - b).map(g => G[g] + ' × ' + g + '-gang').join(', ') || '—');
+  $('tb').innerHTML = R.map((o, i) => `<tr><td>${esc(S.rows[i].room)}</td><td>${o.loads}</td><td>${o.dim}</td><td>${o.sw}</td><td>${o.comp}</td><td>${o.kp}</td><td>${o.pico}</td><td>${o.main}-gang</td></tr>`).join('');
+  $('tf').innerHTML = `<tr><th>Total</th><th>${T.loads}</th><th>${T.dim}</th><th>${T.sw}</th><th>${T.comp}</th><th>${T.kp}</th><th>${T.pico}</th><th>${boxes} boxes</th></tr>`;
+  $('ph').textContent = [S.proj, S.sys, S.by && 'Prepared by ' + S.by].filter(Boolean).join(' · ');
+}
+['proj', 'sys', 'by'].forEach(k => { $(k).value = S[k] || (k === 'sys' ? 'RadioRA 3' : ''); $(k).oninput = calc; $(k).onchange = calc; });
+document.addEventListener('input', e => { const i = e.target.dataset.i; if (i === undefined) return; const f = e.target.dataset.f; S.rows[i][f] = f === 'kp' ? e.target.checked : e.target.value; calc(); });
+document.addEventListener('change', e => { const i = e.target.dataset.i; if (i === undefined || e.target.dataset.f !== 'kp') return; S.rows[i].kp = e.target.checked; calc(); });
+document.addEventListener('click', e => { const d = e.target.closest('[data-del]'); if (d && confirm('Remove this room?')) { S.rows.splice(+d.dataset.del, 1); drawRows(); } });
+$('add').onclick = () => { S.rows.push(mk($('newType').value)); drawRows(); };
+$('clr').onclick = () => { if (confirm('Start a new count? This clears the rooms saved on this device.')) { S = { proj: '', sys: S.sys, by: S.by, rows: [] }; $('proj').value = ''; drawRows(); } };
+$('csvBtn').onclick = () => { const R = S.rows.map(room); csv((S.proj || 'Lighting') + ' - lighting control count', [['Room', 'Loads', 'Dimmers', 'Switches', 'Companions', 'Keypads', 'Picos', 'Main box (gang)', 'Switch locations']].concat(R.map((o, i) => [S.rows[i].room, o.loads, o.dim, o.sw, o.comp, o.kp, o.pico, o.main, n(S.rows[i].locs)]))); };
+drawRows();
+
+</script>
+<script src="./sidebar.js" defer></script>
+</body>
+</html>

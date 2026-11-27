@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#2F7FD1">
+<meta name="robots" content="noindex">
+<title>Shade Measurement Sheet | ASBC Tools</title>
+<link rel="icon" href="./tools-favicon.svg">
+<link rel="manifest" href="./manifest.json">
+<script src="./diag.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+<script src="./roles.js"></script>
+<script src="./nav.js" defer></script>
+<script src="./update-check.js" defer></script>
+<style>
+:root { --gold:#1F6FD1; --bg:#F3F5F8; --card:#FFFFFF; --line:#E3E7EE; --muted:#4B5563; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:#1F2937; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; }
+.wrap { max-width:1000px; margin:0 auto; padding:14px 14px 60px; }
+header { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:6px; flex-wrap:wrap; }
+h1 { font-size:20px; margin:0; } h1 span { color:var(--gold); }
+.back { display:inline-block; margin:0 0 10px; color:#1F6FD1; font-size:14px; font-weight:600; text-decoration:none; }
+.intro { color:var(--muted); font-size:13px; margin:0 0 14px; }
+.box { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:14px; }
+.box h2 { font-size:15px; margin:0 0 10px; }
+.fields { display:grid; grid-template-columns:repeat(auto-fill, minmax(170px, 1fr)); gap:10px; }
+label { display:flex; flex-direction:column; gap:4px; font-size:12px; font-weight:600; color:#374151; }
+input, select { background:#FFFFFF; border:1px solid #D5DBE4; color:#1F2937; border-radius:9px; min-height:42px; padding:0 10px; font-size:15px; width:100%; font-family:inherit; }
+.btn { display:inline-flex; align-items:center; justify-content:center; min-height:40px; padding:0 14px; border-radius:9px; border:1px solid #D5DBE4; color:#1F2937; background:#FFFFFF; font-size:14px; font-weight:600; cursor:pointer; }
+.btn.green { background:#14945C; border-color:#14945C; color:#fff; }
+.tiles { display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:10px; }
+.tile { background:#F8FAFC; border:1px solid var(--line); border-radius:10px; padding:12px; }
+.tile .k { font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); font-weight:700; }
+.tile .v { font-size:22px; font-weight:700; margin-top:4px; } .tile .s { font-size:12px; color:var(--muted); margin-top:2px; }
+.ok { color:#14945C; } .warn { color:#B54708; } .bad { color:#B42318; }
+.tile.ok { border-color:#A6E3C4; background:#F0FBF5; } .tile.warn { border-color:#F7D08A; background:#FFF8EB; } .tile.bad { border-color:#F5B5AE; background:#FEF3F2; }
+table { width:100%; border-collapse:collapse; font-size:14px; }
+th, td { text-align:left; padding:8px 6px; border-bottom:1px solid var(--line); vertical-align:middle; }
+th { font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); }
+td input, td select { min-height:36px; font-size:14px; }
+.tbl { overflow-x:auto; }
+.note { font-size:12px; color:var(--muted); margin-top:10px; line-height:1.5; }
+.pill { display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; font-weight:700; }
+.pill.ok { background:#E7F7EE; } .pill.warn { background:#FFF1D6; } .pill.bad { background:#FDE4E1; }
+.x { background:none; border:0; color:#B42318; font-size:18px; cursor:pointer; min-height:36px; padding:0 8px; }
+@media print { #asbcSide, #asbcBar, #asbcNav, .back, .noprint { display:none !important; } body { background:#fff; } .box { border:0; padding:0; } }
+</style>
+<script>window.ASBC_TOOLS = true;</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./tools.css">
+</head>
+<body>
+<div class="wrap">
+  <header><h1>ASBC <span>Shade Measurement Sheet</span></h1><nav id="asbcNav" data-page="design"></nav></header>
+  <a class="back" href="./design.html">‹ Design Center</a>
+  <p class="intro">Measure each window three times across and three times down. Enter inches as 36 3/8, 36-3/8 or 36.375. The sheet works out the size to order and flags problems. It saves on this device until you start a new sheet.</p>
+<style>
+.wc { background:#F8FAFC; border:1px solid var(--line); border-radius:10px; padding:12px; margin-bottom:10px; }
+.wc .top { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px; font-weight:700; }
+.wc .fields { grid-template-columns:repeat(auto-fill, minmax(130px, 1fr)); }
+.res { margin-top:8px; font-size:14px; } .res b { font-size:16px; }
+.flag { display:block; font-size:12px; margin-top:4px; }
+.acts { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+.chk { flex-direction:row; align-items:center; gap:8px; min-height:42px; } .chk input { width:20px; min-height:20px; }
+.printhead { display:none; } @media print { .printhead { display:block; margin-bottom:10px; } .wc { break-inside:avoid; } }
+</style>
+  <div class="box"><h2>Project</h2><div class="fields">
+    <label>Project / client<input id="proj" placeholder="e.g. 19 Cushing Residence"></label>
+    <label>Measured by<input id="by"></label>
+    <label>Date<input id="date" type="date"></label>
+    <label>Outside mount overlap per side (in)<input id="ov" inputmode="decimal"></label>
+    <label>Min. depth for inside mount (in)<input id="md" inputmode="decimal"></label>
+  </div></div>
+  <div class="box noprint"><h2>Windows</h2><div id="rows"></div>
+    <div class="acts"><button type="button" class="btn green" id="add">+ Add window</button><button type="button" class="btn" id="dup">+ Copy last window</button></div></div>
+  <div class="box"><div class="printhead"><b id="ph"></b></div><h2>Shade schedule</h2><div class="tiles" id="sum"></div>
+    <div class="tbl" style="margin-top:12px"><table><thead><tr><th>#</th><th>Room</th><th>Window</th><th>Mount</th><th>Order W × H</th><th>Type</th><th>Fabric</th><th>Control</th><th>Notes</th></tr></thead><tbody id="sched"></tbody></table></div>
+    <div class="acts noprint"><button type="button" class="btn" onclick="print()">Print / Save PDF</button><button type="button" class="btn" id="csvBtn">Download CSV</button><button type="button" class="btn" id="clr">Start a new sheet</button></div>
+    <div class="note">Inside mount: the size to order is the opening (narrowest width, longest height). Enter the opening and let the factory take its deductions; check in Lutron Designer whether you're entering opening or shade size. Outside mount: widest width plus the overlap on each side, longest height plus the overlap at the top. Widths that differ by more than 1/4" mean the opening is out of square; note it for the installer.</div></div>
+</div>
+<script>
+// v11.3.0 Design Center tool. Runs entirely in the browser; nothing is saved.
+firebase.initializeApp({ apiKey: "AIzaSyCSf560VkBf2esIH5rC-_Vcx349o7iIC-0", authDomain: "asbc-calculator.firebaseapp.com", projectId: "asbc-calculator" });
+firebase.auth().onAuthStateChanged(u => { if (!u || !u.emailVerified) return location.replace('./index.html'); if (typeof toolUser === 'function') toolUser(u); });
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
+const $ = id => document.getElementById(id), num = id => parseFloat($(id).value) || 0;
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmt = (n, d = 1) => Number(n).toLocaleString('en-US', { maximumFractionDigits: d, minimumFractionDigits: 0 });
+const store = { get(k) { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
+function csv(name, rows) { const t = rows.map(r => r.map(c => '"' + String(c ?? '').replace(/"/g, '""') + '"').join(',')).join('\r\n'); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([t], { type: 'text/csv' })); a.download = name.replace(/[\\/:*?"<>|]+/g, '-') + '.csv'; document.body.appendChild(a); a.click(); a.remove(); }
+const tile = (k, v, s, cls) => `<div class="tile ${cls || ''}"><div class="k">${k}</div><div class="v">${v}</div>${s ? `<div class="s">${s}</div>` : ''}</div>`;
+const KEY = 'asbc-shades-v1', TYPES = ['Roller', 'Honeycomb', 'Roman', 'Drapery', 'Other'], CTRL = ['Wired (QS)', 'Wireless', 'Battery', 'Manual'], MOUNT = { inside: 'Inside', outside: 'Outside', ceiling: 'Ceiling', pocket: 'Pocket' };
+const blank = p => ({ room: p ? p.room : '', win: '', mount: p ? p.mount : 'inside', w1: '', w2: '', w3: '', h1: '', h2: '', h3: '', depth: '', type: p ? p.type : 'Roller', fabric: p ? p.fabric : '', ctrl: p ? p.ctrl : 'Wired (QS)', roll: 'Standard', notes: '' });
+let S = store.get(KEY) || { proj: '', by: '', date: new Date().toISOString().slice(0, 10), ov: '2', md: '3', rows: [blank()] };
+function inch(v) { const t = String(v || '').trim().replace(/["”]/g, ''); if (!t) return NaN; const m = t.match(/^(\d+(?:\.\d+)?)?(?:[\s-]+)?(?:(\d+)\/(\d+))?$/); if (!m || (!m[1] && !m[2])) return NaN; return (m[1] ? parseFloat(m[1]) : 0) + (m[2] ? +m[2] / +m[3] : 0); }
+function fin(x) { if (!isFinite(x)) return '—'; let w = Math.floor(x), e = Math.round((x - w) * 8); if (e === 8) { w++; e = 0; } if (!e) return w + '"'; let d = 8; while (e % 2 === 0) { e /= 2; d /= 2; } return w + ' ' + e + '/' + d + '"'; }
+function size(r) {
+  const W = [r.w1, r.w2, r.w3].map(inch).filter(isFinite), H = [r.h1, r.h2, r.h3].map(inch).filter(isFinite), ov = inch(S.ov) || 0, flags = [];
+  if (!W.length || !H.length) return { w: NaN, h: NaN, flags: ['Needs width and height'] };
+  const ins = r.mount === 'inside' || r.mount === 'pocket';
+  const w = ins ? Math.min(...W) : Math.max(...W) + 2 * ov, h = ins ? Math.max(...H) : Math.max(...H) + ov;
+  if (Math.max(...W) - Math.min(...W) > 0.25) flags.push('Out of square: widths differ by ' + fin(Math.max(...W) - Math.min(...W)).replace('"', '') + '"');
+  if (Math.max(...H) - Math.min(...H) > 0.25) flags.push('Heights differ by ' + fin(Math.max(...H) - Math.min(...H)).replace('"', '') + '"');
+  if (ins) { const d = inch(r.depth); if (!isFinite(d)) flags.push('Add the window depth'); else if (d < (inch(S.md) || 0)) flags.push('Shallow: ' + fin(d) + ' deep, may not mount flush'); }
+  if (W.length < 3 || H.length < 3) flags.push('Fewer than 3 measurements');
+  return { w, h, flags };
+}
+const sel = (f, i, list, cur) => `<select data-i="${i}" data-f="${f}">${list.map(o => Array.isArray(o) ? o : [o, o]).map(([v, t]) => `<option value="${esc(v)}" ${cur === v ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>`;
+const inp = (f, i, r, ph, mode) => `<input data-i="${i}" data-f="${f}" value="${esc(r[f])}" placeholder="${ph || ''}" ${mode ? 'inputmode="' + mode + '"' : ''}>`;
+function drawRows() {
+  $('rows').innerHTML = S.rows.map((r, i) => `<div class="wc"><div class="top"><span>Window ${i + 1}</span><button type="button" class="x" data-del="${i}" aria-label="Remove window">×</button></div><div class="fields">
+    <label>Room${inp('room', i, r, 'Living room')}</label><label>Window / ID${inp('win', i, r, 'W1 left')}</label><label>Mount${sel('mount', i, Object.entries(MOUNT), r.mount)}</label>
+    <label>Width top${inp('w1', i, r, '', 'decimal')}</label><label>Width middle${inp('w2', i, r, '', 'decimal')}</label><label>Width bottom${inp('w3', i, r, '', 'decimal')}</label>
+    <label>Height left${inp('h1', i, r, '', 'decimal')}</label><label>Height middle${inp('h2', i, r, '', 'decimal')}</label><label>Height right${inp('h3', i, r, '', 'decimal')}</label>
+    <label>Depth (inside)${inp('depth', i, r, '', 'decimal')}</label><label>Shade type${sel('type', i, TYPES, r.type)}</label><label>Fabric / openness${inp('fabric', i, r, 'e.g. 3% white')}</label>
+    <label>Control${sel('ctrl', i, CTRL, r.ctrl)}</label><label>Roll${sel('roll', i, ['Standard', 'Reverse'], r.roll)}</label><label>Notes${inp('notes', i, r, 'Obstructions, power, pocket')}</label>
+  </div><div class="res" id="res${i}"></div></div>`).join('');
+  calc();
+}
+function calc() {
+  ['proj', 'by', 'date', 'ov', 'md'].forEach(k => S[k] = $(k).value); store.set(KEY, S);
+  const out = S.rows.map(size);
+  S.rows.forEach((r, i) => { const o = out[i], el = $('res' + i); if (el) el.innerHTML = `Order: <b>${fin(o.w)} × ${fin(o.h)}</b> <span class="qmeta">(${MOUNT[r.mount]} mount, W × H)</span>` + o.flags.map(f => `<span class="flag ${/Needs|Shallow|Out of/.test(f) ? 'bad' : 'warn'}">⚠ ${esc(f)}</span>`).join(''); });
+  const cnt = (f, v) => S.rows.filter(r => r[f] === v).length, rooms = new Set(S.rows.map(r => r.room.trim()).filter(Boolean)).size, issues = out.filter(o => o.flags.length).length;
+  $('sum').innerHTML = tile('Shades', S.rows.length, rooms + ' room' + (rooms === 1 ? '' : 's')) + tile('Wired (QS)', cnt('ctrl', 'Wired (QS)'), 'need a low-voltage run each') + tile('Wireless / battery', cnt('ctrl', 'Wireless') + cnt('ctrl', 'Battery'), cnt('ctrl', 'Wireless') ? 'wireless need power at the shade' : '')
+    + tile('By type', TYPES.filter(t => cnt('type', t)).map(t => cnt('type', t) + ' ' + t).join(', ') || '—', '') + tile('To check', issues, issues ? 'windows with a ⚠' : 'all measured', issues ? 'warn' : 'ok');
+  $('sched').innerHTML = S.rows.map((r, i) => `<tr><td>${i + 1}</td><td>${esc(r.room)}</td><td>${esc(r.win)}</td><td>${MOUNT[r.mount]}</td><td><b>${fin(out[i].w)} × ${fin(out[i].h)}</b>${out[i].flags.length ? ' <span class="warn" title="' + esc(out[i].flags.join('; ')) + '">⚠</span>' : ''}</td><td>${esc(r.type)}</td><td>${esc(r.fabric)}</td><td>${esc(r.ctrl)}${r.roll === 'Reverse' ? ', reverse roll' : ''}</td><td>${esc(r.notes)}</td></tr>`).join('');
+  $('ph').textContent = [S.proj, S.by && 'Measured by ' + S.by, S.date].filter(Boolean).join(' · ');
+}
+['proj', 'by', 'date', 'ov', 'md'].forEach(k => { $(k).value = S[k] || ''; $(k).oninput = calc; });
+document.addEventListener('input', e => { const i = e.target.dataset.i; if (i === undefined) return; S.rows[i][e.target.dataset.f] = e.target.value; calc(); });
+document.addEventListener('change', e => { const i = e.target.dataset.i; if (i === undefined) return; S.rows[i][e.target.dataset.f] = e.target.value; calc(); });
+document.addEventListener('click', e => { const d = e.target.closest('[data-del]'); if (d && confirm('Remove window ' + (+d.dataset.del + 1) + '?')) { S.rows.splice(+d.dataset.del, 1); if (!S.rows.length) S.rows.push(blank()); drawRows(); } });
+$('add').onclick = () => { S.rows.push(blank(S.rows[S.rows.length - 1])); drawRows(); };
+$('dup').onclick = () => { const l = S.rows[S.rows.length - 1]; S.rows.push(Object.assign({}, l, { win: '' })); drawRows(); };
+$('clr').onclick = () => { if (confirm('Start a new sheet? This clears the windows saved on this device.')) { S = { proj: '', by: S.by, date: new Date().toISOString().slice(0, 10), ov: S.ov, md: S.md, rows: [blank()] }; ['proj', 'by', 'date', 'ov', 'md'].forEach(k => $(k).value = S[k] || ''); drawRows(); } };
+$('csvBtn').onclick = () => csv((S.proj || 'Shades') + ' - shade schedule', [['#', 'Room', 'Window', 'Mount', 'Order width (in)', 'Order height (in)', 'Type', 'Fabric', 'Control', 'Roll', 'Depth', 'Notes', 'Check']].concat(S.rows.map((r, i) => { const o = size(r); return [i + 1, r.room, r.win, MOUNT[r.mount], isFinite(o.w) ? o.w.toFixed(3) : '', isFinite(o.h) ? o.h.toFixed(3) : '', r.type, r.fabric, r.ctrl, r.roll, r.depth, r.notes, o.flags.join('; ')]; })));
+drawRows();
+
+</script>
+<script src="./sidebar.js" defer></script>
+</body>
+</html>
