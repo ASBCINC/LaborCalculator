@@ -4,7 +4,7 @@
 // A user's role is config/users[email].access. Older entries without it are read from role/allQuotes.
 (function () {
   const DEFS = {
-    admin:     { label: 'Admin',          pages: ['calendar', 'calculator', 'recaps', 'pipeline', 'expenses', 'leaderboard', 'quotes', 'users', 'design', 'knowledge'], quotes: 'all',  recaps: 'all' },
+    admin:     { label: 'Admin',          pages: ['calendar', 'calculator', 'recaps', 'pipeline', 'expenses', 'leaderboard', 'quotes', 'users', 'design', 'knowledge', 'laborreview'], quotes: 'all',  recaps: 'all' },
     management:{ label: 'Management',     pages: ['calendar', 'calculator', 'recaps', 'pipeline', 'expenses', 'leaderboard', 'quotes', 'design', 'knowledge'], quotes: 'all',  recaps: 'all-view' },  // v9.5.0 non-store managers: see everything read-only, no User Roles
     director:  { label: 'Sales Director', pages: ['calendar', 'calculator', 'pipeline', 'leaderboard', 'quotes', 'design', 'knowledge'],                    quotes: 'all',  recaps: 'none' },
     manager:   { label: 'Sales Manager',  pages: ['calendar', 'calculator', 'leaderboard', 'quotes', 'design', 'knowledge'],                                quotes: 'own',  recaps: 'none' },
@@ -22,7 +22,8 @@
     quotes:      { label: 'Quote Log',          href: './log.html' },
     users:       { label: 'User Roles',         href: './users.html' },
     design:      { label: 'Design Center',      href: './design.html' },
-    knowledge:   { label: 'Knowledge Center',   href: './knowledge.html' }
+    knowledge:   { label: 'Knowledge Center',   href: './knowledge.html' },
+    laborreview: { label: 'Labor Review',       href: './labor-review.html' }
   };
   // The fields older code reads (role: admin | rep | tech, allQuotes) for each role.
   const LEGACY = { admin: { role: 'admin', allQuotes: true }, management: { role: 'rep', allQuotes: true }, director: { role: 'rep', allQuotes: true }, manager: { role: 'rep', allQuotes: false },

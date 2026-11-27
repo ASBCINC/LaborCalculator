@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#2F7FD1">
+<meta name="robots" content="noindex">
+<title>Labor Review | ASBC Tools</title>
+<link rel="icon" href="./tools-favicon.svg">
+<link rel="manifest" href="./manifest.json">
+<script src="./diag.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+<script src="./roles.js"></script>
+<script src="./nav.js" defer></script>
+<script src="./update-check.js" defer></script>
+<style>
+:root { --gold:#1F6FD1; --bg:#F3F5F8; --card:#FFFFFF; --line:#E3E7EE; --muted:#4B5563; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:#1F2937; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; }
+.wrap { max-width:1100px; margin:0 auto; padding:14px 14px 60px; }
+header { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:6px; flex-wrap:wrap; }
+h1 { font-size:20px; margin:0; } h1 span { color:var(--gold); }
+h2 { font-size:15px; margin:0 0 10px; }
+.intro { color:var(--muted); font-size:13px; margin:0 0 14px; }
+.box { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:14px; }
+.btn { display:inline-flex; align-items:center; justify-content:center; min-height:36px; padding:0 12px; border-radius:9px; border:1px solid #D5DBE4; color:#1F2937; background:#FFFFFF; font-size:13px; font-weight:600; cursor:pointer; }
+.btn.green { background:#14945C; border-color:#14945C; color:#fff; } .btn:disabled { opacity:.5; cursor:default; }
+table { width:100%; border-collapse:collapse; font-size:13px; } th, td { text-align:left; padding:8px 6px; border-bottom:1px solid var(--line); vertical-align:top; }
+th { font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); }
+.tbl { overflow-x:auto; } .num { white-space:nowrap; } .muted { color:var(--muted); font-size:12px; }
+.up { color:#B42318; font-weight:700; } .down { color:#0E7A4D; font-weight:700; }
+.pill { display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:700; background:#E8F1FC; color:#16529C; }
+.pill.done { background:#E7F7EE; color:#0E7A4D; } .pill.no { background:#F2F4F7; color:#4B5563; }
+details summary { cursor:pointer; font-weight:600; font-size:14px; }
+</style>
+<script>window.ASBC_TOOLS = true;</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./tools.css">
+</head>
+<body>
+<div class="wrap">
+  <header><h1>ASBC <span>Labor Review</span></h1><nav id="asbcNav" data-page="laborreview"></nav></header>
+  <p class="intro">Each week the job recaps are compared with the quoted hours. Overruns are explained from the techs' notes, and labor tiles that keep running long (or short) get a suggested new value. Nothing changes in the calculator until you tap Apply.</p>
+  <div id="app"><div class="muted">Loading…</div></div>
+</div>
+<script>
+// v11.7.0 Labor Review (admin). Live numbers come from submitted job reports (quotes with job.laborHours); the weekly Claude
+// task reads them with asbcLR.data(), judges overruns from the recap notes, and saves suggestions with asbcLR.save() to
+// config/laborReview {json: {weekOf, summary, overruns, suggestions, history}}. Apply writes the new hours to config/catalog.
+firebase.initializeApp({ apiKey: "AIzaSyCSf560VkBf2esIH5rC-_Vcx349o7iIC-0", authDomain: "asbc-calculator.firebaseapp.com", projectId: "asbc-calculator" });
+const db = firebase.firestore(), REF = db.collection('config').doc('laborReview'), CAT = db.collection('config').doc('catalog');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const r2 = x => Math.round(x * 100) / 100, q4 = x => Math.round(x * 4) / 4;
+let ADMIN = false, CATALOG = new Map(), REVIEW = {}, LIVE = null, ME = '';
+const label = q => (q.project && q.project.dtoolsProjectName) || q.label || (q.project && q.project.customerName) || 'Untitled';
+function quoted(q) {
+  let inst = 0, prog = 0; const lines = [];
+  (q.items || []).forEach(it => { const c = it.isCustom ? it : (CATALOG.get(it.id) || {}), n = Number(it.qty) || 0; if (!n) return;
+    const li = ((Number(c.installHours) || 0) + (it.addon ? Number(it.addon.installHours) || 0 : 0)) * n, lp = ((Number(c.programmingHours) || 0) + (it.addon ? Number(it.addon.programmingHours) || 0 : 0)) * n;
+    inst += li; prog += lp; if (!it.isCustom && CATALOG.has(it.id) && li + lp > 0) lines.push({ id: it.id, name: c.name, qty: n, est: li + lp }); });
+  if (inst + prog > 0) return { est: inst + prog, inst, prog, src: 'labor quote', lines };
+  const d = q.dtoolsLabor || {}, di = (Number(d.install) || 0) + (Number(d.flat) || 0), dp = Number(d.prog) || 0;
+  return { est: di + dp, inst: di, prog: dp, src: di + dp > 0 ? 'D-Tools proposal' : '', lines: [] };
+}
+async function build(days) {
+  const since = Date.now() - (days || 365) * 864e5, qs = await db.collection('quotes').where('status', 'in', ['submitted', 'closed']).get();
+  const jobs = [], tiles = {};
+  qs.docs.forEach(doc => { const q = doc.data(), j = q.job || {}; if (q.jobDeleted || q.mergedInto || q.isTemplate) return;
+    const at = Date.parse(j.submittedAt || j.savedAt || '') || 0, act = Number(j.laborHours) || 0; if (!at || at < since || !(act > 0)) return;
+    const qt = quoted(q), extras = Number(j.extrasHours) || 0, adj = Math.max(0, act - extras), ratio = qt.est > 0 ? adj / qt.est : null;
+    const rc = j.recap || {};
+    jobs.push({ id: doc.id, label: label(q), date: new Date(at).toISOString().slice(0, 10), est: r2(qt.est), inst: r2(qt.inst), prog: r2(qt.prog), src: qt.src, act: r2(act), extras: r2(extras), ratio: ratio == null ? null : r2(ratio),
+      techs: ((q.schedule || {}).techs || []).length, rep: (q.project || {}).salesManagerName || '', issues: String(rc.issues || '').slice(0, 600), work: String(rc.work || '').slice(0, 300),
+      extrasList: (j.extras || []).filter(x => x && (x.desc || x.hours)).map(x => (x.desc || '') + (x.hours ? ' (' + x.hours + ' h)' : '')).slice(0, 5), items: qt.lines.map(l => l.name + ' ×' + l.qty) });
+    if (ratio != null) qt.lines.forEach(l => { const t = tiles[l.id] || (tiles[l.id] = { id: l.id, name: l.name, jobs: 0, qty: 0, est: 0, attr: 0, recent: 0 });
+      t.jobs++; t.qty += l.qty; t.est += l.est; t.attr += l.est * ratio; if (at > Date.now() - 90 * 864e5) t.recent++; }); });
+  const tl = Object.values(tiles).map(t => { const c = CATALOG.get(t.id) || {}; return { id: t.id, name: t.name, category: c.category || '', installHours: Number(c.installHours) || 0, programmingHours: Number(c.programmingHours) || 0,
+    jobs: t.jobs, recentJobs: t.recent, qty: t.qty, estHrs: r2(t.est), actualShare: r2(t.attr), ratio: r2(t.attr / t.est), perUnitNow: r2(t.est / t.qty), perUnitReal: r2(t.attr / t.qty) }; }).sort((a, b) => b.jobs - a.jobs);
+  jobs.sort((a, b) => b.date.localeCompare(a.date));
+  return { jobs, tiles: tl };
+}
+// For the weekly task. days = how far back the tile averages look (default 365); the week's jobs are those within 7 days.
+window.asbcLR = {
+  async data(days) { if (!ADMIN) throw new Error('admin only'); const L = await build(days || 365), wk = Date.now() - 7 * 864e5;
+    return { week: L.jobs.filter(j => Date.parse(j.date) >= wk), overrunsYear: L.jobs.filter(j => j.ratio != null && j.ratio > 1.2).length, jobsYear: L.jobs.length, tiles: L.tiles.filter(t => t.jobs >= 2),
+      lastReview: { weekOf: REVIEW.weekOf || null, open: (REVIEW.suggestions || []).filter(s => !s.status).map(s => s.id) } }; },
+  // review: {summary, overruns:[{id,label,est,act,ratio,cause,tileRelated}], suggestions:[{id,name,installHours,programmingHours,jobs,ratio,reason}]}
+  async save(review) { if (!ADMIN) throw new Error('admin only');
+    const sug = (review.suggestions || []).filter(s => CATALOG.has(s.id) && isFinite(s.installHours) && isFinite(s.programmingHours) && s.installHours >= 0 && s.programmingHours >= 0 && s.installHours <= 40 && s.programmingHours <= 40)
+      .map(s => { const c = CATALOG.get(s.id); return { id: s.id, name: c.name, curI: Number(c.installHours) || 0, curP: Number(c.programmingHours) || 0, installHours: q4(s.installHours), programmingHours: q4(s.programmingHours), jobs: s.jobs || 0, ratio: s.ratio || null, reason: String(s.reason || '').slice(0, 300) }; });
+    const hist = (REVIEW.history || []).concat(REVIEW.weekOf ? [{ weekOf: REVIEW.weekOf, summary: REVIEW.summary, suggestions: (REVIEW.suggestions || []).length, applied: (REVIEW.suggestions || []).filter(s => s.status === 'applied').length }] : []).slice(-12);
+    REVIEW = { weekOf: new Date().toISOString().slice(0, 10), summary: String(review.summary || '').slice(0, 1200), overruns: (review.overruns || []).slice(0, 25), suggestions: sug, history: hist };
+    await REF.set({ json: JSON.stringify(REVIEW), at: new Date() }); render(); return sug.length; }
+};
+async function decide(id, apply) {
+  const s = (REVIEW.suggestions || []).find(x => x.id === id); if (!s) return;
+  if (apply) { const d = await CAT.get(), items = ((d.exists && d.data().items) || []).slice(), i = items.findIndex(x => x.id === id); if (i < 0) return alert('That tile is no longer in the catalog.');
+    if (!confirm(`Update ${s.name}?\n\nInstall ${s.curI} → ${s.installHours} hrs\nProgramming ${s.curP} → ${s.programmingHours} hrs`)) return;
+    items[i] = Object.assign({}, items[i], { installHours: s.installHours, programmingHours: s.programmingHours }); await CAT.set({ items, updatedAt: new Date().toISOString() });
+    CATALOG.set(id, items[i]); }
+  s.status = apply ? 'applied' : 'dismissed'; s.by = ME; s.decidedAt = new Date().toISOString();
+  await REF.set({ json: JSON.stringify(REVIEW), at: new Date() }); render();
+}
+document.addEventListener('click', e => { const a = e.target.closest('[data-apply]'), d = e.target.closest('[data-dismiss]'); if (a) decide(a.dataset.apply, true); else if (d) decide(d.dataset.dismiss, false); });
+const pct = r => r == null ? '—' : `<span class="${r > 1.05 ? 'up' : r < 0.95 ? 'down' : ''}">${Math.round((r - 1) * 100) > 0 ? '+' : ''}${Math.round((r - 1) * 100)}%</span>`;
+function render() {
+  const R = REVIEW, S = R.suggestions || [], O = R.overruns || [];
+  let h = `<div class="box"><h2>This week's review${R.weekOf ? ' · ' + esc(new Date(R.weekOf + 'T12:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })) : ''}</h2>${R.summary ? `<div style="white-space:pre-wrap;font-size:14px;line-height:1.5">${esc(R.summary)}</div>` : '<div class="muted">No review yet. The first one runs Friday afternoon.</div>'}</div>`;
+  h += `<div class="box"><h2>Suggested labor changes</h2>${S.length ? `<div class="tbl"><table><tr><th>Tile</th><th>Now</th><th>Suggested</th><th>Jobs</th><th>Why</th><th></th></tr>${S.map(s => `<tr><td><b>${esc(s.name)}</b></td>
+    <td class="num">${s.curI} + ${s.curP} h</td><td class="num"><b>${s.installHours} + ${s.programmingHours} h</b></td><td class="num">${s.jobs}${s.ratio ? ' · ' + pct(s.ratio) : ''}</td><td>${esc(s.reason)}</td>
+    <td class="num">${s.status ? `<span class="pill ${s.status === 'applied' ? 'done' : 'no'}">${s.status}</span>` : `<button class="btn green" data-apply="${esc(s.id)}">Apply</button> <button class="btn" data-dismiss="${esc(s.id)}">Dismiss</button>`}</td></tr>`).join('')}</table></div>
+    <div class="muted" style="margin-top:6px">Hours are install + programming per unit. Apply updates the labor calculator right away.</div>` : '<div class="muted">No changes suggested.</div>'}</div>`;
+  h += `<div class="box"><h2>Overruns reviewed</h2>${O.length ? `<div class="tbl"><table><tr><th>Job</th><th>Quoted</th><th>Actual</th><th></th><th>Cause</th></tr>${O.map(o => `<tr><td><a href="./jobs.html?quote=${encodeURIComponent(o.id)}" style="color:#1F6FD1">${esc(o.label)}</a></td><td class="num">${o.est} h</td><td class="num">${o.act} h</td><td class="num">${pct(o.ratio)}</td><td>${esc(o.cause || '')}${o.tileRelated ? ' <span class="pill">tile</span>' : ''}</td></tr>`).join('')}</table></div>` : '<div class="muted">None this week.</div>'}</div>`;
+  if (LIVE) h += `<div class="box"><details><summary>All tiles with real jobs (last 12 months, ${LIVE.jobs.length} job reports)</summary><div class="tbl" style="margin-top:10px"><table><tr><th>Tile</th><th>Jobs</th><th>Units</th><th>Catalog / unit</th><th>Real / unit</th><th></th></tr>
+    ${LIVE.tiles.map(t => `<tr><td>${esc(t.name)}</td><td class="num">${t.jobs}</td><td class="num">${t.qty}</td><td class="num">${t.perUnitNow} h</td><td class="num">${t.perUnitReal} h</td><td class="num">${pct(t.ratio)}</td></tr>`).join('')}</table></div>
+    <div class="muted" style="margin-top:6px">Real hours are each job's actual labor (minus logged extra work) shared across its tiles in proportion to their quoted hours. Jobs quoted only in D-Tools count toward overruns but not toward tiles.</div></details></div>`;
+  if ((R.history || []).length) h += `<div class="box"><details><summary>Past reviews</summary>${R.history.slice().reverse().map(x => `<div style="margin-top:8px;font-size:13px"><b>${esc(x.weekOf)}</b> · ${x.suggestions} suggested, ${x.applied} applied<div class="muted">${esc(String(x.summary || '').slice(0, 240))}</div></div>`).join('')}</details></div>`;
+  document.getElementById('app').innerHTML = h;
+}
+firebase.auth().onAuthStateChanged(async u => {
+  if (!u || !u.emailVerified) { location.replace('./index.html'); return; }
+  ME = (u.email || '').toLowerCase();
+  const s = await db.collection('config').doc('users').get().catch(() => null), access = ASBCRoles.accessOf(((s && s.exists && s.data().users) || {})[ME], ME);
+  if (!ASBCRoles.can(access, 'laborreview')) return ASBCRoles.deny('laborreview', document.getElementById('app'));
+  ADMIN = access === 'admin';
+  try { const c = await CAT.get(); ((c.exists && c.data().items) || []).forEach(i => CATALOG.set(i.id, i)); } catch (e) {}
+  try { const d = await REF.get(); REVIEW = JSON.parse((d.exists && d.data().json) || '{}'); } catch (e) { REVIEW = {}; }
+  render(); try { LIVE = await build(365); render(); } catch (e) { console.warn('labor review', e); }
+});
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
+</script>
+<script src="./sidebar.js" defer></script>
+</body>
+</html>
