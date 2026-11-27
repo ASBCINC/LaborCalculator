@@ -8,6 +8,7 @@
 // 3) POST /notify (v8.33.0) Teams messages to the techs assigned to a job, sent by an ADMIN's signed-in session (the D-Tools
 //    calendar sync): {kind: 'schedule', quote, change: 'new'|'updated'} when an install is added or its days/times/techs change,
 //    {kind: 'nudge', quote} at the end of an install day when no job report was submitted. The caller must be an admin in config/users.
+//    v11.10.0: or the app's service account (hourly GitHub workflow: nudges, sales-rep heads-ups, {kind:'admin', title, text, url} alerts).
 // Variables and Secrets (Worker > Settings):
 //   GITHUB_TOKEN  fine-grained token, only ASBCINC/LaborCalculator, "Actions: Read and write"
 //   HOOK_SECRET   the random string in the webhook URL
@@ -158,21 +159,44 @@ function scheduleLines(sc) {
   return (sc.dates || []).map(d => { const w = (sc.times || {})[d] || (!sc.times || !Object.keys(sc.times).length ? sc : null);
     return dayTxt(d) + (w && w.start ? ' · ' + t12(w.start) + (w.end ? '–' + t12(w.end) : '') : ' · all day'); }).join('\n');
 }
+// v11.10.0 the hourly GitHub workflow calls /notify with an OAuth token for the app's own service account (FIREBASE_SA).
+// Google's tokeninfo proves the token is genuine and whose it is; only a service account of the asbc-calculator project passes.
+async function saCaller(token) {
+  if (!token || token.split('.').length === 3) return '';
+  try { const r = await fetch('https://oauth2.googleapis.com/tokeninfo?access_token=' + encodeURIComponent(token)); if (!r.ok) return '';
+    const j = await r.json(), e = String(j.email || '').toLowerCase();
+    return /@asbc-calculator\.iam\.gserviceaccount\.com$/.test(e) && String(j.email_verified) !== 'false' && Number(j.expires_in) > 0 ? e : ''; } catch (e) { return ''; }
+}
 function jwtEmail(token) { try { const p = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))); return String(p.email || '').toLowerCase(); } catch (e) { return ''; } }
 async function notifyTechs(request, env) {
   const json = (o, s) => new Response(JSON.stringify(o), { status: s || 200, headers: { ...CORS, 'Content-Type': 'application/json' } });
   if (!env.TEAMS_HOOK) return json({ error: 'TEAMS_HOOK not set' }, 500);
   const token = (request.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
   let b = {}; try { b = await request.json(); } catch (e) {}
-  const kind = ['nudge', 'prep', 'opp'].includes(b.kind) ? b.kind : 'schedule';
+  const kind = ['nudge', 'prep', 'opp', 'admin'].includes(b.kind) ? b.kind : 'schedule';
   if (kind === 'opp') return notifyOpp(token, b, env, json);
+  const sa = await saCaller(token);
+  if (kind === 'admin') {  // v11.10.0 system alert to the admin(s), e.g. "D-Tools calendar hasn't synced"
+    let users = {}; try { users = (await getDoc('config/users', token)).users || {}; } catch (e) { return json({ error: 'cannot read users: ' + e.message }, 403); }
+    const caller = sa || jwtEmail(token);
+    if (!(sa || (env.ADMIN_EMAIL && caller === String(env.ADMIN_EMAIL).toLowerCase()) || (users[caller] || {}).role === 'admin' || (users[caller] || {}).access === 'admin')) return json({ error: 'admin only' }, 403);
+    const admins = (env.ADMIN_EMAIL ? [String(env.ADMIN_EMAIL)] : Object.keys(users).filter(e => (users[e] || {}).role === 'admin')).map(e => e.trim().toLowerCase()).filter(e => /@(asbc\.us|asbis\.com)$/i.test(e));
+    if (!admins.length) return json({ error: 'no admin recipient' }, 500);
+    const url = /^https:\/\/asbcinc\.github\.io\/LaborCalculator\//.test(String(b.url || '')) ? String(b.url) : 'https://asbcinc.github.io/LaborCalculator/calendar.html';
+    const card = { type: 'AdaptiveCard', $schema: 'http://adaptivecards.io/schemas/adaptive-card.json', version: '1.4',
+      body: [{ type: 'TextBlock', size: 'Medium', weight: 'Bolder', wrap: true, color: 'Attention', text: clip(b.title || 'ASBC Tools alert', 120) }, { type: 'TextBlock', wrap: true, text: clip(b.text || '', 600) }],
+      actions: [{ type: 'Action.OpenUrl', title: clip(b.button || 'Open', 40), url }] };
+    const sent = {}; for (const a of admins) sent[a] = await postTeams(env, a, card);
+    console.log('notify admin', JSON.stringify(sent));
+    return json({ ok: true, sent });
+  }
   const id = String(b.quote || '');
   if (!token || !/^[\w-]{1,100}$/.test(id)) return json({ error: 'bad request' }, 400);
   let q, users = {};
   try { q = await getDoc('quotes/' + encodeURIComponent(id), token); users = (await getDoc('config/users', token)).users || {}; }
   catch (e) { return json({ error: 'cannot read job: ' + e.message }, 403); }
-  const caller = jwtEmail(token);  // the token passed Firestore's own check above, so its email is genuine
-  if (!((env.ADMIN_EMAIL && caller === String(env.ADMIN_EMAIL).toLowerCase()) || (users[caller] || {}).role === 'admin' || (users[caller] || {}).access === 'admin')) return json({ error: 'admin only' }, 403);
+  const caller = sa || jwtEmail(token);  // the token passed Firestore's own check above, so its email is genuine
+  if (!(sa || (env.ADMIN_EMAIL && caller === String(env.ADMIN_EMAIL).toLowerCase()) || (users[caller] || {}).role === 'admin' || (users[caller] || {}).access === 'admin')) return json({ error: 'admin only' }, 403);
   const sc = q.schedule || {}, p = q.project || {};
   const techs = (sc.techs || []).map(e => String(e).toLowerCase()).filter(e => /@(asbc\.us|asbis\.com)$/i.test(e));
   const repEmail = (Object.keys(users).find(e => (users[e] || {}).name === p.salesManagerName) || '').toLowerCase();

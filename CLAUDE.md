@@ -348,3 +348,24 @@ D-Tools handoff panel (paste-ready labor block); Quote Log search wording.
 - The calculator no longer uses dark Tailwind class names repainted by tools.css. 410 class uses were renamed to honest light-theme classes defined in calculator.css: bg-page, bg-card, bg-soft, bg-go (green button), bg-scrim, text-ink, text-ink2, text-mute, text-on (white on green), text-accent, text-bad, text-good, border-line, border-accent, divide-line, shadow-bar, hover/focus helpers hv-tint, hv-go, hv-text-on, hv-text-accent, hv-border-accent, fc-border-accent, fc-ring-accent, ph-mute. The calculator block in tools.css was removed. Use these names for new calculator markup.
 - Bugs this fixed (old overrides beat the page's own styles): the selected category chip now shows blue; the printed estimate's title, client and sales manager were white-on-white and are visible again; item quantities show on the printout. Print zone headers are light gray (were black). Totals use the app font with tabular numbers (were monospace). Old gold accents (scrollbar hover, qty focus ring) are now blue/gray.
 - Verified with before/after screenshots (desktop, phone, list view, modals, print) and the smoke test.
+
+## v11.10.0 Less dependence on the work computer (Nov 27, 2026)
+- ASBC sync bookmark v2 (calendar.html DT_BOOKMARK): opens the app in a NEW tab (window.open at click, then navigated), import as before
+  (hash v:2 carries o = D-Tools origin). After the import, calendar.html pushStages(): asbcPendingStages() -> confirm list -> postMessage
+  {t:'asbc-stages', P} to window.opener (origin checked: https://*.d-tools.cloud); the bookmark (still running in the D-Tools tab,
+  origin + source checked) makes the stage calls (same as old pull step 7f, max 10) and posts {t:'asbc-stages-done', R} back;
+  asbcStagesDone(R). D-Tools sign-in headers never leave d-tools.cloud. Old bookmarks still import (v:1) but can't push stages.
+  Tested end-to-end with Playwright (stubbed D-Tools + mock Firebase): import, confirm, MarkProjectAsCompleted, done.
+- Installer task statuses are now set by Anthony by hand. asbcImportSchedule() calls taskCheck(projects): a report's task update is
+  marked done when D-Tools shows the target status on the techs' task for that project. Job report (closed, admin): "Mark recap
+  uploaded to D-Tools" (job.dtoolsUploaded {for: submittedAt}) and "Mark D-Tools task updated" (dtoolsTasks).
+- window.asbcDtoolsTodo() -> [{project, url, jobs, need:[stage → X | installer task → X | upload job recap], recap}] (60 days);
+  the evening Claude pull posts it to Anthony's Claude dashboard on Fridays.
+- config/syncStatus {okAt, problem, problemAt, via}: importSchedule clears the problem; window.asbcSyncProblem(reason) records one
+  (scheduled run signed out of D-Tools etc.). health.js shows it in the stale-calendar item.
+- scripts/daily_alerts.py (hourly sync workflow step): sales-rep prep heads-up (weekdays from 7 AM PT), recap nudge (5-9 PM PT),
+  stale-calendar Teams alert to the admin once a day (8 AM-6 PM, 26 h / 74 h Mondays; config/syncAlert.sent). Calls relay /notify
+  with an OAuth token for FIREBASE_SA (scopes datastore + userinfo.email); relay saCaller() verifies it with Google tokeninfo
+  (must be @asbc-calculator.iam.gserviceaccount.com). New relay kind 'admin' {title, text, url, button}.
+- Claude "ASBC D-Tools pull (v2)" now runs once, weekdays 5:37 PM PT: connector pull, calendar import (backup to the bookmark),
+  dashboard tasks/messages, Monday data check, Friday D-Tools update list. Old steps 7f/7g/8/10 retired.

@@ -36,6 +36,11 @@ jobs:
         run: python3 scripts/auth_status.py
         env:
           FIREBASE_SA: ${{ secrets.FIREBASE_SA }}
+      - name: Teams reminders and stale-calendar alert (v11.10.0; used to need the work computer)
+        continue-on-error: true
+        run: python3 scripts/daily_alerts.py
+        env:
+          FIREBASE_SA: ${{ secrets.FIREBASE_SA }}
       - name: Catch up skipped schedules (backup daily, weekly report Fridays)
         env:
           GH_TOKEN: ${{ github.token }}

@@ -158,6 +158,13 @@ function collectJob() {
   const jsEl = document.getElementById('jobStatus');
   return Object.assign({}, Q.job || {}, { jobStatus: jsEl ? jsEl.value : ((Q.job || {}).jobStatus || ''), lines: [], log, siteHours: siteHours(log), laborHours: laborHours(log), installedItems: inst, recap, extras, signoffSkip: signoffSkip(), photos: photosVal() || (Q.job || {}).photos || null, extrasHours: Math.round(extras.reduce((a, x) => a + x.hours, 0) * 100) / 100, savedAt: new Date().toISOString(), savedBy: ME.email });
 }
+// v11.10.0 D-Tools updates Anthony makes by hand (weekly list on his dashboard): upload the recap, set the installer task.
+function dtoolsMarks(j) {
+  const up = (j.dtoolsUploaded || {}).for === j.submittedAt, tk = (Q.dtoolsTasks || {}).for === j.submittedAt;
+  const d = x => x ? new Date(x).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+  return (j.jobStatus === 'Complete' ? (up ? `<span class="qmeta" style="align-self:center">✓ Recap uploaded to D-Tools ${esc(d(j.dtoolsUploaded.at))}</span>` : '<button class="qbtn" id="markUploaded">Mark recap uploaded to D-Tools</button>') : '')
+    + (tk ? `<span class="qmeta" style="align-self:center">✓ D-Tools task: ${esc(Q.dtoolsTasks.result || 'updated')}</span>` : '<button class="qbtn" id="markTask">Mark D-Tools task updated</button>');
+}
 function report(admin, canEdit) {
   const j = Q.job || {}, show = admin || ME.access === 'management';
   const daily = () => `    <div class="card"><div class="sect" style="margin-top:0">Time on site by day</div><table><tr><th>Date</th><th class="right">Hours on site</th><th>Techs</th><th class="right">Labor hrs</th></tr>
@@ -166,6 +173,7 @@ function report(admin, canEdit) {
     <div class="qmeta" style="margin-top:10px">Submitted by ${esc(nameOf(j.submittedBy))}${j.submittedAt ? ' · ' + esc(new Date(j.submittedAt).toLocaleString('en-US')) : ''}${j.reviewedAt && (Q.status === 'closed') ? ' · Approved by ' + esc(nameOf(j.reviewedBy)) + ' ' + esc(new Date(j.reviewedAt).toLocaleDateString('en-US')) : ''}</div></div>`;
   const actions = revisionsCard() + `<div class="qactions no-print"><button class="qbtn" id="pdfJob">Export PDF</button><a class="qbtn" style="display:inline-flex;align-items:center;text-decoration:none" href="${ipHref(REF && REF.id)}">${ipDevs(Q).length ? 'IP plan' : '+ IP / VLAN plan'}</a>${canEdit ? '<button class="qbtn gold" id="addDayJob">+ Log another day</button><button class="qbtn" id="editJob">Edit &amp; resubmit</button>' : ''}${canEdit && (Q.project || {}).dtoolsOpportunityId ? `<a class="qbtn" style="display:inline-flex;align-items:center;text-decoration:none" href="?new=1&opp=${encodeURIComponent(Q.project.dtoolsOpportunityId)}&rep=${encodeURIComponent(Q.project.salesManagerName || '')}">+ Another report for this project</a>` : ''}<button class="qbtn" onclick="window.print()">Print / Save PDF</button>
     ${admin && (j.recap || {}).followups && !j.returnVisitId ? '<button class="qbtn" id="makeReturn" style="border-color:#E0B860;color:#8A5A00">Create return visit</button>' : ''}${admin && j.returnVisitId ? '<a class="qbtn" style="display:inline-flex;align-items:center;text-decoration:none" href="?quote=' + encodeURIComponent(j.returnVisitId) + '">Open return visit</a>' : ''}
+    ${admin && Q.status === 'closed' && j.submittedAt ? dtoolsMarks(j) : ''}
     ${admin && Q.status === 'submitted' ? '<button class="qbtn gold" id="approveJob">Approve &amp; close</button><button class="qbtn qbtn-del" id="sendBack">Send back</button>' : ''}</div><div id="revMsg" class="qmeta no-print"></div>`;
   const ex = (j.extras || []).filter(x => x.desc || x.hours);
   const extrasCard = ex.length ? `<div class="card" style="border-color:#F3B98F"><div class="sect" style="margin-top:0;color:#A1440B">Unplanned / extra work: possible change order (${hrs(ex.reduce((a, x) => a + (Number(x.hours) || 0), 0))} hrs)</div>

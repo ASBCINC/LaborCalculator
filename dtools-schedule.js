@@ -202,6 +202,8 @@
     out.events = events.filter(e => !e.job).length;
     await db.collection('config').doc('dtoolsEvents').set({ events, holidays, at: new Date().toISOString() });
     for (const n of toNotify) out.notified.push(n.name + ': ' + await notify({ kind: 'schedule', quote: n.quote, change: n.change }));
+    try { out.tasksSeen = await taskCheck(projects); } catch (e) { console.warn('task check', e); }  // v11.10.0
+    try { await db.collection('config').doc('syncStatus').set({ okAt: new Date().toISOString(), problem: '', problemAt: '', via: (extra || {}).via || 'pull' }, { merge: true }); } catch (e) {}
     return out;
   }
   // Today's jobs (Pacific date) still waiting on a report: one Teams reminder to the assigned techs.
@@ -310,10 +312,10 @@
   window.asbcRawToProjects = rawToProjects;
   // v10.4.0 installer task status from job reports (replaces the encrypted jobs.enc list the D-Tools pull used to decrypt).
   // Each report submitted in the last 14 days and not yet applied: target task status Completed (job Complete) or In Progress.
-  async function pendingTasks() {
+  async function pendingTasks(days, limit) {
     const db = firebase.firestore(); let pipe = {};
     try { const s = await db.collection('pipeline').doc('data').get(); if (s.exists) pipe = JSON.parse(s.data().json || '{}').projects || {}; } catch (e) {}
-    const P = Object.values(pipe), users = ((await db.collection('config').doc('users').get()).data() || {}).users || {}, since = new Date(Date.now() - 14 * 864e5).toISOString(), out = [];
+    const P = Object.values(pipe), users = ((await db.collection('config').doc('users').get()).data() || {}).users || {}, since = new Date(Date.now() - (days || 14) * 864e5).toISOString(), out = [];
     for (const d of (await db.collection('quotes').where('status', '==', 'closed').get()).docs) {
       const q = d.data(), j = q.job || {}, pr = q.project || {}; if (!j.submittedAt || j.submittedAt < since) continue;
       if (q.dtoolsTasks && q.dtoolsTasks.for === j.submittedAt) continue;
@@ -321,8 +323,49 @@
       const techs = [...new Set((j.log || []).flatMap(r => Array.isArray(r.techs) ? r.techs : (r.who ? [r.who] : [])))].map(e => (users[e] || {}).name || e);
       out.push({ quote: d.id, for: j.submittedAt, project: p ? p.id : '', url: p ? p.url : '', name: p ? p.name : (pr.dtoolsProjectName || q.label), techs, dates: [...new Set((j.log || []).map(r => r.date))].sort(), target: j.jobStatus === 'Complete' ? 'Completed' : 'In Progress' });
     }
-    return out.slice(0, 5);
+    return out.slice(0, limit || 5);
   }
+  // v11.10.0 installer task statuses are now set by hand in D-Tools: every calendar import (bookmark or evening pull) marks a
+  // job report's task update done once D-Tools shows that status on the techs' task for the project.
+  async function taskCheck(projects) {
+    const pend = await pendingTasks(60, 100); if (!pend.length) return 0;
+    let pipe = {}; try { const s = await firebase.firestore().collection('pipeline').doc('data').get(); if (s.exists) pipe = JSON.parse(s.data().json || '{}').projects || {}; } catch (e) {}
+    const P = Object.values(pipe), done = [];
+    for (const t of pend) {
+      const p = P.find(x => x.id === t.project) || {};
+      const ids = [t.project, p.id, p.num].filter(Boolean).map(String);
+      const pr = (projects || []).find(x => ids.includes(String(x.pid || '')) || (t.name && fold(x.name) === fold(t.name)));
+      if (!pr) continue;
+      const mine = (pr.tasks || []).filter(k => !t.techs.length || (k.assignees || []).some(a => t.techs.some(n => fold(n) === fold(a))));
+      const ok = mine.some(k => k.status === 'Completed' || (t.target === 'In Progress' && k.status === 'In Progress'));
+      if (ok) done.push(Object.assign({}, t, { ok: true, result: 'seen in D-Tools: ' + t.target }));
+    }
+    if (done.length) await tasksDone(done);
+    return done.length;
+  }
+  // v11.10.0 weekly list of D-Tools updates Anthony makes by hand, grouped by project:
+  // stage changes still waiting for the bookmark, installer task statuses to set, and Complete job recaps to upload.
+  async function dtoolsTodo() {
+    const db = firebase.firestore(); let pipe = {};
+    try { const s = await db.collection('pipeline').doc('data').get(); if (s.exists) pipe = JSON.parse(s.data().json || '{}').projects || {}; } catch (e) {}
+    const P = Object.values(pipe), by = {};
+    const proj = (name, oppId) => P.find(x => oppId && x.id === oppId) || P.find(x => fold(x.name) === fold(name)) || {};
+    const row = (name, oppId) => { const p = proj(name, oppId), k = p.id || fold(name); return by[k] || (by[k] = { project: p.name || name, url: p.url || '', jobs: [], need: [] }); };
+    for (const s of await pendingStages()) row(s.name).need.push('stage → ' + s.want);
+    for (const t of await pendingTasks(60, 100)) { const r = row(t.name); r.need.push('installer task → ' + t.target + (t.dates.length ? ' (' + t.dates.slice(-1)[0] + ')' : '')); r.jobs.push(t.quote); }
+    const since = new Date(Date.now() - 60 * 864e5).toISOString();
+    for (const d of (await db.collection('quotes').where('status', '==', 'closed').get()).docs) {
+      const q = d.data(), j = q.job || {}, pr = q.project || {};
+      if (q.isTemplate || q.jobDeleted || j.jobStatus !== 'Complete' || !j.submittedAt || j.submittedAt < since) continue;
+      if ((j.dtoolsUploaded || {}).for === j.submittedAt) continue;
+      const r = row(pr.dtoolsProjectName || q.label, pr.dtoolsOpportunityId); r.need.push('upload job recap'); r.jobs.push(d.id);
+    }
+    return Object.values(by).map(r => Object.assign(r, { jobs: [...new Set(r.jobs)], recap: r.jobs.length ? 'https://asbcinc.github.io/LaborCalculator/jobs.html?quote=' + encodeURIComponent(r.jobs[0]) : '' }));
+  }
+  window.asbcDtoolsTodo = dtoolsTodo;
+  window.asbcTaskCheck = taskCheck;
+  // v11.10.0 a scheduled run that can't reach D-Tools records why, so the stale-sync alert can say what to fix
+  window.asbcSyncProblem = async reason => { await firebase.firestore().collection('config').doc('syncStatus').set({ problem: String(reason || '').slice(0, 120), problemAt: new Date().toISOString() }, { merge: true }); return true; };
   async function tasksDone(results) {
     const db = firebase.firestore();
     for (const r of results || []) await db.collection('quotes').doc(r.quote).set({ dtoolsTasks: { for: r.for, at: new Date().toISOString(), result: r.result || (r.ok ? 'set to ' + r.target : 'skipped') } }, { merge: true });

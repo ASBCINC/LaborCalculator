@@ -49,9 +49,10 @@
     } catch (e) {}
     try {
       const ev = await db.collection('config').doc('dtoolsEvents').get();
+      let PROB = ''; try { const ss = await db.collection('config').doc('syncStatus').get(); PROB = (ss.exists && ss.data().problem) || ''; } catch (e) {}  // v11.10.0
       const day = new Date().toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles', weekday: 'short' });
       const limit = day === 'Mon' ? 74 : day === 'Sun' || day === 'Sat' ? 999 : 26;
-      if (!ev.exists || hoursAgo(ev.data().at) > limit) issues.push({ level: 'high', text: 'D-Tools calendar sync hasn\'t run since ' + (ev.exists ? new Date(ev.data().at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'ever') + ' (check the D-Tools pull scheduled task and that you are signed in to D-Tools in the Claude app browser)', href: './calendar.html', items: [] });
+      if (!ev.exists || hoursAgo(ev.data().at) > limit) issues.push({ level: 'high', text: 'D-Tools calendar sync hasn\'t run since ' + (ev.exists ? new Date(ev.data().at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'ever') + (PROB ? ' (' + PROB + ')' : '') + ': open D-Tools and click the ASBC sync bookmark', href: './calendar.html', items: [] });
     } catch (e) {}
     try {
       const pd = await db.collection('pipeline').doc('data').get();
