@@ -23,6 +23,7 @@ const CORE_ASSETS = [
   './update-check.js',
   './tools.css',
   './sidebar.js',
+  './alerts.js',
   './diag.js',
   './manifest.json',
   './labor-catalog.json',

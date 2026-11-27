@@ -247,6 +247,7 @@
         .asbc-ticker-inner { display: inline-block; white-space: nowrap; animation: asbcTicker 26s linear infinite; will-change: transform; }
         .asbc-ticker-wrap:hover .asbc-ticker-inner { animation-play-state: paused; }
     </style>
+<script>window.ASBC_TOOLS = true;</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./tools.css">
@@ -2060,7 +2061,8 @@
                 currentUserProfile = { email, name: p.name, role: p.role || 'rep', allQuotes: !!p.allQuotes, access: ASBCRoles.accessOf(p, email) };
                 // v8.29.0: sign-in lands on the Home page; the calculator opens from there (?calc=1) or with a saved quote (?quote=)
                 { const qs = new URLSearchParams(location.search);
-                  if (!ASBCRoles.can(currentUserProfile.access, 'calculator') || (!qs.has('quote') && !qs.has('calc'))) { location.replace('./home.html'); return; } }
+                  const acc0 = currentUserProfile.access, land = !window.ASBC_TOOLS ? './home.html' : ['installer', 'lead'].includes(acc0) ? './jobs.html' : acc0 === 'manager' ? '' : './home.html';  // v11.0.0 reps land here, techs on My Jobs
+                  if (!ASBCRoles.can(acc0, 'calculator') || (!qs.has('quote') && !qs.has('calc') && land)) { location.replace(land || './home.html'); return; } }
                 // v8.16.0: techs use the calculator too (no admin); Jobs link in the header
                 showAuthGate(false);
                 { const cl = document.getElementById('calLink'); if (cl) { cl.classList.remove('hidden'); cl.classList.add('block'); } }  // v8.26.0
@@ -2073,6 +2075,7 @@
                 }
                 applySignedInUser();
                 window.ASBCDiag && ASBCDiag.ready('calculator');  // v10.8.0 error log
+                if (window.ASBC_TOOLS && window.asbcDashboard && currentUserProfile.access === 'manager') asbcDashboard({ access: 'manager', email, name: currentUserProfile.name, users }).then(d => { const h = asbcAlertStrip(d.alerts); const pt = document.getElementById('projectTools'); if (h && pt) pt.insertAdjacentHTML('afterend', '<div style="padding:10px 12px 0">' + h + '</div>'); }).catch(() => {});  // v11.0.0 rep alerts
                 refreshSavedEstimateList();
                 loadRepLeaderboard();
                 if (typeof _bootQuoteId !== 'undefined' && _bootQuoteId) { const q = _bootQuoteId; _bootQuoteId = null; loadQuoteById(q); }
@@ -2985,6 +2988,7 @@
             });
         }
     </script>
+<script src="./alerts.js"></script>
 <script src="./sidebar.js" defer></script>
 </body>
 </html>

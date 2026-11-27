@@ -414,7 +414,8 @@ function techList(jobs, archived) {
       ${chip(q)}<a class="tbtn" href="?quote=${encodeURIComponent(q._id)}">${btn}</a></div>`; };
   const row = (q, d) => `<a class="trow" href="?quote=${encodeURIComponent(q._id)}"><div><div class="n">${esc(label(q))}</div><div class="qmeta">${esc(dayWin(q, d))}${(q.schedule || {}).address ? ' · ' + esc(q.schedule.address) : ''}</div></div><div class="d">${esc(fmtDate(d))} ›</div></a>`;
   const nextD = q => ds(q).find(d => d > t);
-  app().innerHTML = `<div class="hello">Hi <b>${esc(first || 'there')}</b> · ${esc(new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'America/Los_Angeles' }))}</div>
+  if (window.ASBC_TOOLS && window.asbcDashboard) setTimeout(() => asbcDashboard({ access: ME.access, email: ME.email, name: ME.name, users: USERS }).then(d => { const b = document.getElementById('techAlerts'); if (b) b.innerHTML = asbcAlertStrip(d.alerts); }).catch(() => {}), 0);  // v11.0.0
+  app().innerHTML = `<div id="techAlerts"></div><div class="hello">Hi <b>${esc(first || 'there')}</b> · ${esc(new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'America/Los_Angeles' }))}</div>
     <div class="tsec">Today</div>${todayJobs.length ? todayJobs.map(q => big(q, 'today')).join('') : '<div class="trow" style="color:var(--muted)">No jobs scheduled for you today.</div>'}
     ${late.length ? `<div class="tsec warn">Needs your report (${late.length})</div>${late.map(q => big(q, 'late')).join('')}` : ''}
     ${soon.length ? `<div class="tsec dim">Coming up</div>${soon.map(q => row(q, nextD(q))).join('')}` : ''}

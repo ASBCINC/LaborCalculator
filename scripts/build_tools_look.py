@@ -91,7 +91,8 @@ def _recolor(text):
         text = re.sub(r'(%s\s*:\s*)#[0-9a-fA-F]{3,6}\b' % re.escape(k), r'\g<1>' + v, text)
     return text
 
-HEAD_ADD = ('<link rel="preconnect" href="https://fonts.googleapis.com">\n'
+HEAD_ADD = ('<script>window.ASBC_TOOLS = true;</script>\n'
+            '<link rel="preconnect" href="https://fonts.googleapis.com">\n'
             '<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">\n'
             '<link rel="stylesheet" href="./tools.css">\n')
 
@@ -105,7 +106,8 @@ def html(name, s):
     s = s.replace('content="#b08d57"', 'content="#2F7FD1"').replace('content="#050505"', 'content="#2F7FD1"')
     if 'tools.css' not in s: s = s.replace('</head>', HEAD_ADD + '</head>', 1)
     if name not in NO_SIDEBAR and 'sidebar.js' not in s and './roles.js' in s:
-        s = s.replace('</body>', '<script src="./sidebar.js" defer></script>\n</body>', 1)
+        extra = '<script src="./alerts.js"></script>\n' if name in ('home.html', 'jobs.html', 'index.html') and 'alerts.js' not in s else ''
+        s = s.replace('</body>', extra + '<script src="./sidebar.js" defer></script>\n</body>', 1)
     return s
 
 def main():
@@ -124,7 +126,7 @@ def main():
             s = recolor(s)
             if name == 'sw.js':
                 s = s.replace("'asbc-calc-v", "'asbc-tools-next-v" if not LIVE else "'asbc-tools-v")
-                if "'./tools.css'" not in s: s = s.replace("'./update-check.js',", "'./update-check.js',\n  './tools.css',\n  './sidebar.js',", 1)
+                if "'./tools.css'" not in s: s = s.replace("'./update-check.js',", "'./update-check.js',\n  './tools.css',\n  './sidebar.js',\n  './alerts.js',", 1)
             with open(dst, 'w', encoding='utf-8') as f: f.write(s)
         elif name == 'manifest.json':
             m = json.load(open(src, encoding='utf-8'))

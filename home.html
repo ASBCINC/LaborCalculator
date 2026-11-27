@@ -75,6 +75,7 @@ firebase.auth().onAuthStateChanged(async u => {
   const access = ASBCRoles.accessOf(p, email);
   if (!access) { document.getElementById('app').innerHTML = `<div class="empty">${esc(email)} isn't on the approved list yet. Ask Anthony to add you.</div>`; return; }
   document.getElementById('who').textContent = (p && p.name ? p.name + ' · ' : '') + ASBCRoles.DEFS[access].label;
+  if (window.ASBC_TOOLS && window.asbcDashboard) return dash(access, p, email, (us && us.exists && us.data().users) || {});  // v11.0.0
   const pages = SHOW.filter(k => ASBCRoles.can(access, k));
   document.getElementById('app').innerHTML = '<div id="attn"></div><div class="grid">' + pages.map(k => `<a class="tile" href="${ASBCRoles.PAGES[k].href}">${ICON[k]}<div><b>${esc(ASBCRoles.PAGES[k].label)}</b><span>${esc(SUB[k])}</span><span class="cnt" id="cnt-${k}"></span></div></a>`).join('') + '</div>';
   counts(access, p, email).catch(() => {});
@@ -105,6 +106,21 @@ async function counts(access, p, email) {
   try { const s = await db.collection('config').doc('users').get(); setCnt('users', plural(Object.keys((s.data() || {}).users || {}).length, 'person') .replace('persons', 'people')); } catch (e) {}
   if (ASBCRoles.can(access, 'pipeline')) try { const s = await db.collection('pipeline').doc('data').get(); if (s.exists) { const d = JSON.parse(s.data().json || '{}');
     const act = Object.values(d.projects || {}).filter(x => !/completed/i.test(x.stage || '')).length; setCnt('pipeline', plural(act, 'active project') + ' · ' + plural(Object.keys(d.opps || {}).length, 'opportunity').replace('opportunitys', 'opportunities')); } } catch (e) {}
+}
+// v11.0.0 ASBC Tools dashboard: each role's alerts + number cards (alerts.js). Techs land on My Jobs, reps on the Calculator,
+// unless they open the Dashboard from the sidebar (?dash=1).
+async function dash(access, p, email, users) {
+  const qs = new URLSearchParams(location.search);
+  if (!qs.has('dash') && ['installer', 'lead'].includes(access)) return location.replace('./jobs.html');
+  if (!qs.has('dash') && access === 'manager') return location.replace('./index.html?calc=1');
+  document.querySelector('.brand h1').innerHTML = 'ASBC <span>Dashboard</span>';
+  const app = document.getElementById('app');
+  app.innerHTML = '<div class="empty">Loading your dashboard…</div>';
+  let d = { alerts: [], cards: [] };
+  try { d = await asbcDashboard({ access, email, name: (p && p.name) || '', store: (p && p.store) || '', users }); } catch (e) { console.warn('dashboard', e); }
+  const lv = { high: 'high', medium: 'medium', low: 'low' };
+  app.innerHTML = `<div class="attn"${d.alerts.length ? '' : ' style="border-color:var(--line)"'}><h2>${d.alerts.length ? 'Needs attention (' + d.alerts.length + ')' : 'Needs attention'}</h2>${d.alerts.length ? d.alerts.map(i => `<a class="it" href="${esc(i.href)}"><span class="lv ${lv[i.level] || 'low'}"></span>${esc(i.text)}${(i.items || []).length ? `<div class="its">${esc(i.items.join(' · '))}</div>` : ''}</a>`).join('') : '<div style="color:var(--muted);font-size:14px">Nothing right now. You are all caught up.</div>'}</div>
+    <div class="grid">${d.cards.map(c => `<a class="tile" href="${esc(c.href)}"><div><span style="margin:0;font-weight:700;text-transform:uppercase;letter-spacing:.05em">${esc(c.label)}</span><b style="font-size:26px;margin-top:8px">${esc(c.value)}</b></div><span>${esc(c.sub || '')}</span></a>`).join('')}</div>`;
 }
 function showHealth(h) {
   const box = document.getElementById('attn'); if (!box) return;

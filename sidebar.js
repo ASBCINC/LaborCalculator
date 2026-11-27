@@ -4,7 +4,7 @@
 (function () {
   if (window.ASBCSidebar) return;
   const LINKS = [
-    ['home', 'Home', './home.html', '<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/>'],
+    ['home', 'Dashboard', './home.html?dash=1', '<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/>'],
     ['calculator', 'Calculator', './index.html?calc=1', '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8 12h2M12 12h2M8 16h2M12 16h2"/>'],
     ['recaps', 'Jobs', './jobs.html', '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>'],
     ['calendar', 'Calendar', './calendar.html', '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>'],
