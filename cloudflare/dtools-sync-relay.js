@@ -20,6 +20,9 @@
 //   RAMP_CLIENT_ID / RAMP_CLIENT_SECRET  Ramp developer app "Labor Calculator" (client credentials; scopes transactions:read,
 //                 receipts:read/write, memos:read/write, users:read). Nothing here can move money or change cards.
 //                 (if not set: every config/users entry with role "admin")
+// 6) POST /invite (v11.1.0) {email}: an admin sends a Teams message to someone on User Roles who hasn't signed up or verified yet:
+//    how to sign in, verify the email, and that the email can take a few minutes, may land in Junk, and comes from
+//    noreply@asbc-calculator.firebaseapp.com ("Verify your email for asbc-calculator").
 // 5) /photo (v10.6.0) install photos taken in the app, kept in Workers KV (binding PHOTOS; free plan: 1 GB, 1,000 saves a day).
 //    POST {action:'put', quote, image: JPEG data URL}  caller must be able to read that job in Firestore (or it is a brand-new job-<time> id)
 //    POST {action:'del', k}                            the tech who took it, or an admin
@@ -349,6 +352,30 @@ async function photoRoute(request, env) {
   }
   return json({ error: 'unknown action' }, 400);
 }
+async function invite(request, env) {
+  const json = (o, s) => new Response(JSON.stringify(o), { status: s || 200, headers: { ...CORS, 'Content-Type': 'application/json' } });
+  if (!env.TEAMS_HOOK) return json({ error: 'TEAMS_HOOK not set' }, 500);
+  const token = (request.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
+  let b = {}; try { b = await request.json(); } catch (e) {}
+  if (!token) return json({ error: 'sign in first' }, 401);
+  let users = {}; try { users = (await getDoc('config/users', token)).users || {}; } catch (e) { return json({ error: 'not approved' }, 403); }
+  const caller = jwtEmail(token), admin = caller === String(env.ADMIN_EMAIL || '-').toLowerCase() || (users[caller] || {}).role === 'admin' || (users[caller] || {}).access === 'admin';
+  if (!admin) return json({ error: 'admins only' }, 403);
+  const to = String(b.email || '').trim().toLowerCase();
+  if (!/^[^@\s]+@asbc\.us$/.test(to) || !users[to]) return json({ error: 'that person is not on User Roles' }, 400);
+  const first = String((users[to] || {}).name || '').split(' ')[0] || 'there', from = String((users[caller] || {}).name || 'Anthony Ward');
+  const APP = 'https://asbcinc.github.io/LaborCalculator/';
+  const card = { type: 'AdaptiveCard', $schema: 'http://adaptivecards.io/schemas/adaptive-card.json', version: '1.4', body: [
+    { type: 'TextBlock', size: 'Medium', weight: 'Bolder', wrap: true, text: 'You have been invited to ASBC Tools (Labor Calculator)' },
+    { type: 'TextBlock', wrap: true, text: 'Hi ' + first + ', ' + from + ' added you to ASBC Tools. To get in:' },
+    { type: 'TextBlock', wrap: true, spacing: 'Small', text: '1. Open ASBC Tools (button below) and sign in with your work email: ' + to + '\n2. Create your PIN.\n3. Open the verification email and click the link to verify your email address, then come back and sign in.' },
+    { type: 'TextBlock', wrap: true, spacing: 'Medium', color: 'Attention', weight: 'Bolder', text: 'Heads up: the verification email can take a few minutes to arrive and may land in your Junk folder.' },
+    { type: 'TextBlock', wrap: true, spacing: 'Small', text: 'Look for an email from **noreply@asbc-calculator.firebaseapp.com** with the subject **"Verify your email for asbc-calculator"**.' }],
+    actions: [{ type: 'Action.OpenUrl', title: 'Open ASBC Tools', url: APP }] };
+  const st = await postTeams(env, to, card);
+  console.log('invite', to, caller, st);
+  return json({ ok: st === 200 || st === 202, status: st });
+}
 async function photoGet(path, env) {
   const k = decodeURIComponent(path.slice('/photo/'.length));
   if (!env.PHOTOS || !PHOTO_KEY.test(k)) return new Response('Not found', { status: 404 });
@@ -367,6 +394,11 @@ export default {
     if (path === '/ramp') {
       if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
       if (request.method === 'POST') return rampRoute(request, env);
+      return new Response('Not found', { status: 404 });
+    }
+    if (path === '/invite') {
+      if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
+      if (request.method === 'POST') return invite(request, env);
       return new Response('Not found', { status: 404 });
     }
     if (path === '/photo') {

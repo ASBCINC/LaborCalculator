@@ -62,19 +62,48 @@ function matrix() {
     ${R.ORDER.map(k => `<tr><td><b>${esc(R.DEFS[k].label)}</b></td>${cols.map(c => R.can(k, c) ? '<td class="y">✓</td>' : '<td class="n">—</td>').join('')}<td>${QTXT[R.DEFS[k].quotes]}</td><td>${RTXT[R.DEFS[k].recaps]}</td></tr>`).join('')}</table></div>
     <div class="muted" style="margin-top:6px">Sales Managers only see and edit their own quotes. Team Leads and Installers only see job recaps they're assigned to.</div></div>`;
 }
+// v11.1.0 sign-in status (config/authStatus, written hourly by scripts/auth_status.py) + Teams invite (relay /invite)
+let AUTH = {}, AUTH_AT = '', INVITES = {};
+const INVITE_URL = 'https://yellow-cloud-830a.a-ward-612.workers.dev/invite';
+const shortDate = v => { try { return new Date(v).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); } catch (e) { return ''; } };
+function signCell(r) {
+  if (r.isNew || !r.email) return '<span class="muted">Save first</span>';
+  const a = AUTH[r.email], inv = INVITES[r.email];
+  const btn = `<button type="button" class="inv" data-inv="${esc(r.email)}" style="margin-top:4px;min-height:32px;padding:0 10px;border-radius:7px;border:1px solid #1F6FD1;background:#FFFFFF;color:#1F6FD1;font-weight:600;font-size:12px;cursor:pointer">${inv ? 'Resend Teams invite' : 'Send Teams invite'}</button>`;
+  const sent = inv ? `<div class="muted" style="font-size:11px">Invited ${esc(shortDate(inv))}</div>` : '';
+  if (a && a.verified) return `<span style="color:#0E7A4D;font-weight:700">✓ Verified</span><div class="muted" style="font-size:11px">${a.lastLogin ? 'Last sign-in ' + esc(shortDate(a.lastLogin)) : ''}</div>`;
+  if (a) return `<span style="color:#8A5A00;font-weight:700">Signed up, not verified</span>${sent}${btn}`;
+  return `<span style="color:#B42318;font-weight:700">Not signed up yet</span>${sent}${btn}`;
+}
+document.addEventListener('click', async e => {
+  const b = e.target.closest && e.target.closest('[data-inv]'); if (!b) return;
+  const email = b.dataset.inv, name = (USERS[email] || {}).name || email;
+  if (!confirm('Send ' + name + ' a Teams message inviting them to ASBC Tools, with steps to sign in and verify their email?')) return;
+  b.disabled = true; b.textContent = 'Sending…';
+  try {
+    const tok = await firebase.auth().currentUser.getIdToken();
+    const r = await fetch(INVITE_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify({ email }) });
+    const o = await r.json().catch(() => ({}));
+    if (!r.ok || !o.ok) throw new Error(o.error || ('Teams said ' + (o.status || r.status)));
+    const at = new Date().toISOString(); INVITES[email] = at;
+    await db.collection('config').doc('invites').set({ [email]: at }, { merge: true });
+    b.textContent = 'Sent ✓'; setTimeout(() => render('Teams invite sent to ' + name + '.'), 800);
+  } catch (err) { b.disabled = false; b.textContent = 'Send Teams invite'; alert('Could not send: ' + err.message); }
+});
 function rowHtml(r, i) {
   const owner = r.email === R.OWNER;
   return `<tr data-i="${i}" class="${r.dirty ? 'chg' : ''}"><td><input class="f-name" value="${esc(r.name)}" placeholder="Full name (as in D-Tools)"></td>
     <td>${r.isNew ? `<input class="f-email" value="${esc(r.email)}" placeholder="name@asbc.us" type="email">` : `<span style="font-size:13px">${esc(r.email)}</span>`}</td>
     <td><select class="f-role" ${owner ? 'disabled' : ''}>${R.ORDER.map(k => `<option value="${k}" ${k === r.access ? 'selected' : ''}>${esc(R.DEFS[k].label)}</option>`).join('')}</select></td>
     <td><select class="f-store">${STORES.map(s => `<option value="${s}" ${s === (r.store || '') ? 'selected' : ''}>${s === '' ? '—' : s === 'none' ? 'Not ranked' : s}</option>`).join('')}</select></td>
+    <td>${signCell(r)}</td>
     <td class="full" style="text-align:right">${owner ? '<span class="muted">Owner</span>' : `<button class="del" data-del="${i}">Remove</button>`}</td></tr>`;
 }
 function render(msg) {
   const order = k => R.ORDER.indexOf(k);
   document.getElementById('app').innerHTML = matrix() + `<div class="card"><div class="sect">People (${ROWS.filter(r => !r.removed).length})</div>
-    <div class="muted" style="margin-bottom:8px">Names must match how the person appears in D-Tools, so their quotes and jobs line up. New people sign in with their ASBC email, create a PIN and confirm their email.</div>
-    <table class="ulist"><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Store (leaderboard)</th><th></th></tr></thead><tbody>
+    <div class="muted" style="margin-bottom:8px">Names must match how the person appears in D-Tools, so their quotes and jobs line up. New people sign in with their ASBC email, create a PIN and confirm their email.${AUTH_AT ? ' Sign-in status updates hourly (last ' + esc(new Date(AUTH_AT).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })) + ').' : ' Sign-in status appears after the next hourly sync.'}</div>
+    <table class="ulist"><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Store (leaderboard)</th><th>Sign-in</th><th></th></tr></thead><tbody>
     ${ROWS.map((r, i) => r.removed ? '' : rowHtml(r, i)).join('')}</tbody></table>
     <button class="btn" id="add" style="margin-top:10px">+ Add person</button></div>
     <div id="probs"></div>
@@ -135,6 +164,8 @@ async function save() {
 }
 async function load(msg) {
   const s = await db.collection('config').doc('users').get();
+  try { const a = await db.collection('config').doc('authStatus').get(); if (a.exists) { AUTH = JSON.parse(a.data().json || '{}'); const t = a.data().at; AUTH_AT = t && t.toDate ? t.toDate().toISOString() : ''; } } catch (e) {}
+  try { const v = await db.collection('config').doc('invites').get(); INVITES = (v.exists && v.data()) || {}; } catch (e) {}
   USERS = (s.exists && s.data().users) || {};
   ROWS = Object.entries(USERS).map(([email, p]) => ({ email, name: p.name || '', access: R.accessOf(p, email), store: p.store || '' }))
     .sort((a, b) => R.ORDER.indexOf(a.access) - R.ORDER.indexOf(b.access) || a.name.localeCompare(b.name));
