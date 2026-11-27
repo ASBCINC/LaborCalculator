@@ -57,6 +57,7 @@ input, select { background:#FFFFFF; border:1px solid #D5DBE4; color:#1F2937; bor
   <header><h1>ASBC <span>Knowledge Center</span></h1><nav id="asbcNav" data-page="knowledge"></nav></header>
   <p class="intro">Installation manuals and guides by system. Pick a branch to narrow it down, or search. B&O manuals and ASBC documents open from the ASBC OneDrive (sign in with your work account); other brands open on the manufacturer's site.</p>
   <div style="margin-bottom:12px"><input type="search" id="q" placeholder="Search manuals, products, brackets…" aria-label="Search manuals"></div>
+  <div id="pwPanel" style="margin-bottom:14px"></div>
   <div id="app"><div class="muted">Loading…</div></div>
 </div>
 <script>
@@ -128,6 +129,56 @@ function render() {
   const cb = document.getElementById('cancelBtn'); if (cb) cb.onclick = () => { EDIT = null; render(); };
   const sb = document.getElementById('saveBtn'); if (sb) sb.onclick = save;
 }
+
+// v11.6.0 Product watch. The hourly D-Tools sync queues products on installer proposals that ASBC hasn't seen before
+// (config/productWatch {json: {known, queue, done}}). The daily Claude task (signed in here as admin) uses these
+// helpers to add the product's manuals and, when no labor tile covers it, a new labor-calculator tile.
+const PW = db.collection('config').doc('productWatch');
+const slugify = v => String(v).trim().toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+async function pwRead() { const d = await PW.get(); return JSON.parse((d.exists && d.data().json) || '{}'); }
+window.asbcPW = {
+  async queue() { const pw = await pwRead(); return pw.queue || []; },
+  async catalog() { const d = await db.collection('config').doc('catalog').get(); return ((d.exists && d.data().items) || []).map(i => ({ id: i.id, category: i.category, name: i.name, installHours: i.installHours, programmingHours: i.programmingHours })); },
+  async manualsFor(text) { const t = String(text).toLowerCase(); return ITEMS.filter(x => [x.product, x.title, x.sub].join(' ').toLowerCase().includes(t)).map(x => ({ cat: x.cat, sub: x.sub, product: x.product, title: x.title })); },
+  // list: [{cat, sub, product, title, url, kind, src}]; https only; skips a url already filed under the same product
+  async addManuals(list) {
+    if (!ADMIN) throw new Error('admin only');
+    const d = await REF.get(); const items = ((d.exists && d.data().items) || []).slice(); let n = 0;
+    for (const m of list || []) {
+      if (!m || !/^https:\/\/\S+$/i.test(m.url || '') || !m.product || !m.title || !CATS.some(([c]) => c === m.cat)) continue;
+      if (items.some(x => x.url === m.url && x.product === m.product)) continue;
+      items.push({ id: 'auto-' + Date.now().toString(36) + n, cat: m.cat, sub: String(m.sub || '').slice(0, 60), product: String(m.product).slice(0, 80), title: String(m.title).slice(0, 160), url: m.url, kind: m.kind || 'Install guide', src: (m.src || '') + ' (auto)' }); n++;
+    }
+    if (n) { await REF.set({ items, updatedAt: new Date() }, { merge: true }); ITEMS = items; render(); }
+    return n;
+  },
+  // tile: {category, name, installHours, programmingHours}; added only if no tile with that id/name exists
+  async addTile(t) {
+    if (!ADMIN) throw new Error('admin only');
+    const ref = db.collection('config').doc('catalog'), d = await ref.get(), items = ((d.exists && d.data().items) || []).slice();
+    const cat = String(t.category || '').trim(), name = String(t.name || '').trim(), ih = Number(t.installHours), ph = Number(t.programmingHours || 0);
+    if (!cat || !name || !isFinite(ih) || ih < 0 || ih > 40 || !isFinite(ph) || ph < 0 || ph > 40) throw new Error('bad tile');
+    const id = slugify(cat) + '--' + slugify(name);
+    if (items.some(i => i.id === id || String(i.name).toLowerCase() === name.toLowerCase())) return { added: false, id };
+    items.push({ id, category: cat, name, installHours: Math.round(ih * 4) / 4, programmingHours: Math.round(ph * 4) / 4, addons: '' });
+    await ref.set({ items, updatedAt: new Date().toISOString() }); return { added: true, id };
+  },
+  // record what happened and take the product off the queue. entry: {manuals, tile, coveredBy, hours, note}
+  async finish(key, entry) {
+    if (!ADMIN) throw new Error('admin only');
+    return db.runTransaction(async tx => { const d = await tx.get(PW), pw = JSON.parse((d.exists && d.data().json) || '{}'), q = pw.queue || [], it = q.find(x => x.key === key);
+      pw.queue = q.filter(x => x.key !== key); pw.done = (pw.done || []).concat([Object.assign({ key, name: it ? it.name : '', model: it ? it.model : '', brand: it ? it.brand : '', opp: it ? it.opp : '', at: new Date().toISOString() }, entry || {})]).slice(-100);
+      tx.set(PW, { json: JSON.stringify(pw), at: new Date() }, { merge: true }); return pw.queue.length; });
+  }
+};
+async function pwPanel() {
+  if (!ADMIN) return; let pw; try { pw = await pwRead(); } catch (e) { return; }
+  const done = (pw.done || []).slice(-8).reverse(), q = (pw.queue || []).length; if (!done.length && !q) return;
+  const el = document.getElementById('pwPanel'); if (!el) return;
+  el.innerHTML = `<div class="sect" style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#4B5563;font-weight:700;margin:0 0 8px">New products from proposals${q ? ' · ' + q + ' waiting' : ''}</div>` +
+    done.map(x => `<div class="doc" style="margin-bottom:6px"><div class="ti"><b>${esc(x.name || x.model)}</b><div class="meta">${esc([x.brand, x.model].filter(Boolean).join(' '))}${x.opp ? ' · ' + esc(x.opp) : ''} · ${esc(new Date(x.at).toLocaleDateString('en-US'))}</div>
+      <div class="meta">${x.manuals ? x.manuals + ' manual' + (x.manuals > 1 ? 's' : '') + ' added' : 'no manuals added'} · ${x.tile ? 'new labor tile: <b>' + esc(x.tile) + '</b>' + (x.hours ? ' (' + esc(x.hours) + ')' : '') : x.coveredBy ? 'covered by tile: ' + esc(x.coveredBy) : 'no labor tile'}${x.note ? ' · ' + esc(x.note) : ''}</div></div></div>`).join('');
+}
 async function persist(next) { await REF.set({ items: next, updatedAt: new Date() }, { merge: true }); ITEMS = next; }
 async function save() {
   const v = id => document.getElementById(id).value.trim(), msg = t => document.getElementById('fMsg').textContent = t;
@@ -156,7 +207,7 @@ firebase.auth().onAuthStateChanged(async u => {
   try { const d = await REF.get(); ITEMS = ((d.exists && d.data().items) || []).filter(x => x && x.title && x.url); seeded = (d.exists && d.data().seedV) || 0; } catch (e) { ITEMS = []; seeded = SEED_V; }
   if (seeded < SEED_V) { ITEMS = ITEMS.concat(SEED.filter(x => (x.v || 1) > seeded && !ITEMS.some(y => y.id === x.id)).map(({ v, ...x }) => x));
     if (ADMIN) REF.set({ items: ITEMS, seedV: SEED_V, updatedAt: new Date() }, { merge: true }).catch(() => {}); }
-  readHash(); render();
+  readHash(); render(); pwPanel();
 });
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
 </script>

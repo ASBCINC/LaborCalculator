@@ -143,22 +143,55 @@ def main():
         return bool(re.search(r'INSTALL_SERVICE|SRV-PROG', txt)) or i.get('allowanceType') == 'Labor' or 'FLAT RATE' in txt or bool({str(i.get('partNumber') or '').strip().upper(), str(i.get('model') or '').strip().upper()} & {'INSTALLATION', 'INSTALL'})  # + older install lines being phased out
     open_ids = [oid for oid, f in keep.items() if not re.search(r'lost|won|closed', str(f.get('stage') or ''), re.I)]
     calls, lab_changed = 0, False
+    # v11.6.0 product watch: the product lines on installer proposals (quotes with a labor line). A product never seen
+    # before goes into config/productWatch.queue; the daily Claude task adds its manuals to the Knowledge Center and,
+    # if no labor-calculator tile covers it, adds a tile with recommended hours. Until every open opportunity has
+    # been scanned once (rule 'sku5'), everything found is only recorded as known (baseline), so nothing old floods in.
+    try:
+        pw = json.loads((fs.fields(fs.call('config/productWatch')) or {}).get('json') or '{}')
+    except Exception:
+        pw = {}
+    pw.setdefault('known', {}); pw.setdefault('queue', []); pw_changed = False
+    baseline = any((lab.get(o) or {}).get('rule') != 'sku5' for o in open_ids) or not pw.get('ready')
+    SKIP = re.compile(r'\b(wire|cable|cabling|connector|termination|labor|service|fee|freight|shipping|misc|consumable|allowance|discount|permit|design)\b', re.I)
+    def pkey(i):
+        model = str(i.get('model') or i.get('partNumber') or '').strip()
+        brand = str(i.get('brand') or i.get('manufacturer') or i.get('make') or '').strip()
+        return (brand + '|' + model).upper() if model else ''
+    def watch(oid, f, qid, items):
+        nonlocal pw_changed
+        for i in items:
+            if labor_item(i) or i.get('isClientSupplied') or SKIP.search(' '.join(str(i.get(k) or '') for k in ('category', 'name', 'type'))): continue
+            k = pkey(i)
+            if not k or k in pw['known']: continue
+            pw['known'][k] = now[:10]; pw_changed = True
+            if baseline or len(pw['queue']) >= 150: continue
+            pw['queue'].append({'key': k, 'brand': str(i.get('brand') or i.get('manufacturer') or i.get('make') or ''), 'model': str(i.get('model') or i.get('partNumber') or ''),
+                                'name': str(i.get('name') or i.get('shortName') or '')[:120], 'category': str(i.get('category') or '')[:60], 'qty': i.get('quantity'),
+                                'opp': str(f.get('name') or '')[:80], 'oppId': oid, 'quoteId': qid, 'seen': now})
     for oid in open_ids:
         f = keep[oid]; cur = lab.get(oid) or {}
-        if cur.get('mod') == f.get('modifiedDate') and cur.get('labor') is not None and cur.get('rule') == 'sku4': continue  # v10.9.0 recheck with the exact SKUs
+        if cur.get('mod') == f.get('modifiedDate') and cur.get('labor') is not None and cur.get('rule') == 'sku5': continue  # v11.6.0 one rescan so the product watch sees every open proposal
         if calls >= 60: break
         try:
             d = http(f'{BASE}/Opportunities/GetOpportunity?' + urllib.parse.urlencode({'id': oid}), headers=headers); calls += 1
             qids = (d or {}).get('quoteIds') or []; has = False
             for qid in qids[:4]:
                 qd = http(f'{BASE}/Quotes/GetQuote?' + urllib.parse.urlencode({'id': qid}), headers=headers); calls += 1
-                if any(labor_item(i) for i in ((qd or {}).get('items') or [])): has = True; break
-            lab[oid] = {'mod': f.get('modifiedDate'), 'labor': has, 'quotes': len(qids), 'rule': 'sku4'}
+                its = (qd or {}).get('items') or []
+                if any(labor_item(i) for i in its): has = True; watch(oid, f, qid, its); break
+            lab[oid] = {'mod': f.get('modifiedDate'), 'labor': has, 'quotes': len(qids), 'rule': 'sku5'}
         except Exception as e:
             print(f'::warning::labor SKU check {f.get("name")}: {e}')
             lab[oid] = {'mod': f.get('modifiedDate'), 'labor': None, 'err': str(e)[:120]}
         lab_changed = True
     for oid in [k for k in lab if k not in keep]: del lab[oid]; lab_changed = True
+    if not baseline and not pw.get('ready'): pw['ready'] = now; pw_changed = True
+    if all((lab.get(o) or {}).get('rule') == 'sku5' for o in open_ids) and not pw.get('ready'): pw['ready'] = now; pw_changed = True
+    if pw_changed:
+        try: fs.call('config/productWatch', method='PATCH', body={'fields': {'json': fs.typed(json.dumps(pw)), 'at': {'timestampValue': now}}})
+        except Exception as e: print(f'::warning::product watch save: {e}')
+    print(f'::notice::product watch: {len(pw["known"])} known, {len(pw["queue"])} queued' + (' (baseline)' if baseline else ''))
     if lab_changed:
         fs.call('config/oppLaborSku', method='PATCH', body={'fields': {'json': fs.typed(json.dumps(lab)), 'at': {'timestampValue': now}}})
     print(f'::notice::labor SKU check: {calls} API calls, {sum(1 for v in lab.values() if v.get("labor"))} of {len(lab)} open opportunities have labor')
