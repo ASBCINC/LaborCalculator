@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#2F7FD1">
+<meta name="robots" content="noindex">
+<title>Project Expenses | ASBC Tools</title>
+<link rel="icon" href="./tools-favicon.svg">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./tools-icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<script src="./diag.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+<script src="./roles.js"></script>
+<script src="./ramp.js"></script>
+<script src="./nav.js" defer></script>
+<script src="./update-check.js" defer></script>
+<style>
+:root { --gold:#1F6FD1; --bg:#F3F5F8; --card:#FFFFFF; --line:#E3E7EE; --muted:#4B5563; --good:#0E7A4D; --warn:#8A5A00; --bad:#B42318; --blue:#1F6FD1; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:#1F2937; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; }
+.wrap { max-width:1500px; margin:0 auto; padding:10px 14px 40px; }
+header { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+h1 { font-size:19px; margin:0; } h1 span { color:var(--gold); }
+.muted { color:var(--muted); font-size:12px; }
+.btn { display:inline-flex; align-items:center; justify-content:center; height:34px; padding:0 12px; border-radius:9px; border:1px solid var(--line); background:#FFFFFF; color:#1F2937; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; }
+.btn:hover { border-color:var(--gold); } .btn.gold { background:var(--gold); color:#FFFFFF; border-color:var(--gold); } .btn:disabled { opacity:.5; cursor:default; }
+.kpis { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:8px; margin:10px 0; }
+.kpi { background:var(--card); border:1px solid var(--line); border-radius:11px; padding:8px 11px; }
+.kpi .l { color:var(--muted); font-size:10px; text-transform:uppercase; letter-spacing:.06em; font-weight:700; }
+.kpi .v { font-size:20px; font-weight:800; font-variant-numeric:tabular-nums; margin-top:2px; }
+.grid { display:grid; grid-template-columns:minmax(280px, 400px) 1fr; gap:12px; align-items:start; }
+.panel { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:10px; min-width:0; }
+.list { max-height:calc(100vh - 230px); overflow:auto; margin-top:8px; }
+.pr { display:flex; justify-content:space-between; gap:8px; padding:9px 10px; border:1px solid var(--line); border-radius:10px; margin-bottom:6px; cursor:pointer; background:#FFFFFF; }
+.pr:hover, .pr.on { border-color:var(--gold); } .pr .nm { font-weight:700; font-size:13px; word-break:break-word; } .pr .sub { color:var(--muted); font-size:11px; margin-top:2px; }
+.pr .amt { text-align:right; font-variant-numeric:tabular-nums; font-weight:800; white-space:nowrap; } .pr .amt span { display:block; color:var(--muted); font-size:11px; font-weight:500; }
+input, select { background:#FFFFFF; border:1px solid var(--line); color:#1F2937; border-radius:9px; height:34px; padding:0 10px; font-size:14px; font-family:inherit; }
+.sect { color:var(--gold); font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; margin:14px 0 6px; }
+table { width:100%; border-collapse:collapse; font-size:13px; } th { text-align:left; color:var(--muted); font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; font-weight:700; padding:6px; border-bottom:1px solid var(--line); }
+td { padding:7px 6px; border-bottom:1px solid #E3E7EE; vertical-align:top; } td.r, th.r { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; } tr.tot td { font-weight:800; border-top:1px solid var(--line); }
+.tag { font-size:9.5px; font-weight:800; letter-spacing:.04em; padding:1px 6px; border-radius:999px; border:1px solid var(--line); color:var(--muted); white-space:nowrap; }
+.tag.g { color:var(--good); border-color:#8FD3B0; } .tag.w { color:var(--warn); border-color:#E0B860; } .tag.u { color:var(--blue); border-color:#A9C6EE; }
+.people { display:flex; gap:8px; flex-wrap:wrap; } .person { background:#FFFFFF; border:1px solid var(--line); border-radius:10px; padding:7px 10px; min-width:150px; }
+.person b { display:block; font-size:16px; font-variant-numeric:tabular-nums; } .person span { color:var(--muted); font-size:12px; }
+.x { background:none; border:1px solid var(--line); color:var(--muted); border-radius:6px; cursor:pointer; font-size:12px; height:22px; padding:0 6px; }
+.x:hover { color:var(--bad); border-color:var(--bad); }
+.empty { color:var(--muted); padding:30px 10px; text-align:center; }
+.bg { position:fixed; inset:0; background:rgba(0,0,0,.65); display:flex; align-items:center; justify-content:center; z-index:60; padding:14px; }
+.modal { background:var(--card); border:1px solid var(--line); border-radius:14px; width:min(620px, 100%); max-height:90vh; overflow:auto; padding:14px; }
+.modal h3 { margin:0 0 4px; font-size:16px; } .row { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; align-items:center; } .row > * { flex:1 1 140px; }
+.ch { display:flex; justify-content:space-between; gap:8px; padding:8px; border:1px solid var(--line); border-radius:9px; margin-top:6px; cursor:pointer; font-size:13px; }
+.ch:hover, .ch.on { border-color:var(--gold); }
+@media (max-width:860px) { .grid { grid-template-columns:1fr; } .list { max-height:none; } .kpis { grid-template-columns:repeat(2, minmax(0,1fr)); } }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./tools.css">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div><h1>Project <span>Expenses</span></h1><div class="muted">Ramp charges, job receipts and expenses you add (flights, hotels, rentals) by project</div></div>
+    <nav id="asbcNav" data-page="expenses"></nav>
+  </header>
+  <div id="app"><div class="empty">Loading…</div></div>
+</div>
+<script>
+// v9.7.0 Project Expenses: every D-Tools project (pipeline sync) with its expenses: receipts techs add on job reports
+// (quote.expenses), charges whose Ramp memo names the project, and expenses added here (projectExpenses/{projectId}).
+firebase.initializeApp({ apiKey: "AIzaSyCSf560VkBf2esIH5rC-_Vcx349o7iIC-0", authDomain: "asbc-calculator.firebaseapp.com", projectId: "asbc-calculator" });
+const db = firebase.firestore();
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const usd = n => '$' + (Number(n) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fold = s => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+const ymd = d => new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
+const CATS = ['Flight', 'Hotel', 'Rental car', 'Equipment rental', 'Meals', 'Parking / tolls', 'Fuel', 'Materials', 'Shipping', 'Other'];
+let ME = null, USERS = {}, PROJ = [], SEL = null, Q = '', ONLY = false;
+
+function nameOf(e) { return (USERS[e] || {}).name || e || ''; }
+function personOf(x) { return x.who || nameOf(x.email || x.by) || 'Unknown'; }
+function srcTag(x) {
+  if (x.status === 'pending') return '<span class="tag w">WAITING FOR CHARGE</span>';
+  if (x.src === 'manual') return '<span class="tag u">ADDED · NOT RAMP</span>';
+  if (x.src === 'memo') return '<span class="tag g">RAMP · MEMO</span>';
+  if (x.src === 'page') return `<span class="tag g">RAMP${x.receipt ? ' · RECEIPT' : ''}</span>`;
+  return `<span class="tag g">RAMP · JOB RECEIPT${x.receipt ? '' : ' (NO PHOTO)'}</span>`;
+}
+
+async function load() {
+  const [pd, qs, pe] = await Promise.all([db.collection('pipeline').doc('data').get(), db.collection('quotes').where('status', 'in', ['won', 'scheduled', 'submitted', 'closed']).get(), db.collection('projectExpenses').get()]);
+  const data = pd.exists ? JSON.parse(pd.data().json || '{}') : {};
+  const quotes = qs.docs.map(d => ({ id: d.id, ref: d.ref, ...d.data() })).filter(q => !q.isTemplate && !q.jobDeleted);
+  const pex = Object.fromEntries(pe.docs.map(d => [d.id, d.data()]));
+  const used = new Set();
+  PROJ = Object.values(data.projects || {}).map(p => {
+    const qq = quotes.filter(q => (q.project || {}).dtoolsOpportunityId === p.id || (fold((q.project || {}).dtoolsProjectName) && fold((q.project || {}).dtoolsProjectName) === fold(p.name)));
+    qq.forEach(q => used.add(q.id));
+    return { key: p.id, name: p.name, number: p.number, client: p.client, rep: p.rep, stage: p.stage, url: p.url, quotes: qq, doc: pex[p.id] || {} };
+  });
+  quotes.filter(q => !used.has(q.id) && (q.expenses || []).length).forEach(q => PROJ.push({ key: 'q-' + q.id, name: (q.project || {}).dtoolsProjectName || q.label, number: (q.project || {}).dtoolsOppNumber, client: (q.project || {}).dtoolsClientName, rep: (q.project || {}).salesManagerName, stage: q.status, quotes: [q], doc: pex['q-' + q.id] || {} }));
+  PROJ.forEach(p => {
+    const seen = new Set(), ex = [];
+    p.quotes.forEach(q => (q.expenses || []).forEach((e, i) => { const k = e.id || e.pid || q.id + i; if (seen.has(k)) return; seen.add(k); ex.push(Object.assign({}, e, { _q: q.id, _k: k })); }));
+    (p.doc.expenses || []).forEach(e => { if (seen.has(e.id)) return; seen.add(e.id); ex.push(Object.assign({}, e, { _k: e.id })); });
+    p.ex = ex.sort((a, b) => String(b.date).localeCompare(String(a.date)));
+    p.total = ex.reduce((a, e) => a + (Number(e.amount) || 0), 0);
+  });
+  PROJ.sort((a, b) => b.total - a.total || String(a.name).localeCompare(String(b.name)));
+}
+
+function render() {
+  const all = PROJ.flatMap(p => p.ex), month = ymd(new Date()).slice(0, 7);
+  const list = PROJ.filter(p => (!ONLY || p.ex.length) && (!Q || fold(p.name + p.client + p.rep + p.number).includes(fold(Q))));
+  if (!SEL && list.length) SEL = list[0].key;
+  document.getElementById('app').innerHTML = `<div class="kpis">
+    <div class="kpi"><div class="l">All project expenses</div><div class="v">${usd(all.reduce((a, e) => a + (Number(e.amount) || 0), 0))}</div></div>
+    <div class="kpi"><div class="l">This month</div><div class="v">${usd(all.filter(e => String(e.date).startsWith(month)).reduce((a, e) => a + (Number(e.amount) || 0), 0))}</div></div>
+    <div class="kpi"><div class="l">Projects with expenses</div><div class="v">${PROJ.filter(p => p.ex.length).length} / ${PROJ.length}</div></div>
+    <div class="kpi"><div class="l">Receipts waiting for a charge</div><div class="v">${all.filter(e => e.status === 'pending').length}</div></div></div>
+    <div class="grid"><div class="panel"><div style="display:flex;gap:6px"><input id="q" placeholder="Search project, client, rep" value="${esc(Q)}" style="flex:1">
+      <button class="btn${ONLY ? ' gold' : ''}" id="only" title="Only projects with expenses">With $</button></div>
+      <div class="list">${list.map(p => `<div class="pr${p.key === SEL ? ' on' : ''}" data-p="${esc(p.key)}"><div><div class="nm">${esc(p.name)}</div><div class="sub">${esc([p.client, p.rep, p.stage].filter(Boolean).join(' · '))}</div></div>
+        <div class="amt">${p.total ? usd(p.total) : '—'}<span>${p.ex.length ? p.ex.length + ' item' + (p.ex.length > 1 ? 's' : '') : ''}</span></div></div>`).join('') || '<div class="empty">No projects match.</div>'}</div></div>
+    <div class="panel" id="detail">${detail(PROJ.find(p => p.key === SEL))}</div></div>`;
+  document.getElementById('q').oninput = e => { Q = e.target.value; const pos = e.target.selectionStart; render(); const i = document.getElementById('q'); i.focus(); i.setSelectionRange(pos, pos); };
+  document.getElementById('only').onclick = () => { ONLY = !ONLY; render(); };
+  document.querySelectorAll('[data-p]').forEach(el => el.onclick = () => { SEL = el.dataset.p; render(); if (innerWidth < 860) document.getElementById('detail').scrollIntoView({ behavior: 'smooth' }); });
+  const a1 = document.getElementById('addRamp'), a2 = document.getElementById('addManual');
+  if (a1) a1.onclick = () => addRamp(PROJ.find(p => p.key === SEL));
+  if (a2) a2.onclick = () => addManual(PROJ.find(p => p.key === SEL));
+  document.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => removeExp(PROJ.find(p => p.key === SEL), b.dataset.rm));
+}
+
+function detail(p) {
+  if (!p) return '<div class="empty">Pick a project.</div>';
+  const admin = ME.access === 'admin';
+  const by = {}; p.ex.forEach(e => { const k = personOf(e); (by[k] = by[k] || { n: 0, t: 0 }); by[k].n++; by[k].t += Number(e.amount) || 0; });
+  const cats = {}; p.ex.forEach(e => { const k = e.cat || 'Uncategorized'; cats[k] = (cats[k] || 0) + (Number(e.amount) || 0); });
+  return `<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><div><div style="font-size:17px;font-weight:800">${esc(p.name)}</div>
+      <div class="muted">${esc([p.client, p.number, p.rep ? 'Rep: ' + p.rep : '', p.stage].filter(Boolean).join(' · '))}${p.url ? ` · <a href="${esc(p.url)}" target="_blank" rel="noopener" style="color:var(--gold)">Open in D-Tools</a>` : ''}</div></div>
+      <div style="text-align:right"><div class="muted">Total</div><div style="font-size:22px;font-weight:800">${usd(p.total)}</div></div></div>
+    ${admin ? `<div class="row" style="flex-wrap:wrap"><button class="btn gold" id="addRamp" style="flex:0 0 auto">+ Add from my Ramp charges</button><button class="btn" id="addManual" style="flex:0 0 auto">+ Add expense not in Ramp</button></div>` : ''}
+    ${p.ex.length ? `<div class="sect">By person</div><div class="people">${Object.entries(by).sort((a, b) => b[1].t - a[1].t).map(([k, v]) => `<div class="person"><span>${esc(k)}</span><b>${usd(v.t)}</b><span>${v.n} item${v.n > 1 ? 's' : ''}</span></div>`).join('')}</div>
+    ${Object.keys(cats).length > 1 || !cats.Uncategorized ? `<div class="sect">By type</div><div class="people">${Object.entries(cats).sort((a, b) => b[1] - a[1]).map(([k, v]) => `<div class="person"><span>${esc(k)}</span><b>${usd(v)}</b></div>`).join('')}</div>` : ''}
+    <div class="sect">Expenses</div><table><tr><th>Date</th><th>Type</th><th>Vendor</th><th>Person</th><th class="r">Amount</th><th>Source</th>${admin ? '<th></th>' : ''}</tr>
+    ${p.ex.map(e => `<tr><td style="white-space:nowrap">${esc(e.date || '')}</td><td>${esc(e.cat || '—')}</td><td>${esc(e.merchant || e.vendor || 'Receipt')}${e.note ? `<div class="muted">${esc(e.note)}</div>` : ''}${e.memo && e.src !== 'manual' ? `<div class="muted">Memo: ${esc(e.memo)}</div>` : ''}</td>
+      <td>${esc(personOf(e))}</td><td class="r">${usd(e.amount)}</td><td>${srcTag(e)}</td>${admin ? `<td class="r"><button class="x" data-rm="${esc(e._k)}" title="Remove from this project (nothing changes in Ramp)">✕</button></td>` : ''}</tr>`).join('')}
+    <tr class="tot"><td colspan="4">Total</td><td class="r">${usd(p.total)}</td><td colspan="${admin ? 2 : 1}"></td></tr></table>`
+    : '<div class="empty">No expenses on this project yet.' + (admin ? ' Add flights, hotels, rentals or any Ramp charge above.' : '') + '</div>'}`;
+}
+
+function modal(html) { const bg = document.createElement('div'); bg.className = 'bg'; bg.innerHTML = `<div class="modal">${html}</div>`; bg.addEventListener('click', e => { if (e.target === bg || e.target.closest('[data-close]')) bg.remove(); }); document.body.appendChild(bg); return bg; }
+const catSel = id => `<select id="${id}">${CATS.map(c => `<option>${c}</option>`).join('')}</select>`;
+function guessCat(m) { m = String(m || '').toLowerCase();
+  return /airline|airways|southwest|united|delta|alaska air|jetblue|american air|frontier|spirit/.test(m) ? 'Flight' : /hotel|marriott|hilton|hyatt|\binn\b|suites|airbnb|lodg|resort/.test(m) ? 'Hotel'
+    : /hertz|avis|enterprise|budget|national car|sixt|turo|alamo/.test(m) ? 'Rental car' : /sunbelt|united rentals|home depot rental|herc|rental/.test(m) ? 'Equipment rental'
+    : /uber|lyft|parking|fastrak|toll|park/.test(m) ? 'Parking / tolls' : /shell|chevron|arco|exxon|76|valero|fuel|gas/.test(m) ? 'Fuel' : /fedex|ups|usps|shipping|dhl/.test(m) ? 'Shipping' : 'Other'; }
+async function save(p, entries) {
+  entries = [].concat(entries);
+  await db.collection('projectExpenses').doc(p.key).set({ name: p.name, number: p.number || '', expenses: firebase.firestore.FieldValue.arrayUnion(...entries), updatedAt: new Date(), updatedBy: ME.email }, { merge: true });
+  await load(); render();
+}
+
+// v9.8.0 any team member's Ramp charges (installers first), up to a year back, several at once
+async function addRamp(p) {
+  const ranks = { installer: 0, lead: 0, manager: 2, director: 2, management: 2, admin: 1 };
+  const people = Object.entries(USERS).filter(([, u]) => u && u.name).map(([e, u]) => ({ e, n: u.name, r: ranks[ASBCRoles.accessOf(u, e)] ?? 3, lbl: ASBCRoles.DEFS[ASBCRoles.accessOf(u, e)] ? ASBCRoles.DEFS[ASBCRoles.accessOf(u, e)].label : '' }))
+    .sort((a, b) => a.r - b.r || a.n.localeCompare(b.n));
+  const bg = modal(`<h3>Add Ramp charges to ${esc(p.name)}</h3><div class="muted">Pick whose card and how far back. Charges already on a project are hidden. Each charge you add gets "${esc(p.name)}" in front of its Ramp memo.</div>
+    <div class="row"><select id="who">${people.map(x => `<option value="${esc(x.e)}" ${x.e === ME.email ? 'selected' : ''}>${esc(x.n)}${x.lbl ? ' · ' + esc(x.lbl) : ''}</option>`).join('')}</select>
+      <select id="days" style="flex:0 0 130px">${[[30, 'Last 30 days'], [60, 'Last 60 days'], [90, 'Last 90 days'], [180, 'Last 6 months'], [365, 'Last 12 months']].map(([d, t]) => `<option value="${d}" ${d === 90 ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
+    <div id="chs" class="muted" style="margin-top:10px"></div>`);
+  const claimed = new Set(PROJ.flatMap(x => x.ex.map(e => e.id)).concat(PROJ.flatMap(x => (x.doc.ignored || []))).filter(Boolean));
+  const box = bg.querySelector('#chs'); let list = [], picked = new Set();
+  async function fetchList() {
+    box.innerHTML = 'Loading charges…'; picked = new Set();
+    try { const who = bg.querySelector('#who').value, days = Number(bg.querySelector('#days').value);
+      const { txns } = await asbcRamp.call('txns', { from: ymd(new Date(Date.now() - days * 864e5)), to: ymd(new Date()), email: who });
+      list = txns.filter(t => t.email === who && !claimed.has(t.id) && t.amount > 0).sort((a, b) => b.date.localeCompare(a.date));
+      if (!list.length) { box.innerHTML = 'No unassigned charges on ' + esc(nameOf(who)) + "'s Ramp card in that period."; return; }
+      box.innerHTML = `<input id="flt" placeholder="Filter by vendor, memo, amount or date" style="width:100%"><div id="chl"></div>
+        <div class="row" id="one" style="display:none"><span class="muted" style="flex:0 0 auto">Receipt (optional)</span><input type="file" id="rf" accept="image/*,application/pdf"></div>
+        <div class="row"><button class="btn" data-close style="flex:0 0 auto">Cancel</button><button class="btn gold" id="go" disabled style="flex:0 0 auto">Add selected</button><span class="muted" id="msg"></span></div>`;
+      draw(''); bg.querySelector('#flt').oninput = e => draw(e.target.value); bg.querySelector('#go').onclick = go;
+    } catch (e) { box.textContent = 'Could not load Ramp charges: ' + e.message; }
+  }
+  function draw(f) {
+    const vis = list.filter(t => !f || fold(t.merchant + t.memo + t.amount + t.date).includes(fold(f))).slice(0, 150);
+    bg.querySelector('#chl').innerHTML = vis.map(t => `<label class="ch${picked.has(t.id) ? ' on' : ''}" style="align-items:center"><span style="display:flex;gap:8px;align-items:flex-start"><input type="checkbox" data-t="${esc(t.id)}" ${picked.has(t.id) ? 'checked' : ''} style="width:auto;height:auto;margin-top:3px">
+      <span>${esc(t.date)} · <b>${esc(t.merchant)}</b>${t.memo ? `<br><span class="muted">${esc(t.memo)}</span>` : ''}</span></span>
+      <span style="display:flex;gap:6px;align-items:center">${picked.has(t.id) ? `<select data-c="${esc(t.id)}" style="height:28px;font-size:12px">${CATS.map(c => `<option ${c === (t.cat || guessCat(t.merchant)) ? 'selected' : ''}>${c}</option>`).join('')}</select>` : ''}<b>${usd(t.amount)}</b></span></label>`).join('') || '<div class="muted" style="margin-top:8px">No match.</div>';
+    bg.querySelectorAll('[data-t]').forEach(c => c.onchange = () => { c.checked ? picked.add(c.dataset.t) : picked.delete(c.dataset.t); draw(bg.querySelector('#flt').value); });
+    bg.querySelectorAll('[data-c]').forEach(s => { s.onclick = e => e.preventDefault(); s.onchange = () => { const t = list.find(x => x.id === s.dataset.c); if (t) t.cat = s.value; }; s.onmousedown = e => e.stopPropagation(); });
+    const sum = list.filter(t => picked.has(t.id)).reduce((a, t) => a + t.amount, 0);
+    bg.querySelector('#go').disabled = !picked.size; bg.querySelector('#go').textContent = picked.size ? `Add ${picked.size} (${usd(sum)})` : 'Add selected';
+    bg.querySelector('#one').style.display = picked.size === 1 ? 'flex' : 'none';
+  }
+  async function go() {
+    const btn = bg.querySelector('#go'), msg = t => bg.querySelector('#msg').textContent = t; btn.disabled = true;
+    const sel = list.filter(t => picked.has(t.id)), out = [], f = sel.length === 1 ? (bg.querySelector('#rf').files || [])[0] : null;
+    try { const image = f ? await asbcRamp.shrink(f) : '';
+      for (const [i, t] of sel.entries()) { msg(`Updating Ramp ${i + 1} of ${sel.length}…`);
+        let r = {}; try { r = await asbcRamp.call('attach', { txn: t.id, image, title: p.name }); } catch (e) { r = { memoErr: e.message }; }
+        out.push({ id: t.id, amount: t.amount, date: t.date, merchant: t.merchant, who: t.who, email: t.email, cat: t.cat || guessCat(t.merchant), memo: r.memoText || t.memo || '', receipt: !!r.receipt || t.receipts > 0, status: 'ramp', src: 'page', by: ME.email, at: new Date().toISOString(),
+          note: [r.receiptErr ? 'Receipt upload failed: ' + r.receiptErr : '', r.memoErr ? 'Memo not set: ' + r.memoErr : ''].filter(Boolean).join(' · ') }); }
+      await save(p, out); bg.remove();
+    } catch (e) { msg('Could not add: ' + e.message); btn.disabled = false; }
+  }
+  bg.querySelector('#who').onchange = fetchList; bg.querySelector('#days').onchange = fetchList; fetchList();
+}
+
+function addManual(p) {
+  const people = Object.entries(USERS).filter(([, u]) => u && u.name).map(([e, u]) => [e, u.name]).sort((a, b) => a[1].localeCompare(b[1]));
+  const bg = modal(`<h3>Add expense not in Ramp</h3><div class="muted">For costs paid another way (personal card, company account, invoice). Ramp charges should use "Add from my Ramp charges" so they aren't counted twice.</div>
+    <div class="row"><label class="muted" style="flex:0 0 60px">Type</label>${catSel('mc')}</div>
+    <div class="row"><input id="mv" placeholder="Vendor (e.g. Southwest, Marriott, Sunbelt)"><input id="ma" type="number" min="0" step="0.01" placeholder="Amount $"></div>
+    <div class="row"><input id="md" type="date" value="${ymd(new Date())}"><select id="mp">${people.map(([e, n]) => `<option value="${esc(e)}" ${e === ME.email ? 'selected' : ''}>Paid by ${esc(n)}</option>`).join('')}</select></div>
+    <div class="row"><input id="mn" placeholder="Note (who it was for, dates, confirmation #)"></div>
+    <div class="row"><button class="btn" data-close style="flex:0 0 auto">Cancel</button><button class="btn gold" id="go" style="flex:0 0 auto">Add to project</button><span class="muted" id="msg"></span></div>`);
+  bg.querySelector('#mv').oninput = e => { bg.querySelector('#mc').value = guessCat(e.target.value); };
+  bg.querySelector('#go').onclick = async () => {
+    const amt = Math.round(Number(bg.querySelector('#ma').value) * 100) / 100, v = bg.querySelector('#mv').value.trim();
+    if (!(amt > 0) || !v) { bg.querySelector('#msg').textContent = 'Vendor and amount are needed.'; return; }
+    const email = bg.querySelector('#mp').value;
+    bg.querySelector('#go').disabled = true;
+    try { await save(p, { id: 'm-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), amount: amt, date: bg.querySelector('#md').value, vendor: v, merchant: v, cat: bg.querySelector('#mc').value, email, who: nameOf(email), note: bg.querySelector('#mn').value.trim(), status: 'manual', src: 'manual', by: ME.email, at: new Date().toISOString() }); bg.remove(); }
+    catch (e) { bg.querySelector('#msg').textContent = 'Could not save: ' + e.message; bg.querySelector('#go').disabled = false; }
+  };
+}
+
+async function removeExp(p, k) {
+  const e = p.ex.find(x => x._k === k); if (!e || !confirm('Remove ' + usd(e.amount) + ' ' + (e.merchant || '') + ' from this project? Nothing changes in Ramp.')) return;
+  if (e._q) { const q = p.quotes.find(x => x.id === e._q); await q.ref.update({ expenses: (q.expenses || []).filter(x => (x.id || x.pid) !== k), expensesIgnored: firebase.firestore.FieldValue.arrayUnion(k) });
+    if (e.pid) await db.collection('rampPending').doc(e.pid).delete().catch(() => {}); }
+  else await db.collection('projectExpenses').doc(p.key).set({ expenses: (p.doc.expenses || []).filter(x => x.id !== k), ignored: firebase.firestore.FieldValue.arrayUnion(k) }, { merge: true });
+  await load(); render();
+}
+
+firebase.auth().onAuthStateChanged(async u => {
+  if (!u || !u.emailVerified) { location.replace('./index.html'); return; }
+  try { if (!(await u.getIdTokenResult()).claims.email_verified) { await u.reload(); await u.getIdToken(true); } } catch (e) {}
+  const email = (u.email || '').toLowerCase();
+  const us = await db.collection('config').doc('users').get().catch(() => null);
+  USERS = (us && us.exists && us.data().users) || {};
+  const p = USERS[email] || (email === ASBCRoles.OWNER ? { name: 'Anthony Ward', role: 'admin' } : null);
+  ME = { email, name: p && p.name, access: ASBCRoles.accessOf(p, email) };
+  if (!ASBCRoles.can(ME.access, 'expenses')) return ASBCRoles.deny('expenses', document.getElementById('app'));
+  try { await load(); render(); } catch (e) { document.getElementById('app').innerHTML = '<div class="empty">Could not load: ' + esc(e.message) + '</div>'; }
+});
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
+</script>
+<script src="./sidebar.js" defer></script>
+</body>
+</html>

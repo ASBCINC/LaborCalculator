@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#2F7FD1">
+<title>Saved Quotes | ASBC Tools</title>
+<link rel="icon" href="./tools-favicon.svg">
+<script src="./diag.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+<script src="./roles.js"></script>
+<script src="./nav.js" defer></script>
+<script src="./update-check.js" defer></script>
+<script src="./pricing.js"></script>
+<style>
+:root { --gold:#1F6FD1; --bg:#F3F5F8; --card:#FFFFFF; --line:#E3E7EE; --muted:#4B5563; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:#1F2937; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; }
+.wrap { max-width:860px; margin:0 auto; padding:16px 14px 60px; }
+header { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px; }
+h1 { font-size:20px; margin:0; letter-spacing:.02em; }
+h1 span { color:var(--gold); }
+.btn { display:inline-flex; align-items:center; height:34px; padding:0 12px; border-radius:8px; border:1px solid var(--line); color:#1F2937; text-decoration:none; font-size:12px; font-weight:600; background:#FFFFFF; }
+input, select { background:#FFFFFF; border:1px solid var(--line); color:#1F2937; border-radius:10px; padding:10px 12px; font-size:14px; width:100%; }
+.controls { display:flex; gap:8px; margin-bottom:12px; }
+.badge { display:inline-block; font-size:9px; font-weight:700; letter-spacing:.06em; padding:2px 7px; border-radius:999px; border:1px solid; vertical-align:middle; }
+.b-t { color:#1F6FD1; border-color:#A9C6EE; }
+.b-l { color:#8A5A00; border-color:#E0B860; }
+.b-a { color:#0E7A4D; border-color:#8FD3B0; }
+.qrow { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin-bottom:8px; cursor:pointer; }
+.qrow:hover { border-color:var(--gold); }
+.qtop { display:flex; justify-content:space-between; gap:10px; align-items:baseline; }
+.qname { font-weight:700; font-size:15px; }
+.qmeta { color:var(--muted); font-size:11px; margin-top:2px; }
+.qnums { text-align:right; font-variant-numeric:tabular-nums; font-size:13px; white-space:nowrap; }
+.qnum-b { color:var(--gold); font-weight:700; }
+.qdetail { display:none; border-top:1px solid var(--line); margin-top:10px; padding-top:10px; font-size:12px; color:#374151; overflow-x:auto; }
+.qrow.open .qdetail { display:block; }
+table { width:100%; border-collapse:collapse; }
+th, td { text-align:left; padding:4px 6px; border-bottom:1px solid #E3E7EE; font-variant-numeric:tabular-nums; }
+th { color:var(--muted); font-size:10px; text-transform:uppercase; letter-spacing:.05em; }
+.pos { color:#0E7A4D; } .neg { color:#B42318; }
+.sect { margin:18px 0 8px; font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); font-weight:700; }
+.empty { text-align:center; color:var(--muted); padding:30px 0; }
+details summary { cursor:pointer; color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.08em; font-weight:700; }
+details[open] summary { margin-bottom:8px; }
+.qactions { display:flex; gap:6px; margin-top:8px; }
+.qbtn { height:28px; padding:0 12px; border-radius:7px; border:1px solid var(--line); background:#FFFFFF; color:#1F2937; font-size:11px; font-weight:600; cursor:pointer; }
+.qbtn-load { border-color:#E0B860; color:#8A5A00; }
+.qbtn-del { border-color:#F1A9A0; color:#B42318; }
+.qbtn:hover { border-color:var(--gold); }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./tools.css">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>ASBC <span>Saved Quotes</span></h1><nav id="asbcNav" data-page="quotes"></nav>
+  </header>
+  <div class="controls">
+    <input id="search" type="search" placeholder="Search opportunity or sales manager...">
+    <select id="filter" style="width:auto">
+      <option value="all">All</option>
+      <option value="quotes">Quotes</option>
+      <option value="templates">Templates</option>
+    </select>
+  </div>
+  <details open>
+    <summary>Labor calibration (estimate vs actual)</summary>
+    <div id="calib" class="empty" style="padding:12px 0 0">Loading...</div>
+  </details>
+  <div class="sect">Quotes</div>
+  <div id="list"><div class="empty">Loading quotes...</div></div>
+</div>
+<script>
+const firebaseConfig = {
+            apiKey: "AIzaSyCSf560VkBf2esIH5rC-_Vcx349o7iIC-0",
+            authDomain: "asbc-calculator.firebaseapp.com",
+            projectId: "asbc-calculator",
+            storageBucket: "asbc-calculator.firebasestorage.app",
+            messagingSenderId: "1060301879727",
+            appId: "1:1060301879727:web:3eb390503974dc60ea175a"
+        };
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+let QUOTES = [];
+const CATALOG = new Map();
+const SETTINGS = { hourlyRate: 200, recyclingFee: 75 };
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = v => '$' + Number(v || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+// v8.11.1: same sign-in as the calculator. Admins see every quote; reps only their own.
+let ME = null;
+async function quotesForUser() {
+  if (ME.role === 'admin' || ME.allQuotes) return db.collection('quotes').get();
+  return db.collection('quotes').where('project.salesManagerName', '==', ME.name).get();
+}
+firebase.auth().onAuthStateChanged(async (u) => {
+  if (!u || !u.emailVerified) {
+    document.getElementById('list').innerHTML = '<div class="empty">Sign in on the <a href="./" style="text-decoration:underline">calculator</a> first, then reopen the Quote Log.</div>';
+    return;
+  }
+ try { if (!(await u.getIdTokenResult()).claims.email_verified) { await u.reload(); await u.getIdToken(true); } } catch (e) {}  // v8.28.1: refresh a sign-in token issued before the email was confirmed
+  const us = await db.collection('config').doc('users').get().catch(() => null);
+  const map = (us && us.exists && us.data().users) || {};
+  const email = (u.email || '').toLowerCase();
+  const p = map[email] || (email === 'a.ward@asbc.us' ? { name: 'Anthony Ward', role: 'admin' } : null);
+  if (!p) { document.getElementById('list').innerHTML = '<div class="empty">' + esc(email) + ' is not approved yet. Ask Anthony.</div>'; return; }
+  ME = { email, name: p.name, role: p.role || 'rep', allQuotes: !!p.allQuotes, access: ASBCRoles.accessOf(p, email) };
+  if (!ASBCRoles.can(ME.access, 'quotes')) return ASBCRoles.deny('quotes', document.getElementById('list'));
+  boot();
+});
+
+async function boot() {
+  try {
+    const [catSnap, setSnap, quotesSnap] = await Promise.all([
+      db.collection('config').doc('catalog').get(),
+      db.collection('config').doc('settings').get(),
+      quotesForUser()
+    ]);
+    if (catSnap.exists) (catSnap.data().items || []).forEach(i => CATALOG.set(i.id, i));
+    if (setSnap.exists) {
+      const s = setSnap.data();
+      SETTINGS.hourlyRate = Number(s.hourlyRate) || 200;
+      SETTINGS.recyclingFee = Number(s.recyclingFee) || 75;
+      Object.assign(SETTINGS, ASBCPricing.settings(Object.assign({}, s, { hourlyRate: SETTINGS.hourlyRate, recyclingFee: SETTINGS.recyclingFee })));
+    }
+    quotesSnap.forEach(d => {
+      const r = d.data();
+      r._id = d.id;
+      if (r.updatedAt && r.updatedAt.toMillis) r._t = r.updatedAt.toMillis();
+      else if (typeof r.updatedAt === 'string') r._t = Date.parse(r.updatedAt) || 0;
+      else if (r.updatedAt && r.updatedAt.seconds) r._t = r.updatedAt.seconds * 1000;
+      else r._t = 0;
+      QUOTES.push(r);
+    });
+    QUOTES.sort((a, b) => b._t - a._t);
+    renderCalib();
+    renderList();
+  } catch (err) {
+    document.getElementById('calib').innerHTML = '';
+    document.getElementById('list').innerHTML = `<div class="empty">Could not load quotes: ${esc(err.message)}</div>`;
+  }
+}
+
+function quoteHours(q) {
+  let hours = 0, totInst = 0, totProg = 0, units = 0;
+  const lines = [];
+  (q.items || []).forEach(it => {
+    let inst = 0, prog = 0, name = it.name || it.id, missing = false;
+    if (it.isCustom) {
+      inst = Number(it.installHours) || 0;
+      prog = Number(it.programmingHours) || 0;
+    } else {
+      const c = CATALOG.get(it.id);
+      if (c) { inst = Number(c.installHours) || 0; prog = Number(c.programmingHours) || 0; name = c.name; }
+      else { missing = true; }
+    }
+    const addonH = it.addon ? (Number(it.addon.installHours) || 0) + (Number(it.addon.programmingHours) || 0) : 0;
+    const per = inst + prog + addonH;
+    const qn = Number(it.qty) || 0;
+    hours += per * qn; units += qn;
+    totInst += (inst + (it.addon ? Number(it.addon.installHours) || 0 : 0)) * qn;
+    totProg += (prog + (it.addon ? Number(it.addon.programmingHours) || 0 : 0)) * qn;
+    lines.push({ name, zone: it.zone || 'General', qty: it.qty || 0, per, inst: inst + (it.addon ? Number(it.addon.installHours) || 0 : 0), prog: prog + (it.addon ? Number(it.addon.programmingHours) || 0 : 0), addon: it.addon ? it.addon.name : '', missing });
+  });
+  return { hours, lines, install: totInst, prog: totProg, units };
+}
+
+function quotePrice(q, hours) {
+  // v8.12.0: same rules as the calculator (pricing.js); legacy quotes keep their old math.
+  const o = q.options || {};
+  const h = quoteHours(q);
+  const r = ASBCPricing.price(h.install, h.prog, h.units, {
+    pricingV: o.pricingV, site: o.site, trip: o.trip, pm: o.pm, recycling: o.recycling, customRecycling: o.customRecycling, crew: o.crewSize
+  }, Object.assign({}, SETTINGS, { materialsPct: Number(o.markup) || 5 }));
+  return { labor: r.labor, materials: r.materials, trip: r.trip, recycling: r.recycling, total: r.total, billedHours: r.billedHours };
+}
+
+function renderCalib() {  // v10.5.0 per job: quoted hours vs actual labor hours (hours on site × techs) on finished jobs
+  const box = document.getElementById('calib');
+  const rows = QUOTES.filter(r => !r.isTemplate && r.actuals && Number(r.actuals.totalEstHours) > 0 && (((r.job || {}).jobStatus === 'Complete') || r.accScored))
+    .map(r => { const e = Number(r.actuals.totalEstHours), a = Number(r.actuals.totalActualHours) || 0; return { name: (r.project && r.project.dtoolsProjectName) || r.label, rep: (r.project && r.project.salesManagerName) || '', e, a, d: (a - e) / e * 100 }; })
+    .sort((x, y) => Math.abs(y.d) - Math.abs(x.d));
+  if (!rows.length) { box.innerHTML = '<div class="empty" style="padding:12px 0 0">No finished job reports with a labor quote yet.</div>'; return; }
+  const te = rows.reduce((s, r) => s + r.e, 0), ta = rows.reduce((s, r) => s + r.a, 0), td = (ta - te) / te * 100;
+  box.innerHTML = `<table><tr><th>Job</th><th>Rep</th><th>Quoted hrs</th><th>Actual labor hrs</th><th>Delta</th></tr>
+  ${rows.map(r => `<tr><td>${esc(r.name)}</td><td>${esc(r.rep)}</td><td>${r.e.toFixed(2)}</td><td>${r.a.toFixed(2)}</td><td class="${r.d > 10 ? 'neg' : r.d < -10 ? 'pos' : ''}">${r.d >= 0 ? '+' : ''}${r.d.toFixed(0)}%</td></tr>`).join('')}
+  <tr><td><b>All finished jobs</b></td><td></td><td><b>${te.toFixed(2)}</b></td><td><b>${ta.toFixed(2)}</b></td><td><b>${td >= 0 ? '+' : ''}${td.toFixed(0)}%</b></td></tr></table>`;
+}
+function renderList() {
+  const q = document.getElementById('search').value.trim().toLowerCase();
+  const mode = document.getElementById('filter').value;
+  const items = QUOTES.filter(r => {
+    if (mode === 'templates' && !r.isTemplate) return false;
+    if (mode === 'quotes' && r.isTemplate) return false;
+    if (r.counted === 'dtools-schedule' && !(r.items || []).length && mode !== 'templates' && !q) return false;  // v10.5.0 hide D-Tools-created install jobs with no labor quote (they live on Jobs); search still finds them
+    const cust = String(r.label || (r.project && r.project.customerName) || '').toLowerCase();
+    const mgr = String((r.project && r.project.salesManagerName) || '').toLowerCase();
+    return !q || cust.includes(q) || mgr.includes(q);
+  });
+  const box = document.getElementById('list');
+  if (!items.length) { box.innerHTML = '<div class="empty">No quotes match.</div>'; return; }
+  box.innerHTML = items.map(r => {
+    const info = quoteHours(r);
+    const p = quotePrice(r, info.hours);
+    const cust = esc(r.label || (r.project && r.project.customerName) || 'Untitled');
+    const mgr = esc((r.project && r.project.salesManagerName) || '');
+    const date = r._t ? new Date(r._t).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+    const badges =
+      (r.isTemplate ? '<span class="badge b-t">TEMPLATE</span> ' : '') +
+      (r.isLocked ? '<span class="badge b-l">LOCKED</span> ' : '') +
+      (r.actuals ? '<span class="badge b-a">ACTUALS</span> ' : '') +
+      (r.status && r.status !== 'draft' ? '<span class="badge b-l">' + esc(String(r.status).toUpperCase()) + '</span> ' : '') +
+      (r.job && r.job.jobStatus ? '<span class="badge" style="color:#1F6FD1;border-color:#A9C6EE">' + esc(String(r.job.jobStatus).toUpperCase()) + '</span> ' : '') +
+      (r.job && r.job.extrasHours > 0 ? '<span class="badge" style="color:#A1440B;border-color:#F3B98F">EXTRA WORK ' + Number(r.job.extrasHours).toFixed(2) + ' HRS: POSSIBLE CO</span>' : '') +
+      (r.signoff && r.signoff.status === 'signed' ? ' <span class="badge" style="color:' + (r.signoff.concerns ? '#B42318;border-color:#F1A9A0">CLIENT SIGNED · CONCERNS' : '#0E7A4D;border-color:#8FD3B0">CLIENT SIGNED') + '</span>' : '');
+    const a = r.actuals;
+    const detail = `
+      <div class="qdetail">
+        <table><tr><th>Item</th><th>Space</th><th>Qty</th><th>Labor hrs</th><th>Prog hrs</th></tr>
+        ${info.lines.map(l => `<tr><td>${esc(l.name)}${l.addon ? ` <span style="color:#1F6FD1">+ ${esc(l.addon)}</span>` : ''}${l.missing ? ' <span class="neg">(no longer in catalog)</span>' : ''}</td><td>${esc(l.zone)}</td><td>${l.qty}</td><td>${(l.inst * (Number(l.qty) || 0)).toFixed(2)}</td><td>${(l.prog * (Number(l.qty) || 0)).toFixed(2)}</td></tr>`).join('')}
+        <tr><td colspan="3"><b>Total</b></td><td><b>${info.install.toFixed(2)}</b></td><td><b>${info.prog.toFixed(2)}</b></td></tr>
+        </table>
+        <div style="margin-top:8px;color:#4B5563">Labor ${fmt(p.labor)} &middot; Materials ${fmt(p.materials)} (${Number((r.options || {}).markup) || 0}%)${p.trip ? ' &middot; Trip ' + fmt(p.trip) : ''} &middot; Recycling ${fmt(p.recycling)} &middot; Crew ${Number((r.options || {}).crewSize) || 1}</div>
+        <div style="margin-top:4px"><b>Total: ${fmt(p.total)}</b></div>
+        ${a ? `<div style="margin-top:8px"><span class="badge b-a">ACTUALS</span> est ${Number(a.totalEstHours).toFixed(2)} hrs vs actual ${Number(a.totalActualHours).toFixed(2)} hrs${a.notes ? ` &middot; notes: ${esc(a.notes)}` : ''}</div>` : ''}
+      </div>`;
+    return `<div class="qrow" onclick="if(event.target.closest('.qactions'))return;this.classList.toggle('open')">
+      <div class="qtop">
+        <div><div class="qname">${cust} ${badges}</div><div class="qmeta">${mgr ? mgr + ' &middot; ' : ''}${date}</div></div>
+        <div class="qnums"><div class="qnum-b">${fmt(p.total)}</div><div class="qmeta">${p.billedHours.toFixed(2)} hrs billed</div><div class="qmeta">Labor ${info.install.toFixed(2)} · Prog ${info.prog.toFixed(2)}</div></div>
+      </div>
+      <div class="qactions">
+        <button class="qbtn qbtn-load" data-act="load" data-id="${r._id}">Load</button>
+        ${ME.role === 'admin' || ((r.project || {}).salesManagerName === ME.name) ? `<button class="qbtn qbtn-save" data-act="save" data-id="${r._id}">Save</button>
+        <button class="qbtn qbtn-del" data-act="delete" data-id="${r._id}">Delete</button>` : ''}
+        ${ME && ME.role === 'admin' && !r.isTemplate ? `<a class="qbtn" style="display:inline-flex;align-items:center;text-decoration:none" href="./jobs.html?quote=${encodeURIComponent(r._id)}">Job</a>` : (r.job && r.job.submittedAt && ['submitted', 'closed'].includes(r.status) ? `<a class="qbtn" style="display:inline-flex;align-items:center;text-decoration:none;border-color:#8FD3B0;color:#0E7A4D" href="./jobs.html?quote=${encodeURIComponent(r._id)}">Job report</a>` : '')}
+      </div>
+      ${detail}
+    </div>`;
+  }).join('');
+}
+
+document.getElementById('search').addEventListener('input', renderList);
+document.getElementById('filter').addEventListener('change', renderList);
+
+// Load / Save / Delete per quote. Load opens the calculator with that quote
+// loaded; Save pushes the calculator's current edits (its auto-saved draft)
+// back onto this quote; Delete removes it.
+document.getElementById('list').addEventListener('click', async (e) => {
+  const btn = e.target.closest('button[data-act]');
+  if (!btn) return;
+  e.stopPropagation();
+  const id = btn.dataset.id, act = btn.dataset.act;
+  const rec = QUOTES.find(r => r._id === id);
+  const label = rec ? (rec.label || (rec.project && rec.project.customerName) || 'Untitled') : 'this quote';
+  if (act === 'load') {
+    window.location.href = 'index.html?quote=' + encodeURIComponent(id);
+    return;
+  }
+  if (act === 'save') {
+    let d = null;
+    try { const raw = localStorage.getItem('asbcActiveDraft'); d = raw ? JSON.parse(raw) : null; } catch (_e) {}
+    if (!d || d.loadedEstimateId !== id || !Array.isArray(d.cart) || !d.cart.length) {
+      alert('Open this quote in the calculator first (Load), make your edits, then tap Save here.');
+      return;
+    }
+    if (!confirm('Save the calculator edits to "' + label + '"?')) return;
+    try {
+      await db.collection('quotes').doc(id).set({
+        label: d.customerName || label,
+        project: { customerName: d.customerName || '', salesManagerName: d.salesManagerName || '', dtoolsOpportunityId: d.dtoolsOpportunityId || '' },
+        items: d.cart,
+        options: { recycling: d.recyclingToggle, customRecycling: d.customRecyclingInput, markup: d.materialsMarkup, crewSize: d.crewSize },
+        updatedAt: new Date()
+      }, { merge: true });
+      const r = QUOTES.find(x => x._id === id);
+      if (r) {
+        r.label = d.customerName || label;
+        r.project = Object.assign({}, r.project, { customerName: d.customerName || '', salesManagerName: d.salesManagerName || '', dtoolsOpportunityId: d.dtoolsOpportunityId || '' });
+        r.items = d.cart;
+        r.options = Object.assign({}, r.options, { recycling: d.recyclingToggle, customRecycling: d.customRecyclingInput, markup: d.materialsMarkup, crewSize: d.crewSize });
+        r._t = Date.now();
+      }
+      renderList();
+      alert('Saved. "' + label + '" now matches the calculator.');
+    } catch (err) { alert('Save failed: ' + err.message); }
+    return;
+  }
+  if (act === 'delete') {
+    if (!confirm('Delete "' + label + '" from the cloud? This cannot be undone.')) return;
+    try {
+      await db.collection('quotes').doc(id).delete();
+      QUOTES = QUOTES.filter(r => r._id !== id);
+      renderList();
+    } catch (err) { alert('Delete failed: ' + err.message); }
+  }
+});
+
+// boot() runs after sign-in (onAuthStateChanged above)
+</script>
+<script src="./sidebar.js" defer></script>
+</body>
+</html>
