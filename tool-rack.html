@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#2F7FD1">
+<meta name="robots" content="noindex">
+<title>Rack Planner | ASBC Tools</title>
+<link rel="icon" href="./tools-favicon.svg">
+<link rel="manifest" href="./manifest.json">
+<script src="./diag.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+<script src="./roles.js"></script>
+<script src="./nav.js" defer></script>
+<script src="./update-check.js" defer></script>
+<style>
+:root { --gold:#1F6FD1; --bg:#F3F5F8; --card:#FFFFFF; --line:#E3E7EE; --muted:#4B5563; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:#1F2937; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; }
+.wrap { max-width:1000px; margin:0 auto; padding:14px 14px 60px; }
+header { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:6px; flex-wrap:wrap; }
+h1 { font-size:20px; margin:0; } h1 span { color:var(--gold); }
+.back { display:inline-block; margin:0 0 10px; color:#1F6FD1; font-size:14px; font-weight:600; text-decoration:none; }
+.intro { color:var(--muted); font-size:13px; margin:0 0 14px; }
+.box { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:14px; }
+.box h2 { font-size:15px; margin:0 0 10px; }
+.fields { display:grid; grid-template-columns:repeat(auto-fill, minmax(170px, 1fr)); gap:10px; }
+label { display:flex; flex-direction:column; gap:4px; font-size:12px; font-weight:600; color:#374151; }
+input, select { background:#FFFFFF; border:1px solid #D5DBE4; color:#1F2937; border-radius:9px; min-height:42px; padding:0 10px; font-size:15px; width:100%; font-family:inherit; }
+.btn { display:inline-flex; align-items:center; justify-content:center; min-height:40px; padding:0 14px; border-radius:9px; border:1px solid #D5DBE4; color:#1F2937; background:#FFFFFF; font-size:14px; font-weight:600; cursor:pointer; }
+.btn.green { background:#14945C; border-color:#14945C; color:#fff; }
+.tiles { display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:10px; }
+.tile { background:#F8FAFC; border:1px solid var(--line); border-radius:10px; padding:12px; }
+.tile .k { font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); font-weight:700; }
+.tile .v { font-size:22px; font-weight:700; margin-top:4px; } .tile .s { font-size:12px; color:var(--muted); margin-top:2px; }
+.ok { color:#14945C; } .warn { color:#B54708; } .bad { color:#B42318; }
+.tile.ok { border-color:#A6E3C4; background:#F0FBF5; } .tile.warn { border-color:#F7D08A; background:#FFF8EB; } .tile.bad { border-color:#F5B5AE; background:#FEF3F2; }
+table { width:100%; border-collapse:collapse; font-size:14px; }
+th, td { text-align:left; padding:8px 6px; border-bottom:1px solid var(--line); vertical-align:middle; }
+th { font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); }
+td input, td select { min-height:36px; font-size:14px; }
+.tbl { overflow-x:auto; }
+.note { font-size:12px; color:var(--muted); margin-top:10px; line-height:1.5; }
+.pill { display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; font-weight:700; }
+.pill.ok { background:#E7F7EE; } .pill.warn { background:#FFF1D6; } .pill.bad { background:#FDE4E1; }
+.x { background:none; border:0; color:#B42318; font-size:18px; cursor:pointer; min-height:36px; padding:0 8px; }
+@media print { #asbcSide, #asbcBar, #asbcNav, .back, .noprint { display:none !important; } body { background:#fff; } .box { border:0; padding:0; } }
+</style>
+<script>window.ASBC_TOOLS = true;</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./tools.css">
+</head>
+<body>
+<div class="wrap">
+  <header><h1>ASBC <span>Rack Planner</span></h1><nav id="asbcNav" data-page="design"></nav></header>
+  <a class="back" href="./design.html">‹ Design Center</a>
+  <p class="intro">List the gear going in a rack to check rack units, heat load and power. Print it for the install folder.</p>
+  <div class="box"><h2>Rack</h2><div class="fields">
+    <label>Rack size (RU)<select id="ru"><option>8</option><option>12</option><option>16</option><option>20</option><option>24</option><option selected>28</option><option>35</option><option>40</option><option>44</option><option value="0">Not chosen yet</option></select></label>
+    <label>Spare space to plan (%)<input id="spare" type="number" min="0" max="60" value="25" inputmode="numeric"></label>
+    <label>Circuit<select id="amps"><option value="15">120 V 15 A</option><option value="20" selected>120 V 20 A</option><option value="30">120 V 30 A</option></select></label>
+    <label>Project / room (for print)<input id="proj" placeholder="e.g. Brazier – AV closet"></label>
+  </div></div>
+  <div class="box"><h2>Equipment</h2><div class="tbl"><table><thead><tr><th>Item</th><th style="width:80px">Qty</th><th style="width:80px">RU each</th><th style="width:110px">Watts each</th><th style="width:90px">RU</th><th style="width:90px">Watts</th><th></th></tr></thead><tbody id="tb"></tbody></table></div>
+  <div class="noprint" style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn green" id="add">+ Add item</button><button type="button" class="btn" onclick="print()">Print</button></div></div>
+  <div class="box"><h2>Result</h2><div class="tiles" id="out"></div>
+  <div class="note">Watts: use typical draw from the spec sheet (amps at idle draw far less than their rating). Heat: every watt in the rack ends up as about 3.41 BTU/hr. Power: a continuous load should stay under 80% of the circuit. Count shelves, blanks, vents and the power conditioner in RU. Over about 1,500 BTU/hr in a closed closet, plan active ventilation.</div></div>
+</div>
+<script>
+// v11.3.0 Design Center tool. Runs entirely in the browser; nothing is saved.
+firebase.initializeApp({ apiKey: "AIzaSyCSf560VkBf2esIH5rC-_Vcx349o7iIC-0", authDomain: "asbc-calculator.firebaseapp.com", projectId: "asbc-calculator" });
+firebase.auth().onAuthStateChanged(u => { if (!u || !u.emailVerified) location.replace('./index.html'); });
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
+const $ = id => document.getElementById(id), num = id => parseFloat($(id).value) || 0;
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmt = (n, d = 1) => Number(n).toLocaleString('en-US', { maximumFractionDigits: d, minimumFractionDigits: 0 });
+const tile = (k, v, s, cls) => `<div class="tile ${cls || ''}"><div class="k">${k}</div><div class="v">${v}</div>${s ? `<div class="s">${s}</div>` : ''}</div>`;
+let ROWS = [{ n: 'Power conditioner', q: 1, u: 1, w: 15 }, { n: 'Network switch', q: 1, u: 1, w: 40 }, { n: 'Router / firewall', q: 1, u: 1, w: 20 }, { n: 'Multi-channel amplifier', q: 1, u: 2, w: 150 }, { n: 'Control processor', q: 1, u: 1, w: 20 }, { n: 'Shelf (streamer, NVR)', q: 1, u: 2, w: 40 }];
+function draw() {
+  $('tb').innerHTML = ROWS.map((r, i) => `<tr><td><input data-i="${i}" data-f="n" value="${esc(r.n)}"></td><td><input data-i="${i}" data-f="q" type="number" min="0" value="${r.q}" inputmode="numeric"></td>
+    <td><input data-i="${i}" data-f="u" type="number" min="0" value="${r.u}" inputmode="numeric"></td><td><input data-i="${i}" data-f="w" type="number" min="0" value="${r.w}" inputmode="decimal"></td>
+    <td id="u${i}"></td><td id="w${i}"></td><td><button type="button" class="x noprint" data-del="${i}" aria-label="Remove">×</button></td></tr>`).join('');
+  calc();
+}
+const RACKS = [8, 12, 16, 20, 24, 28, 35, 40, 44];
+function calc() {
+  let U = 0, W = 0;
+  ROWS.forEach((r, i) => { const u = (+r.q || 0) * (+r.u || 0), w = (+r.q || 0) * (+r.w || 0); U += u; W += w; const a = $('u' + i), b = $('w' + i); if (a) a.textContent = u; if (b) b.textContent = fmt(w, 0); });
+  const need = Math.ceil(U * (1 + num('spare') / 100)), size = +$('ru').value, fitR = RACKS.find(x => x >= need);
+  const rv = !size ? '' : U > size ? 'bad' : need > size ? 'warn' : 'ok';
+  const btu = W * 3.412, A = W / 120, cap = +$('amps').value, av = A > cap * 0.8 ? 'bad' : A > cap * 0.6 ? 'warn' : 'ok';
+  $('out').innerHTML = tile('Rack units used', U + ' RU', size ? (size - U) + ' of ' + size + ' RU free' : 'rack not chosen', rv)
+    + tile('Suggested rack', fitR ? fitR + ' RU' : 'Two racks', need + ' RU with ' + fmt(num('spare'), 0) + '% spare', size && fitR && size >= fitR ? 'ok' : '')
+    + tile('Heat load', fmt(btu, 0) + ' BTU/hr', btu > 1500 ? 'plan active ventilation' : 'passive venting usually fine', btu > 1500 ? 'warn' : 'ok')
+    + tile('Power', fmt(W, 0) + ' W · ' + fmt(A, 1) + ' A', 'of ' + cap + ' A (80% limit ' + fmt(cap * 0.8, 0) + ' A)', av);
+}
+document.addEventListener('input', e => { const i = e.target.dataset.i; if (i === undefined) return calc(); ROWS[i][e.target.dataset.f] = e.target.value; calc(); });
+document.addEventListener('change', e => { if (!e.target.dataset.i) calc(); });
+document.addEventListener('click', e => { const d = e.target.closest('[data-del]'); if (d) { ROWS.splice(+d.dataset.del, 1); draw(); } });
+$('add').onclick = () => { ROWS.push({ n: '', q: 1, u: 1, w: 0 }); draw(); };
+draw();
+
+</script>
+<script src="./sidebar.js" defer></script>
+</body>
+</html>

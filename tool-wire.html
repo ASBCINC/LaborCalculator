@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#2F7FD1">
+<meta name="robots" content="noindex">
+<title>Speaker Wire Calculator | ASBC Tools</title>
+<link rel="icon" href="./tools-favicon.svg">
+<link rel="manifest" href="./manifest.json">
+<script src="./diag.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+<script src="./roles.js"></script>
+<script src="./nav.js" defer></script>
+<script src="./update-check.js" defer></script>
+<style>
+:root { --gold:#1F6FD1; --bg:#F3F5F8; --card:#FFFFFF; --line:#E3E7EE; --muted:#4B5563; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:#1F2937; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; }
+.wrap { max-width:1000px; margin:0 auto; padding:14px 14px 60px; }
+header { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:6px; flex-wrap:wrap; }
+h1 { font-size:20px; margin:0; } h1 span { color:var(--gold); }
+.back { display:inline-block; margin:0 0 10px; color:#1F6FD1; font-size:14px; font-weight:600; text-decoration:none; }
+.intro { color:var(--muted); font-size:13px; margin:0 0 14px; }
+.box { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:14px; }
+.box h2 { font-size:15px; margin:0 0 10px; }
+.fields { display:grid; grid-template-columns:repeat(auto-fill, minmax(170px, 1fr)); gap:10px; }
+label { display:flex; flex-direction:column; gap:4px; font-size:12px; font-weight:600; color:#374151; }
+input, select { background:#FFFFFF; border:1px solid #D5DBE4; color:#1F2937; border-radius:9px; min-height:42px; padding:0 10px; font-size:15px; width:100%; font-family:inherit; }
+.btn { display:inline-flex; align-items:center; justify-content:center; min-height:40px; padding:0 14px; border-radius:9px; border:1px solid #D5DBE4; color:#1F2937; background:#FFFFFF; font-size:14px; font-weight:600; cursor:pointer; }
+.btn.green { background:#14945C; border-color:#14945C; color:#fff; }
+.tiles { display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:10px; }
+.tile { background:#F8FAFC; border:1px solid var(--line); border-radius:10px; padding:12px; }
+.tile .k { font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); font-weight:700; }
+.tile .v { font-size:22px; font-weight:700; margin-top:4px; } .tile .s { font-size:12px; color:var(--muted); margin-top:2px; }
+.ok { color:#14945C; } .warn { color:#B54708; } .bad { color:#B42318; }
+.tile.ok { border-color:#A6E3C4; background:#F0FBF5; } .tile.warn { border-color:#F7D08A; background:#FFF8EB; } .tile.bad { border-color:#F5B5AE; background:#FEF3F2; }
+table { width:100%; border-collapse:collapse; font-size:14px; }
+th, td { text-align:left; padding:8px 6px; border-bottom:1px solid var(--line); vertical-align:middle; }
+th { font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); }
+td input, td select { min-height:36px; font-size:14px; }
+.tbl { overflow-x:auto; }
+.note { font-size:12px; color:var(--muted); margin-top:10px; line-height:1.5; }
+.pill { display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; font-weight:700; }
+.pill.ok { background:#E7F7EE; } .pill.warn { background:#FFF1D6; } .pill.bad { background:#FDE4E1; }
+.x { background:none; border:0; color:#B42318; font-size:18px; cursor:pointer; min-height:36px; padding:0 8px; }
+@media print { #asbcSide, #asbcBar, #asbcNav, .back, .noprint { display:none !important; } body { background:#fff; } .box { border:0; padding:0; } }
+</style>
+<script>window.ASBC_TOOLS = true;</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./tools.css">
+</head>
+<body>
+<div class="wrap">
+  <header><h1>ASBC <span>Speaker Wire Calculator</span></h1><nav id="asbcNav" data-page="design"></nav></header>
+  <a class="back" href="./design.html">‹ Design Center</a>
+  <p class="intro">Pick the right speaker cable gauge for a run. Works for standard 8 Ω / 4 Ω speakers and 70 V / 100 V distributed systems.</p>
+  <div class="box"><h2>The run</h2><div class="fields">
+    <label>System<select id="mode"><option value="lo">Standard speaker (low impedance)</option><option value="70">70 V distributed</option><option value="100">100 V distributed</option></select></label>
+    <label id="lzW">Speaker impedance<select id="z"><option value="8">8 Ω</option><option value="6">6 Ω</option><option value="4">4 Ω</option></select></label>
+    <label id="lpW" style="display:none">Total tap watts on this run<input id="taps" type="number" min="1" value="60" inputmode="decimal"></label>
+    <label>Run length, one way (ft)<input id="len" type="number" min="1" value="75" inputmode="decimal"></label>
+    <label>Planned gauge<select id="awg"><option>18</option><option selected>16</option><option>14</option><option>12</option><option>10</option></select></label>
+  </div></div>
+  <div class="box"><h2>Result</h2><div class="tiles" id="res"></div></div>
+  <div class="box"><h2>Every gauge for this run</h2><div class="tbl"><table><thead><tr><th>Gauge</th><th>Round-trip resistance</th><th>Power lost</th><th>Loss (dB)</th><th>Verdict</th></tr></thead><tbody id="tb"></tbody></table></div>
+  <div class="note">Copper, round trip (out and back). Standard speakers: keep cable resistance at or under 5% of the speaker impedance (about 0.4 dB). Distributed 70 V / 100 V lines: keep the loss under 10% (about 0.5 dB). Use CL2/CL3-rated cable inside walls.</div></div>
+</div>
+<script>
+// v11.3.0 Design Center tool. Runs entirely in the browser; nothing is saved.
+firebase.initializeApp({ apiKey: "AIzaSyCSf560VkBf2esIH5rC-_Vcx349o7iIC-0", authDomain: "asbc-calculator.firebaseapp.com", projectId: "asbc-calculator" });
+firebase.auth().onAuthStateChanged(u => { if (!u || !u.emailVerified) location.replace('./index.html'); });
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
+const $ = id => document.getElementById(id), num = id => parseFloat($(id).value) || 0;
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmt = (n, d = 1) => Number(n).toLocaleString('en-US', { maximumFractionDigits: d, minimumFractionDigits: 0 });
+const tile = (k, v, s, cls) => `<div class="tile ${cls || ''}"><div class="k">${k}</div><div class="v">${v}</div>${s ? `<div class="s">${s}</div>` : ''}</div>`;
+const OHM = { 18: 6.385, 16: 4.016, 14: 2.525, 12: 1.588, 10: 0.999 };  // ohms per 1000 ft, solid/stranded copper
+function calc() {
+  const mode = $('mode').value, dist = mode !== 'lo';
+  $('lzW').style.display = dist ? 'none' : ''; $('lpW').style.display = dist ? '' : 'none';
+  const V = mode === '100' ? 100 : 70, Z = dist ? (V * V) / Math.max(1, num('taps')) : num('z'), L = num('len');
+  const limit = dist ? 0.10 : 0.05;   // max share of the load impedance
+  const row = g => { const R = 2 * L * OHM[g] / 1000, lost = 1 - (Z * Z) / ((Z + R) * (Z + R)) , db = 20 * Math.log10(Z / (Z + R)), share = R / Z;
+    const v = share <= limit ? 'ok' : share <= limit * 2 ? 'warn' : 'bad'; return { g, R, lost, db, v }; };
+  const rows = Object.keys(OHM).map(Number).sort((a, b) => b - a).map(row);
+  const pick = rows.find(r => r.v === 'ok'), mine = row(+$('awg').value);
+  const word = { ok: 'Good', warn: 'Marginal', bad: 'Too thin' };
+  $('res').innerHTML = tile('Planned ' + mine.g + ' AWG', word[mine.v], fmt(mine.lost * 100) + '% of power lost', mine.v)
+    + tile('Recommended', pick ? pick.g + ' AWG' : '10 AWG+', pick ? 'thinnest gauge that passes' : 'shorten the run or split it', pick ? 'ok' : 'bad')
+    + tile('Load impedance', fmt(Z, 1) + ' Ω', dist ? V + ' V line, ' + fmt(num('taps'), 0) + ' W of taps' : 'speaker');
+  $('tb').innerHTML = rows.map(r => `<tr><td><b>${r.g} AWG</b></td><td>${fmt(r.R, 2)} Ω</td><td>${fmt(r.lost * 100)}%</td><td>${fmt(r.db, 2)}</td><td><span class="pill ${r.v}">${word[r.v]}</span></td></tr>`).join('');
+}
+['mode', 'z', 'taps', 'len', 'awg'].forEach(id => { $(id).oninput = calc; $(id).onchange = calc; }); calc();
+
+</script>
+<script src="./sidebar.js" defer></script>
+</body>
+</html>

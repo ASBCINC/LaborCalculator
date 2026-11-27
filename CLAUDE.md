@@ -297,3 +297,7 @@ D-Tools handoff panel (paste-ready labor block); Quote Log search wording.
 - New page design.html (sidebar "Design Center", every role). Two sections: "Vendor design centers & forms" and "ASBC tools".
 - Links live in Firestore config/designCenter {links:[{id, section:'vendor'|'tool', name, url, desc, cat}]}; everyone approved reads, admins add/edit/remove on the page (existing config/{doc} rule). Links must be https:// or ./page in this app.
 - roles.js PAGES.design + 'design' in all six roles; sidebar.js LINKS/PAGE; sw.js CORE_ASSETS.
+
+## v11.3.0 — Design Center links + four in-house tools (2026-11-27)
+- design.html SEED list (SEED_V=1): ProjectorCentral, AVIXA DISCAS, SANUS MountFinder + HeightFinder, AXIS Site Designer, plus the four tools. Shown to everyone until an admin opens the page, which writes them once to config/designCenter (seedV). Bump SEED_V only to push new starter links.
+- New browser-only tools (nothing saved): tool-wire.html (speaker gauge, 8/4 Ω + 70/100 V), tool-poe.html (PoE budget), tool-tv.html (size by viewing angle + mount height), tool-rack.html (RU, BTU/hr, circuit load, print). sidebar.js maps them to 'design'; sw.js caches them.

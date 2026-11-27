@@ -63,6 +63,17 @@ const db = firebase.firestore();
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const REF = db.collection('config').doc('designCenter');
 const SECTIONS = [['vendor', 'Vendor design centers & forms', 'No vendor links yet.'], ['tool', 'ASBC tools', 'Tools built for the team will show up here.']];
+// v11.3.0 starter links: shown to everyone until an admin opens the page, which saves them once (seedV); after that admins edit freely.
+const SEED_V = 1, SEED = [
+  { id: 's-projcentral', section: 'vendor', cat: 'Projection', name: 'ProjectorCentral Throw Calculator', url: 'https://www.projectorcentral.com/projection-calculator.htm', desc: 'Screen size vs throw distance for almost every projector model.' },
+  { id: 's-discas', section: 'vendor', cat: 'Displays', name: 'AVIXA DISCAS Calculators', url: 'https://www.avixa.org/standards/discas-calculators/discas', desc: 'Industry-standard display sizing for rooms where people need to read the screen.' },
+  { id: 's-sanus-mf', section: 'vendor', cat: 'Mounts', name: 'SANUS MountFinder', url: 'https://www.sanus.com/mountfinder', desc: 'Enter a TV model to see the mounts that fit it (Legrand AV).' },
+  { id: 's-sanus-hf', section: 'vendor', cat: 'Mounts', name: 'SANUS HeightFinder', url: 'https://shop.sanus.com/heightfinder', desc: 'Exact drill locations for a mount at the TV height you want.' },
+  { id: 's-axis', section: 'vendor', cat: 'Cameras', name: 'AXIS Site Designer', url: 'https://www.axis.com/tools/axis-site-designer', desc: 'Free camera placement, coverage, storage and bill of materials in the browser.' },
+  { id: 's-wire', section: 'tool', cat: 'Audio', name: 'Speaker Wire Calculator', url: './tool-wire.html', desc: 'Right gauge for a speaker run, 8/4 Ω or 70/100 V.' },
+  { id: 's-poe', section: 'tool', cat: 'Network', name: 'PoE Budget Calculator', url: './tool-poe.html', desc: 'Check PoE devices against a switch budget and port count.' },
+  { id: 's-tv', section: 'tool', cat: 'Displays', name: 'TV Size & Viewing Distance', url: './tool-tv.html', desc: 'Screen size for a seating distance, plus mounting height.' },
+  { id: 's-rack', section: 'tool', cat: 'Racks', name: 'Rack Planner', url: './tool-rack.html', desc: 'Rack units, heat load (BTU/hr) and circuit load for a rack.' }];
 let LINKS = [], ADMIN = false, EDIT = null, Q = '';
 const okUrl = u => /^https:\/\/[^\s]+$/i.test(u) || /^\.\/[\w.-]+(\?[^\s]*)?$/.test(u);
 function card(l) {
@@ -113,7 +124,12 @@ firebase.auth().onAuthStateChanged(async u => {
   const access = ASBCRoles.accessOf(((s && s.exists && s.data().users) || {})[email], email);
   if (!ASBCRoles.can(access, 'design')) return ASBCRoles.deny('design', document.getElementById('app'));
   ADMIN = access === 'admin';
-  try { const d = await REF.get(); LINKS = ((d.exists && d.data().links) || []).filter(l => l && l.name && l.url); } catch (e) { LINKS = []; }
+  let seeded = 0;
+  try { const d = await REF.get(); LINKS = ((d.exists && d.data().links) || []).filter(l => l && l.name && l.url); seeded = (d.exists && d.data().seedV) || 0; } catch (e) { LINKS = []; seeded = SEED_V; }
+  if (seeded < SEED_V) {
+    LINKS = LINKS.concat(SEED.filter(x => !LINKS.some(l => l.id === x.id)));
+    if (ADMIN) REF.set({ links: LINKS, seedV: SEED_V, updatedAt: new Date() }, { merge: true }).catch(() => {});
+  }
   window.ASBCDiag && ASBCDiag.ready('design');
   render();
 });
