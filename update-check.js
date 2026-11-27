@@ -4,7 +4,7 @@
 // If a newer version is live, a gold button appears at the top; tapping it saves any open recap and reloads.
 // ASBC_VERSION is kept in step by `python3 scripts/release.py bump X.Y.Z`.
 (function () {
-  const ASBC_VERSION = '10.9.8'; window.ASBC_VERSION = ASBC_VERSION;  // v10.8.0 read by diag.js
+  const ASBC_VERSION = '10.9.9'; window.ASBC_VERSION = ASBC_VERSION;  // v10.8.0 read by diag.js
   const newer = (a, b) => { const x = a.split('.').map(Number), y = b.split('.').map(Number); for (let i = 0; i < 3; i++) { if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); } return false; };
   let shown = false, last = 0;
   function show(v) {

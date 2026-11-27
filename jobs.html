@@ -360,11 +360,39 @@ function lineEst(it) {
 }
 const lineName = it => (it.isCustom ? it.name : ((CATALOG.get(it.id) || {}).name || it.id)) + (it.addon && it.addon.name ? ' + ' + it.addon.name : '');
 
+// v10.9.9 iPhone (mostly the installed app): the database's offline storage can stall the first reads for minutes
+// (Eugene, Nov 25: stuck at "loading users and catalog" and on the job list). quick() waits 5 s, then reads the same
+// data straight from the server over REST with the person's sign-in, so the page always loads. Writes still use the SDK.
+const FS_REST = 'https://firestore.googleapis.com/v1/projects/asbc-calculator/databases/(default)/documents';
+function fsVal(v) { if (!v) return null; if ('stringValue' in v) return v.stringValue; if ('integerValue' in v) return Number(v.integerValue); if ('doubleValue' in v) return v.doubleValue;
+  if ('booleanValue' in v) return v.booleanValue; if ('timestampValue' in v) return v.timestampValue; if ('nullValue' in v) return null;
+  if ('arrayValue' in v) return (v.arrayValue.values || []).map(fsVal); if ('mapValue' in v) return fsObj(v.mapValue.fields); return null; }
+const fsObj = f => Object.fromEntries(Object.entries(f || {}).map(([k, v]) => [k, fsVal(v)]));
+const restSnap = (id, fields) => { const d = fsObj(fields); return { id, exists: !!fields, data: () => d }; };
+async function restDoc(path) {
+  const tok = await firebase.auth().currentUser.getIdToken();
+  const r = await fetch(FS_REST + '/' + path, { headers: { Authorization: 'Bearer ' + tok } });
+  if (r.status === 404) return restSnap(path.split('/').pop(), null);
+  if (!r.ok) throw new Error('read ' + r.status); const j = await r.json(); return restSnap(path.split('/').pop(), j.fields || {});
+}
+async function restQuery(field, op, value) {
+  const tok = await firebase.auth().currentUser.getIdToken();
+  const r = await fetch(FS_REST + ':runQuery', { method: 'POST', headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ structuredQuery: { from: [{ collectionId: 'quotes' }], where: { fieldFilter: { field: { fieldPath: field }, op, value: { stringValue: value } } } } }) });
+  if (!r.ok) throw new Error('query ' + r.status);
+  return (await r.json()).filter(x => x.document).map(x => restSnap(x.document.name.split('/').pop(), x.document.fields || {}));
+}
+async function quick(sdk, rest, what) {
+  const r = await Promise.race([sdk().then(v => ({ v }), e => ({ e })), new Promise(res => setTimeout(() => res(null), 5000))]);
+  if (r && 'v' in r) return r.v;
+  window.ASBCDiag && ASBCDiag.stage(what + ' (server fallback)');
+  try { return await rest(); } catch (e) { if (r && r.e) throw r.e; return sdk(); }
+}
 // ---------- list ----------
 async function showList() {
   document.getElementById('pageTitle').textContent = ME.role === 'tech' ? 'My Jobs' : 'Jobs';
   let docs;
-  if (ME.role === 'tech') docs = (await db.collection('quotes').where('schedule.techs', 'array-contains', ME.email).get()).docs;
+  if (ME.role === 'tech') docs = await quick(() => db.collection('quotes').where('schedule.techs', 'array-contains', ME.email).get().then(x => x.docs), () => restQuery('schedule.techs', 'ARRAY_CONTAINS', ME.email), 'job list');
   else if (ME.role === 'rep' && !ME.allQuotes) docs = (await db.collection('quotes').where('project.salesManagerName', '==', ME.name).get()).docs;
   else docs = (await db.collection('quotes').where('status', 'in', ['won', 'scheduled', 'submitted', 'closed']).get()).docs;
   const dated = q => ((q.schedule || {}).dates || []).length > 0;
@@ -629,7 +657,7 @@ async function projectVisits() {
 let Q = null, REF = null;
 async function showJob(id) {
   REF = db.collection('quotes').doc(id);
-  const s = await REF.get();
+  const s = await quick(() => REF.get(), () => restDoc('quotes/' + id), 'job');
   if (!s.exists) { app().innerHTML = '<div class="empty">Job not found.</div>'; return; }
   Q = s.data();
   const assigned = ((Q.schedule || {}).techs || []).includes(ME.email);
@@ -1035,7 +1063,7 @@ firebase.auth().onAuthStateChanged(async (u) => {
   if (!u || !u.emailVerified) { window.ASBCDiag && ASBCDiag.ready('signed out'); app().innerHTML = '<div class="empty">Sign in (and confirm your email) on the <a href="./" style="text-decoration:underline">calculator</a> first, then reopen Jobs.</div>'; return; }
  try { if (!(await u.getIdTokenResult()).claims.email_verified) { await u.reload(); await u.getIdToken(true); } } catch (e) {}  // v8.28.1: refresh a sign-in token issued before the email was confirmed
   window.ASBCDiag && ASBCDiag.stage('loading users and catalog');
-  const [us, cs] = await Promise.all([db.collection('config').doc('users').get().catch(() => null), db.collection('config').doc('catalog').get().catch(() => null)]);
+  const [us, cs] = await Promise.all([quick(() => db.collection('config').doc('users').get(), () => restDoc('config/users'), 'users').catch(() => null), quick(() => db.collection('config').doc('catalog').get(), () => restDoc('config/catalog'), 'catalog').catch(() => null)]);
   USERS = (us && us.exists && us.data().users) || {};
   if (cs && cs.exists) (cs.data().items || []).forEach(i => CATALOG.set(i.id, i));
   const email = (u.email || '').toLowerCase();
