@@ -1,0 +1,28 @@
+name: Smoke test
+# v11.8.0: on every push, check the built files are up to date and that every page opens with no JavaScript errors
+# (stand-in Firebase from tests/mock-firebase.js, desktop and phone sizes). A red X here means: don't trust that push yet.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+concurrency:
+  group: smoke-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Lint (built files up to date, JS syntax)
+        run: python3 scripts/release.py lint
+      - name: Install Playwright (Chromium)
+        run: |
+          npm install --no-save --no-audit --no-fund playwright@1.47.2
+          npx playwright install --with-deps chromium
+      - name: Open every page
+        run: node tests/smoke.js

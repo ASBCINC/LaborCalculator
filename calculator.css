@@ -1,0 +1,230 @@
+/* BUILT FROM index.html: edit this file directly */
+        html { -webkit-text-size-adjust: 100%; }
+        body { overscroll-behavior: none; }
+        button, input, select { touch-action: manipulation; }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #F3F5F8; }
+        ::-webkit-scrollbar-thumb { background: #F1F4F8; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #D4AF37; }
+
+        .category-active {
+            background: #1F6FD1 !important;
+            border-color: #1F6FD1 !important;
+            color: #FFFFFF !important;
+            font-weight: 600;
+        }
+        .cat-count { margin-left: 6px; font-size: 11px; opacity: .55; font-variant-numeric: tabular-nums; }
+        .cat-group-label { font-size: 9px; text-transform: uppercase; letter-spacing: .12em; color: #6B6B6B; padding-left: 8px; margin-left: 2px; border-left: 1px solid #E3E7EE; white-space: nowrap; }
+        #categoryWrap.fade-r #categoryButtons { -webkit-mask-image: linear-gradient(to right, #000 85%, transparent); mask-image: linear-gradient(to right, #000 85%, transparent); }
+        #categoryWrap.fade-l #categoryButtons { -webkit-mask-image: linear-gradient(to left, #000 85%, transparent); mask-image: linear-gradient(to left, #000 85%, transparent); }
+        #categoryWrap.fade-l.fade-r #categoryButtons { -webkit-mask-image: linear-gradient(to right, transparent, #000 10%, #000 88%, transparent); mask-image: linear-gradient(to right, transparent, #000 10%, #000 88%, transparent); }
+        .cat-arrow { position: absolute; top: 2px; z-index: 5; width: 30px; height: 34px; align-items: center; justify-content: center; border-radius: 9999px; background: #FFFFFF; border: 1px solid #E3E7EE; color: #1F6FD1; font-size: 18px; opacity: 0; pointer-events: none; transition: opacity .15s; }
+        .cat-arrow-l { left: -4px; } .cat-arrow-r { right: -4px; }
+        #categoryWrap.fade-l .cat-arrow-l, #categoryWrap.fade-r .cat-arrow-r { opacity: 1; pointer-events: auto; }
+
+        .favorites-active {
+            background: #FFFFFF !important;
+            border-color: #1F6FD1 !important;
+            color: #1F6FD1 !important;
+        }
+
+        .bg-gray-900 { background-color: #F1F4F8 !important; }
+        .bg-gray-800 { background-color: #FFFFFF !important; }
+        .border-gray-800 { border-color: #E3E7EE !important; }
+        .border-gray-700 { border-color: #E3E7EE !important; }
+        .hover\:border-brandGold:hover { border-color: #1F6FD1 !important; }
+        #catalogPanel input, #catalogPanel select,
+        #estimatePanel input, #estimatePanel select,
+        #customItemModal input, #customItemModal select,
+        #adminItemModal input, #adminItemModal select { color-scheme: dark; }
+        select, input[list], datalist { color-scheme: dark; }
+        select option, select optgroup, datalist option { background-color: #FFFFFF !important; color: #1F2937 !important; }
+        .suggestion-box { position: fixed; z-index: 200; background: #FFFFFF; border: 1px solid #4a4a4a; border-radius: 10px; box-shadow: 0 10px 28px rgba(0,0,0,.65); max-height: 240px; overflow-y: auto; color-scheme: dark; }
+        .suggestion-item { padding: 11px 13px; font-size: 14px; color: #1F2937; cursor: pointer; border-bottom: 1px solid #E3E7EE; -webkit-tap-highlight-color: transparent; }
+        .suggestion-item:last-child { border-bottom: none; }
+        .suggestion-item:active { background: #1F6FD1; color: #FFFFFF; }
+        input:focus, select:focus {
+            border-color: #1F6FD1 !important;
+            box-shadow: 0 0 0 1px rgba(199, 166, 106, 0.28);
+            outline: none;
+        }
+
+        .addon-select {
+            height: 26px;
+            width: 100%;
+            max-width: 100%;
+            background-color: #FFFFFF;
+            border: 1px solid #E3E7EE;
+            border-radius: 8px;
+            color: #1F6FD1;
+            font-size: 10px;
+            padding: 0 6px;
+        }
+        .addon-select-row {
+            width: auto;
+            max-width: 45%;
+            flex-shrink: 0;
+        }
+
+        .estimate-open { transform: translateY(0) !important; }
+        /* v8.21.0 layout */
+        .pricing-collapsed { display: none; }
+        #pricingDetails { max-height: 45vh; }
+        .zone-collapsed { display: none; }
+        #categoryButtons { scrollbar-width: none; }
+        #categoryButtons::-webkit-scrollbar { display: none; }
+        @media (min-width: 1024px) {
+            body.estimate-wide #catalogPanel { width: 50% !important; }
+            body.estimate-wide #estimatePanel { width: 50% !important; }
+        }
+        @media (max-width: 639px) {
+            #moreTools { display: none; }
+            #moreTools.open { display: flex; flex-direction: column; align-items: stretch; gap: 8px; position: fixed; top: 6rem; right: 8px; z-index: 60; background: #FFFFFF; border: 1px solid #E3E7EE; border-radius: 12px; padding: 10px; box-shadow: 0 12px 30px rgba(0,0,0,.35); }
+            #moreTools.open > * { justify-content: flex-start; }
+        }
+        @media print {
+            .pricing-collapsed, #pricingDetails { display: block !important; max-height: none !important; overflow: visible !important; }
+            .zone-collapsed { display: block !important; }
+        }
+        .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+
+        body:not(.show-item-hours) .item-hours-display {
+            display: none !important;
+        }
+
+        @media print {
+            @page {
+                size: letter portrait;
+                margin: 12mm 15mm;
+            }
+
+            body {
+                background: white !important;
+                color: #111 !important;
+                height: auto !important;
+                overflow: visible !important;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+            }
+
+            body:not(.show-item-hours) .item-hours-display {
+                display: none !important;
+            }
+
+            header,
+            #catalogPanel,
+            #mobileQuoteBar,
+            #estimateBackdrop,
+            #closeEstimateButton,
+            #customItemModal,
+            #adminItemModal,
+            .print-hide {
+                display: none !important;
+            }
+
+            main {
+                display: block !important;
+                height: auto !important;
+                overflow: visible !important;
+            }
+
+            #estimatePanel {
+                position: static !important;
+                display: block !important;
+                transform: none !important;
+                width: 100% !important;
+                height: auto !important;
+                max-height: none !important;
+                background: white !important;
+                box-shadow: none !important;
+                border: 0 !important;
+                padding: 0 !important;
+            }
+
+            #projectTools, #savedEstimateControls { display: none !important; }
+            #projectInfoPrint { display: block !important; }
+            
+            #quoteList { 
+                overflow: visible !important; 
+                padding: 0 !important;
+            }
+            
+            .print-zone-card {
+                border: 1px solid #e0e0e0 !important;
+                border-radius: 8px !important;
+                margin-bottom: 14px !important;
+                background: #fafafa !important;
+                page-break-inside: avoid;
+            }
+
+            .print-zone-header {
+                background: #111 !important;
+                color: white !important;
+                padding: 6px 12px !important;
+                font-weight: 700 !important;
+                font-size: 11px !important;
+                letter-spacing: 0.08em !important;
+                text-transform: uppercase !important;
+                border-top-left-radius: 7px;
+                border-top-right-radius: 7px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .print-zone-header * {
+                color: white !important;
+            }
+
+            .print-item-row {
+                background: white !important;
+                border-bottom: 1px solid #f0f0f0 !important;
+                padding: 7px 12px !important;
+                display: flex !important;
+                justify-content: space-between !important;
+                align-items: center !important;
+                font-size: 12px !important;
+            }
+
+            .print-item-row:last-child {
+                border-bottom: none !important;
+            }
+
+            #summaryPrintBlock {
+                page-break-inside: avoid;
+                margin-top: 18px;
+                border-top: 2px solid #111;
+                padding-top: 14px;
+            }
+
+            #signatureBlockPrint {
+                display: block !important;
+                page-break-inside: avoid;
+                margin-top: 24px;
+                padding-top: 14px;
+                border-top: 1px solid #ccc;
+            }
+
+            * { color: #111 !important; }
+        }
+            /* Printed scope of work: show the totals block as black on white */
+        @media print {
+            #summaryPrintBlock { position: static !important; background: #fff !important; box-shadow: none !important; border-top: 2px solid #000 !important; padding: 12px 0 !important; }
+            #summaryPrintBlock, #summaryPrintBlock * { color: #000 !important; border-color: #000 !important; }
+            #summaryPrintBlock #priceTotal { font-size: 22px !important; }
+        }
+    /* Typed quantity boxes (v8.1.0) */
+    .qty-input { background: transparent; color: inherit; border: 0; outline: none; padding: 0; -moz-appearance: textfield; appearance: textfield; }
+    .qty-input:focus { background: rgba(31,111,209,0.06); box-shadow: inset 0 0 0 1px #C5A572; border-radius: 6px; }
+    .qty-input::-webkit-outer-spin-button, .qty-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        @keyframes asbcTicker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+        .asbc-ticker-wrap { overflow: hidden; white-space: nowrap; max-width: 100%; }
+        /* v8.30.0 header buttons, same look as the other pages */
+        #hdrNav .hnav { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px; border-radius: 9px; border: 1px solid #E3E7EE; background: #FFFFFF; color: #1F2937; font-size: 13px; font-weight: 600; text-decoration: none; white-space: nowrap; }
+        #hdrNav .hnav:hover { border-color: #1F6FD1; }
+        #hdrNav .hnav.gold { background: #1F6FD1; color: #FFFFFF; border-color: #1F6FD1; }
+        #hdrNav .hnav.hidden { display: none !important; }
+        @media (max-width: 639px) { #hdrNav .navx { display: none !important; } #hdrNav .hnav { height: 34px; padding: 0 10px; font-size: 12px; } }
+        .asbc-ticker-inner { display: inline-block; white-space: nowrap; animation: asbcTicker 26s linear infinite; will-change: transform; }
+        .asbc-ticker-wrap:hover .asbc-ticker-inner { animation-play-state: paused; }
+    
