@@ -36,6 +36,16 @@ jobs:
         run: python3 scripts/auth_status.py
         env:
           FIREBASE_SA: ${{ secrets.FIREBASE_SA }}
+      - name: D-Tools calendar from the company feed (v11.11.0; no browser needed)
+        continue-on-error: true
+        env:
+          DTOOLS_ICS: ${{ secrets.DTOOLS_ICS }}
+          FIREBASE_SA: ${{ secrets.FIREBASE_SA }}
+          DTS_API_KEY: ${{ secrets.DTS_API_KEY }}
+        run: |
+          if [ -z "$DTOOLS_ICS" ]; then echo "DTOOLS_ICS secret not set: skipped"; exit 0; fi
+          npm install --no-save --silent firebase-admin@12 google-auth-library@9 >/dev/null 2>&1
+          node scripts/feed_import.js
       - name: Teams reminders and stale-calendar alert (v11.10.0; used to need the work computer)
         continue-on-error: true
         run: python3 scripts/daily_alerts.py

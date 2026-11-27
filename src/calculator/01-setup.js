@@ -20,7 +20,7 @@
               }
           });
 
-        const APP_VERSION = '11.10.0';
+        const APP_VERSION = '11.11.0';
         const BUILD_DATE = '2026-11-27';
         let HOURLY_RATE = 200;
 

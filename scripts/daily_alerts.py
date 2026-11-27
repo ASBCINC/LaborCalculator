@@ -105,11 +105,12 @@ def stale(tok, now, today, wd):
     if age <= limit: return
     alert = get('config/syncAlert') or {}
     if alert.get('sent') == today: return
-    prob = (get('config/syncStatus') or {}).get('problem') or ''
+    feed = get('config/feedStatus') or {}   # v11.11.0 hourly feed import
+    prob = '; '.join(x for x in [(get('config/syncStatus') or {}).get('problem') or '', ('hourly D-Tools feed: ' + feed['problem']) if feed.get('problem') else ''] if x)
     when = datetime.fromisoformat(at.replace('Z', '+00:00')).astimezone(PT).strftime('%a %b %-d, %-I:%M %p') if at else 'ever'
     text = (f'The install calendar in ASBC Tools was last synced from D-Tools {when}.' if at else 'The install calendar has never synced from D-Tools.') + \
         (f' The last scheduled run reported: {prob}.' if prob else ' The work computer may be off, or D-Tools / ASBC Tools may be signed out.') + \
-        ' Open D-Tools and click the ASBC sync bookmark to catch up (it also pushes any waiting stage changes).'
+        ' Open D-Tools and click the ASBC sync bookmark to catch up (it also pushes any waiting stage changes).' + (' The hourly feed import normally keeps this current, so check the problem above.' if feed.get('problem') else '')
     st = notify(tok, {'kind': 'admin', 'title': "D-Tools calendar hasn't synced", 'text': text, 'url': APP + 'calendar.html', 'button': 'Open Calendar'})
     if st == 200: setf('config/syncAlert', {'sent': today, 'at': now.isoformat()})
     print('  stale alert', st)

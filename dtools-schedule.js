@@ -59,7 +59,7 @@
     if (!u) throw new Error('not signed in');
     const users = ((await db.collection('config').doc('users').get()).data() || {}).users || {};
     const me = (u.email || '').toLowerCase();
-    if (ASBCRoles.accessOf(users[me], me) !== 'admin') throw new Error('admin only');
+    if (!u.isService && ASBCRoles.accessOf(users[me], me) !== 'admin') throw new Error('admin only');  // v11.11.0 isService: the hourly GitHub feed import (scripts/feed_import.js)
     const techByName = {};
     Object.entries(users).forEach(([e, p]) => { const a = ASBCRoles.accessOf(p, e); if (a === 'lead' || a === 'installer') techByName[fold(p.name)] = e; });
     let pipe = {};

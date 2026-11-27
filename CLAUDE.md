@@ -377,3 +377,17 @@ D-Tools handoff panel (paste-ready labor block); Quote Log search wording.
   pushed from Sync dialog → "Push stage changes (n)": confirm, the app opens D-Tools (window.open keeps window.opener), Anthony runs
   the bookmark there, it says {t:'asbc-hello'} to the opener, gets {t:'asbc-ready', P} and replies {t:'asbc-stages-done', R}.
   Tested with Playwright (pop-up blocked path + push from the app).
+
+## v11.11.0 Hourly D-Tools calendar from the Company Calendar Feed (Nov 27, 2026)
+- D-Tools Settings → Company Profile → Company Calendar Feed (generated Nov 27; iCal link = GitHub secret DTOOLS_ICS; revoke /
+  regenerate on that page). Contains project events (UID event-<id> = GetEvents3 id, so 'ev'+id matches the bookmark), meetings
+  (meeting-<id>), standalone tasks (task-<id>, ignored like the bookmark). Has: project name, dates/times, "Assigned to", address.
+  Lacks: task status, event notes, holidays, project ids -> scripts/feed_import.js carries them from config/dtoolsEvents (last
+  bookmark / evening import) by event id / project name; unknown other-PM projects are looked up in the D-Tools API (DTS_API_KEY).
+- Feed quirk: timed entries are UTC as if entered in US Eastern -> read back in FEED_TZ=America/New_York (09:00 entered = 14:00Z).
+  Guard: if 3+ matching timed entries all shift by the same whole hours vs the last import, the run stops (config/feedStatus.problem).
+- scripts/feed_import.js runs hourly in sync-opportunities.yml (6 AM-9 PM PT only, so no overnight tech messages): firebase-admin +
+  vm-loads roles.js and dtools-schedule.js and calls asbcImportSchedule (currentUser.isService skips the admin-role check; relay
+  notify gets the SA OAuth token). Writes config/feedStatus {at, ok, problem, summary}. --dry / --force for manual runs.
+- tests/feed_test.js (runs in the smoke workflow): synthetic feed -> build() -> real importer in Node with the stand-in Firebase.
+  Checked against the real feed on Nov 27: the same 10 install events and 3 meetings as the last bookmark import, same times.

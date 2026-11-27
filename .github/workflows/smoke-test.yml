@@ -25,4 +25,4 @@ jobs:
           npm install --no-save --no-audit --no-fund playwright@1.47.2
           npx playwright install --with-deps chromium
       - name: Open every page
-        run: node tests/smoke.js
+        run: node tests/feed_test.js && node tests/smoke.js
