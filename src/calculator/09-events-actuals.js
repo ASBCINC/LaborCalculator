@@ -48,12 +48,12 @@
             if (!currentLoadedEstimateId) { alert('Save the quote first (Save/Print), then log actuals against it.'); return; }
             const rows = actualsRowsFromCart();
             document.getElementById('actualsList').innerHTML = rows.map((row, i) => `
-                <div class="flex items-center gap-2 bg-gray-900 border border-gray-800 rounded-lg p-2">
+                <div class="flex items-center gap-2 bg-card border border-line rounded-lg p-2">
                     <div class="flex-1 min-w-0">
-                        <div class="text-sm text-white truncate">${escapeHtml(row.name)}${row.qty > 1 ? ` ×${row.qty}` : ''}</div>
-                        <div class="text-[10px] text-textMuted">${escapeHtml(row.zone)} · est ${row.estHours.toFixed(2)} hrs</div>
+                        <div class="text-sm text-ink truncate">${escapeHtml(row.name)}${row.qty > 1 ? ` ×${row.qty}` : ''}</div>
+                        <div class="text-[10px] text-mute">${escapeHtml(row.zone)} · est ${row.estHours.toFixed(2)} hrs</div>
                     </div>
-                    <input type="number" min="0" step="0.25" inputmode="decimal" data-actual-index="${i}" value="${row.actualHours}" placeholder="actual" class="w-24 bg-gray-900 border border-gray-700 rounded-lg p-2 text-sm text-white text-right font-mono">
+                    <input type="number" min="0" step="0.25" inputmode="decimal" data-actual-index="${i}" value="${row.actualHours}" placeholder="actual" class="w-24 bg-card border border-line rounded-lg p-2 text-sm text-ink text-right font-mono">
                 </div>
             `).join('');
             document.getElementById('actualsNotes').value = (currentActuals && currentActuals.notes) || '';
@@ -75,7 +75,7 @@
             });
             document.getElementById('actualsTotals').innerHTML =
                 `<span>Estimate: ${estTotal.toFixed(2)} hrs</span>` +
-                `<span class="${actTotal > estTotal ? 'text-red-400' : 'text-green-400'}">Actual${entered ? ` (${entered} line${entered > 1 ? 's' : ''})` : ''}: ${actTotal.toFixed(2)} hrs</span>`;
+                `<span class="${actTotal > estTotal ? 'text-bad' : 'text-good'}">Actual${entered ? ` (${entered} line${entered > 1 ? 's' : ''})` : ''}: ${actTotal.toFixed(2)} hrs</span>`;
         }
 
         async function saveActuals() {
@@ -108,11 +108,11 @@
             try {
                 await db.collection('quotes').doc(quoteId).set({ actuals: payload, updatedAt: new Date() }, { merge: true });
                 currentActuals = payload;
-                document.getElementById('actualsStatus').innerHTML = '<span class="text-green-400">Actual hours saved to the quote.</span>';
+                document.getElementById('actualsStatus').innerHTML = '<span class="text-good">Actual hours saved to the quote.</span>';
                 setTimeout(() => toggleActualsModal(false), 1000);
             } catch (err) {
                 console.error('Failed to save actuals:', err);
-                document.getElementById('actualsStatus').innerHTML = `<span class="text-red-400">Save failed: ${err.message}</span>`;
+                document.getElementById('actualsStatus').innerHTML = `<span class="text-bad">Save failed: ${err.message}</span>`;
             } finally {
                 saveBtn.disabled = false;
                 saveBtn.textContent = 'Save Actuals';

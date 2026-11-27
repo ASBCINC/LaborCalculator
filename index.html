@@ -24,17 +24,17 @@
 <link rel="stylesheet" href="./tools.css">
 </head>
 
-<body class="bg-bgDark text-white h-screen overflow-hidden font-sans">
+<body class="bg-page text-ink h-screen overflow-hidden font-sans">
     <div id="adminEditModeBanner" class="admin-edit-banner hidden">Admin Edit Mode Active: tap any product title to edit</div>
-    <header class="h-24 sm:h-28 bg-[#050505] text-white border-b border-[#26292f]">
+    <header class="h-24 sm:h-28 bg-page text-ink border-b border-line">
         <!-- v8.30.0: same header style as Home, Calendar, Jobs, Pipeline and the other pages -->
         <div class="h-12 sm:h-16 px-3 sm:px-5 flex items-center justify-between gap-3">
             <div class="min-w-0 leading-tight">
-                <div class="text-lg sm:text-xl font-bold tracking-wide whitespace-nowrap"><span id="asbcLogo" class="cursor-pointer select-none">ASBC</span> <span class="text-[#C7A66A]">Calculator</span></div>
-                <div class="text-[10px] sm:text-[11px] text-[#8b8f98] whitespace-nowrap"><span data-rate-display>$200/hr</span> · <span id="versionNumber" class="cursor-pointer select-none"></span></div>
+                <div class="text-lg sm:text-xl font-bold tracking-wide whitespace-nowrap"><span id="asbcLogo" class="cursor-pointer select-none">ASBC</span> <span class="text-accent">Calculator</span></div>
+                <div class="text-[10px] sm:text-[11px] text-mute whitespace-nowrap"><span data-rate-display>$200/hr</span> · <span id="versionNumber" class="cursor-pointer select-none"></span></div>
             </div>
             <div id="repTicker" onclick="location.href='./leaderboard.html'" class="flex-1 min-w-0 overflow-hidden px-3 hidden lg:block print-hide cursor-pointer" title="Open the leaderboard">
-                <div class="asbc-ticker-wrap"><div class="asbc-ticker-inner text-xs text-[#8b8f98] tracking-wide"><span id="repTickerText"></span><span id="repTickerTextDup"></span></div></div>
+                <div class="asbc-ticker-wrap"><div class="asbc-ticker-inner text-xs text-mute tracking-wide"><span id="repTickerText"></span><span id="repTickerTextDup"></span></div></div>
             </div>
             <div id="hdrNav" class="flex items-center gap-1.5 shrink-0 print-hide">
                 <a id="homeLink" href="./home.html" class="hidden hnav">Home</a>
@@ -50,9 +50,9 @@
             </div>
         </div>
 
-        <div id="projectTools" class="h-12 px-2 sm:px-5 flex items-center gap-2 bg-[#0b0d11] print-hide overflow-x-auto">
-            <input id="customerName" type="text" placeholder="Opportunity name" class="hidden h-9 w-40 sm:w-48 shrink-0 bg-[#101216] border border-[#26292f] rounded-md px-3 text-sm text-white placeholder:text-[#8b8f98]">
-            <select id="salesManagerName" class="h-9 w-36 sm:w-44 shrink-0 bg-[#101216] border border-[#26292f] rounded-md px-2 text-sm text-white">
+        <div id="projectTools" class="h-12 px-2 sm:px-5 flex items-center gap-2 bg-card print-hide overflow-x-auto">
+            <input id="customerName" type="text" placeholder="Opportunity name" class="hidden h-9 w-40 sm:w-48 shrink-0 bg-card border border-line rounded-md px-3 text-sm text-ink ph-mute">
+            <select id="salesManagerName" class="h-9 w-36 sm:w-44 shrink-0 bg-card border border-line rounded-md px-2 text-sm text-ink">
                 <option value="">Select sales rep</option>
                 <option value="Tom Virasak">Tom Virasak</option>
                 <option value="Timothy Parks">Timothy Parks</option>
@@ -70,52 +70,52 @@
                 <option value="Stefn Sandberg">Stefn Sandberg</option>
                 <option value="Enid Shor">Enid Shor</option>
             </select>
-            <select id="dtoolsOpportunity" class="h-9 w-40 sm:w-48 shrink-0 bg-[#101216] border border-[#26292f] rounded-md px-2 text-sm text-white">
+            <select id="dtoolsOpportunity" class="h-9 w-40 sm:w-48 shrink-0 bg-card border border-line rounded-md px-2 text-sm text-ink">
                 <option value="">D-Tools opportunities</option>
             </select>
-            <button id="moreToolsButton" type="button" onclick="document.getElementById('moreTools').classList.toggle('open')" class="sm:hidden h-9 shrink-0 px-3 rounded-md bg-[#1a1d23] border border-[#26292f] text-white text-sm font-medium">More</button>
+            <button id="moreToolsButton" type="button" onclick="document.getElementById('moreTools').classList.toggle('open')" class="sm:hidden h-9 shrink-0 px-3 rounded-md bg-soft border border-line text-ink text-sm font-medium">More</button>
             <div id="moreTools" class="sm:contents">
-            <label class="flex items-center gap-1.5 shrink-0 bg-[#1a1d23] border border-[#26292f] rounded-md px-2.5 h-9 cursor-pointer hover:bg-[#23262d] transition-colors">
-                <input type="checkbox" id="isTemplateCheckbox" class="w-3.5 h-3.5 rounded-sm border-gray-500 text-[#C7A66A] focus:ring-[#C7A66A]">
-                <span class="text-[11px] font-bold text-white uppercase tracking-wide mt-0.5">Template</span>
+            <label class="flex items-center gap-1.5 shrink-0 bg-soft border border-line rounded-md px-2.5 h-9 cursor-pointer hv-tint transition-colors">
+                <input type="checkbox" id="isTemplateCheckbox" class="w-3.5 h-3.5 rounded-sm border-line text-accent fc-ring-accent">
+                <span class="text-[11px] font-bold text-ink uppercase tracking-wide mt-0.5">Template</span>
             </label>
 
-            <label class="flex items-center gap-1.5 shrink-0 bg-[#1a1d23] border border-[#26292f] rounded-md px-2.5 h-9 cursor-pointer hover:bg-[#23262d] transition-colors" title="Locked quotes are never auto-purged after 60 days">
-                <input type="checkbox" id="isLockedCheckbox" class="w-3.5 h-3.5 rounded-sm border-gray-500 text-[#C7A66A] focus:ring-[#C7A66A]">
-                <span class="text-[11px] font-bold text-white uppercase tracking-wide mt-0.5">Lock</span>
+            <label class="flex items-center gap-1.5 shrink-0 bg-soft border border-line rounded-md px-2.5 h-9 cursor-pointer hv-tint transition-colors" title="Locked quotes are never auto-purged after 60 days">
+                <input type="checkbox" id="isLockedCheckbox" class="w-3.5 h-3.5 rounded-sm border-line text-accent fc-ring-accent">
+                <span class="text-[11px] font-bold text-ink uppercase tracking-wide mt-0.5">Lock</span>
             </label>
 
-            <label class="flex items-center gap-1.5 shrink-0 bg-[#1a1d23] border border-[#26292f] rounded-md px-2.5 h-9 cursor-pointer hover:bg-[#23262d] transition-colors" title="Check to show individual line-item hours on cards, quote list, and PDF printouts">
-                <input type="checkbox" id="showHoursCheckbox" class="w-3.5 h-3.5 rounded-sm border-gray-500 text-[#C7A66A] focus:ring-[#C7A66A]">
-                <span class="text-[11px] font-bold text-white uppercase tracking-wide mt-0.5">Show Hours</span>
+            <label class="flex items-center gap-1.5 shrink-0 bg-soft border border-line rounded-md px-2.5 h-9 cursor-pointer hv-tint transition-colors" title="Check to show individual line-item hours on cards, quote list, and PDF printouts">
+                <input type="checkbox" id="showHoursCheckbox" class="w-3.5 h-3.5 rounded-sm border-line text-accent fc-ring-accent">
+                <span class="text-[11px] font-bold text-ink uppercase tracking-wide mt-0.5">Show Hours</span>
             </label>
 
-            <a href="./log.html" title="Browse every saved quote and labor calibration" class="h-9 shrink-0 inline-flex items-center bg-[#1a1d23] border border-[#26292f] text-white font-medium rounded-md px-4 text-sm">Saved Quotes</a>
+            <a href="./log.html" title="Browse every saved quote and labor calibration" class="h-9 shrink-0 inline-flex items-center bg-soft border border-line text-ink font-medium rounded-md px-4 text-sm">Saved Quotes</a>
             </div>
         </div>
     </header>
 
     <main class="h-[calc(100vh-6rem)] h-[calc(100dvh-6rem)] sm:h-[calc(100vh-7rem)] sm:h-[calc(100dvh-7rem)] flex overflow-hidden relative">
-        <section id="catalogPanel" class="w-full lg:w-[60%] flex flex-col border-r border-gray-800 pb-20 lg:pb-0">
-            <div class="p-3 sm:p-4 bg-bgPanel border-b border-gray-800 space-y-3 shrink-0">
+        <section id="catalogPanel" class="w-full lg:w-[60%] flex flex-col border-r border-line pb-20 lg:pb-0">
+            <div class="p-3 sm:p-4 bg-card border-b border-line space-y-3 shrink-0">
                 <div class="flex gap-2">
                     <div class="w-5/12 sm:w-1/3 relative shrink-0">
-                        <select id="activeZone" class="w-full h-12 bg-gray-900 border border-gray-700 rounded-xl px-3 text-xs sm:text-sm text-brandGold font-medium outline-none focus:border-brandGold">
+                        <select id="activeZone" class="w-full h-12 bg-card border border-line rounded-xl px-3 text-xs sm:text-sm text-accent font-medium outline-none fc-border-accent">
                             <option value="">Select room for items</option>
                         </select>
                     </div>
                     
-                    <input id="searchInput" type="search" autocomplete="off" placeholder="Search products..." class="flex-1 min-w-0 bg-gray-900 border border-gray-700 rounded-xl px-4 h-12 text-base outline-none focus:border-brandGold focus:ring-1 focus:ring-brandGold">
+                    <input id="searchInput" type="search" autocomplete="off" placeholder="Search products..." class="flex-1 min-w-0 bg-card border border-line rounded-xl px-4 h-12 text-base outline-none fc-border-accent focus:ring-1 fc-ring-accent">
                 </div>
 
                 <div id="categoryWrap"><div id="categoryButtons" class="flex flex-wrap items-center gap-1.5"></div></div>
 
-                <div class="flex justify-between items-center text-xs text-textMuted">
+                <div class="flex justify-between items-center text-xs text-mute">
                     <span id="resultCount">0 products</span>
                     <div class="flex gap-2">
-                        <button id="viewToggleButton" type="button" class="border border-gray-700 rounded-full px-3 py-1.5 flex items-center transition-colors hover:border-[#555555]">
+                        <button id="viewToggleButton" type="button" class="border border-line rounded-full px-3 py-1.5 flex items-center transition-colors hv-border-accent">
                         </button>
-                        <button id="favoritesFilterButton" type="button" class="border border-gray-700 rounded-full px-3 py-1.5 transition-colors hover:border-[#555555]">☆ Favorites</button>
+                        <button id="favoritesFilterButton" type="button" class="border border-line rounded-full px-3 py-1.5 transition-colors hv-border-accent">☆ Favorites</button>
                     </div>
                 </div>
             </div>
@@ -123,23 +123,23 @@
             <div id="productGrid" class="flex-1 overflow-y-auto p-2.5 sm:p-3 content-start"></div>
         </section>
 
-        <section id="estimatePanel" class="fixed lg:static inset-x-0 bottom-0 z-40 lg:z-auto w-full lg:w-[40%] h-[88vh] h-[88dvh] lg:h-full bg-bgPanel flex flex-col overflow-y-auto shadow-2xl lg:shadow-none rounded-t-2xl lg:rounded-none border-t lg:border-t-0 border-gray-700 translate-y-full lg:translate-y-0 transition-transform duration-300">
-            <div class="sticky top-0 z-20 p-4 border-b border-gray-800 flex justify-between items-center shrink-0 bg-bgPanel print-hide">
+        <section id="estimatePanel" class="fixed lg:static inset-x-0 bottom-0 z-40 lg:z-auto w-full lg:w-[40%] h-[88vh] h-[88dvh] lg:h-full bg-card flex flex-col overflow-y-auto shadow-2xl lg:shadow-none rounded-t-2xl lg:rounded-none border-t lg:border-t-0 border-line translate-y-full lg:translate-y-0 transition-transform duration-300">
+            <div class="sticky top-0 z-20 p-4 border-b border-line flex justify-between items-center shrink-0 bg-card print-hide">
                 <div>
-                    <h2 class="text-xl font-medium tracking-wide text-white">Project Estimate</h2>
-                    <p id="quoteItemCount" class="text-xs text-textMuted">0 items</p>
+                    <h2 class="text-xl font-medium tracking-wide text-ink">Project Estimate</h2>
+                    <p id="quoteItemCount" class="text-xs text-mute">0 items</p>
                 </div>
-                <div class="flex items-center gap-2"><button id="expandEstimateButton" type="button" onclick="toggleWideEstimate()" class="hidden lg:inline-flex items-center h-9 px-3 rounded-lg border border-gray-700 text-xs text-textMuted hover:border-brandGold hover:text-brandGold" title="Give the estimate more of the screen">Expand</button><button id="closeEstimateButton" type="button" onclick="toggleEstimate(false)" class="lg:hidden w-11 h-11 bg-gray-800 rounded-full text-xl" aria-label="Close estimate">×</button></div>
+                <div class="flex items-center gap-2"><button id="expandEstimateButton" type="button" onclick="toggleWideEstimate()" class="hidden lg:inline-flex items-center h-9 px-3 rounded-lg border border-line text-xs text-mute hv-border-accent hv-text-accent" title="Give the estimate more of the screen">Expand</button><button id="closeEstimateButton" type="button" onclick="toggleEstimate(false)" class="lg:hidden w-11 h-11 bg-soft rounded-full text-xl" aria-label="Close estimate">×</button></div>
             </div>
 
             <!-- Enhanced Print Document Header -->
             <div id="projectInfoPrint" class="hidden mb-6">
-                <div class="flex justify-between items-start border-b-2 border-black pb-4 mb-4">
+                <div class="flex justify-between items-start border-b-2 border-line pb-4 mb-4">
                     <div>
-                        <div class="text-2xl font-bold tracking-tight text-black uppercase">Scope of Work &amp; Labor Estimate</div>
-                        <div class="text-xs text-gray-600 tracking-wider uppercase mt-0.5">Bang &amp; Olufsen California · ASBC Inc.</div>
+                        <div class="text-2xl font-bold tracking-tight text-ink uppercase">Scope of Work &amp; Labor Estimate</div>
+                        <div class="text-xs text-mute tracking-wider uppercase mt-0.5">Bang &amp; Olufsen California · ASBC Inc.</div>
                     </div>
-                    <div class="text-right text-xs text-gray-700 space-y-0.5">
+                    <div class="text-right text-xs text-ink2 space-y-0.5">
                         <div><strong>Date:</strong> <span id="printDate"></span></div>
                         <div><strong>Labor Rate:</strong> <span id="printLaborRate">$200.00 / hr</span></div>
                         <div><strong>Standard Day:</strong> 8 hrs / technician</div>
@@ -148,13 +148,13 @@
 
                 <div class="grid grid-cols-2 gap-4 bg-gray-100 p-3 rounded text-xs border border-gray-300">
                     <div>
-                        <span class="text-gray-500 uppercase tracking-wide font-semibold block text-[10px]">Client / Project</span>
-                        <span id="printCustomerName" class="font-bold text-sm text-black">General Project</span>
-                        <span id="printOppLine" class="hidden block text-[11px] text-gray-700 mt-0.5"></span>
+                        <span class="text-mute uppercase tracking-wide font-semibold block text-[10px]">Client / Project</span>
+                        <span id="printCustomerName" class="font-bold text-sm text-ink">General Project</span>
+                        <span id="printOppLine" class="hidden block text-[11px] text-ink2 mt-0.5"></span>
                     </div>
                     <div>
-                        <span class="text-gray-500 uppercase tracking-wide font-semibold block text-[10px]">Sales &amp; Project Manager</span>
-                        <span id="printSalesManager" class="font-bold text-sm text-black">ASBC Operations</span>
+                        <span class="text-mute uppercase tracking-wide font-semibold block text-[10px]">Sales &amp; Project Manager</span>
+                        <span id="printSalesManager" class="font-bold text-sm text-ink">ASBC Operations</span>
                     </div>
                 </div>
             </div>
@@ -164,8 +164,8 @@
 
             <!-- Space / Zone Labor Breakdown Summary -->
             <div id="zoneBreakdownSection" class="px-4 pb-3">
-                <div class="border-t border-gray-800 pt-3">
-                    <div class="text-xs uppercase tracking-wider text-textMuted mb-2 font-medium">Labor by Space / Zone</div>
+                <div class="border-t border-line pt-3">
+                    <div class="text-xs uppercase tracking-wider text-mute mb-2 font-medium">Labor by Space / Zone</div>
                     <div id="zoneBreakdownList" class="space-y-1.5 text-xs sm:text-sm"></div>
                 </div>
             </div>
@@ -174,46 +174,46 @@
             <div id="categoryBreakdown" class="px-4 pb-4"></div>
 
             <!-- Cost & Schedule Summary Block -->
-            <div id="summaryPrintBlock" class="sticky bottom-0 z-20 p-3 sm:p-4 bg-gray-900 border-t border-gray-800 shrink-0 safe-bottom shadow-[0_-10px_20px_rgba(0,0,0,0.45)]">
-                <button type="button" id="pricingToggle" onclick="togglePricingDetails()" class="print-hide w-full flex justify-between items-center text-xs text-textMuted mb-2 hover:text-brandGold"><span><span id="pricingToggleIcon">▸</span> Pricing details &amp; options</span><span id="pricingToggleSummary" class="font-mono"></span></button>
+            <div id="summaryPrintBlock" class="sticky bottom-0 z-20 p-3 sm:p-4 bg-card border-t border-line shrink-0 safe-bottom shadow-bar">
+                <button type="button" id="pricingToggle" onclick="togglePricingDetails()" class="print-hide w-full flex justify-between items-center text-xs text-mute mb-2 hv-text-accent"><span><span id="pricingToggleIcon">▸</span> Pricing details &amp; options</span><span id="pricingToggleSummary" class="font-mono"></span></button>
                 <div id="pricingDetails" class="pricing-collapsed overflow-y-auto">
                 <div class="grid grid-cols-2 sm:grid-cols-5 gap-1.5 sm:gap-2 mb-3 print-hide">
-                    <label class="text-[10px] sm:text-xs text-textMuted flex flex-col">
+                    <label class="text-[10px] sm:text-xs text-mute flex flex-col">
                         <span>Site conditions</span>
-                        <select id="siteConditions" class="mt-1 w-full bg-bgDark border border-gray-700 rounded-lg p-2 sm:p-2.5 text-sm sm:text-base outline-none focus:border-brandGold">
+                        <select id="siteConditions" class="mt-1 w-full bg-page border border-line rounded-lg p-2 sm:p-2.5 text-sm sm:text-base outline-none fc-border-accent">
                             <option value="standard" selected>Standard</option>
                             <option value="moderate">Moderate</option>
                             <option value="difficult">Difficult</option>
                         </select>
                     </label>
-                    <label class="text-[10px] sm:text-xs text-textMuted flex flex-col">
+                    <label class="text-[10px] sm:text-xs text-mute flex flex-col">
                         <span>Trip charge</span>
-                        <select id="tripToggle" class="mt-1 w-full bg-bgDark border border-gray-700 rounded-lg p-2 sm:p-2.5 text-sm sm:text-base outline-none focus:border-brandGold">
+                        <select id="tripToggle" class="mt-1 w-full bg-page border border-line rounded-lg p-2 sm:p-2.5 text-sm sm:text-base outline-none fc-border-accent">
                             <option value="yes">Yes</option>
                             <option value="no" selected>No</option>
                         </select>
                     </label>
-                    <label class="text-[10px] sm:text-xs text-textMuted flex flex-col">
+                    <label class="text-[10px] sm:text-xs text-mute flex flex-col">
                         <span>Project management</span>
-                        <select id="pmToggle" class="mt-1 w-full bg-bgDark border border-gray-700 rounded-lg p-2 sm:p-2.5 text-sm sm:text-base outline-none focus:border-brandGold">
+                        <select id="pmToggle" class="mt-1 w-full bg-page border border-line rounded-lg p-2 sm:p-2.5 text-sm sm:text-base outline-none fc-border-accent">
                             <option value="no" selected>No</option>
                             <option value="yes">Yes</option>
                         </select>
                     </label>
-                    <label class="text-[10px] sm:text-xs text-textMuted flex flex-col">
+                    <label class="text-[10px] sm:text-xs text-mute flex flex-col">
                         <span>Recycling</span>
-                        <select id="recyclingToggle" class="mt-1 w-full bg-bgDark border border-gray-700 rounded-lg p-2 sm:p-2.5 text-sm sm:text-base outline-none focus:border-brandGold">
+                        <select id="recyclingToggle" class="mt-1 w-full bg-page border border-line rounded-lg p-2 sm:p-2.5 text-sm sm:text-base outline-none fc-border-accent">
                             <option value="no" selected>No</option>
                             <option value="yes">Yes (+$75)</option>
                             <option value="custom">Custom...</option>
                         </select>
-                        <input type="number" id="customRecyclingInput" inputmode="decimal" class="hidden mt-1 w-full bg-gray-900 border border-brandGold rounded-lg p-2 text-sm sm:text-base outline-none" placeholder="$">
+                        <input type="number" id="customRecyclingInput" inputmode="decimal" class="hidden mt-1 w-full bg-card border border-accent rounded-lg p-2 text-sm sm:text-base outline-none" placeholder="$">
                     </label>
 
 
-                    <label class="text-[10px] sm:text-xs text-textMuted flex flex-col">
+                    <label class="text-[10px] sm:text-xs text-mute flex flex-col">
                         <span>Crew Size</span>
-                        <select id="crewSize" class="mt-1 w-full bg-bgDark border border-gray-700 rounded-lg p-2 sm:p-2.5 text-sm sm:text-base outline-none focus:border-brandGold">
+                        <select id="crewSize" class="mt-1 w-full bg-page border border-line rounded-lg p-2 sm:p-2.5 text-sm sm:text-base outline-none fc-border-accent">
                             <option value="1">1 Tech</option>
                             <option value="2" selected>2 Techs</option>
                             <option value="3">3 Techs</option>
@@ -223,181 +223,181 @@
                 </div>
 
                 <div class="space-y-1.5 text-sm mb-3">
-                    <div class="flex justify-between text-textMuted"><span>Install hours <span class="text-[10px] text-[#888]">(incl. testing &amp; commissioning)</span></span><span id="installTotal" class="text-white font-mono">0.00</span></div>
-                    <div class="flex justify-between text-textMuted"><span>Programming hours</span><span id="programmingTotal" class="text-white font-mono">0.00</span></div>
-                    <div id="siteRow" class="hidden flex justify-between text-textMuted"><span id="siteLabel">Site conditions</span><span id="siteHours" class="text-white font-mono">0.00</span></div>
-                    <div id="pmRow" class="hidden flex justify-between text-textMuted"><span id="pmLabel">Project management</span><span id="pmHours" class="text-white font-mono">0.00</span></div>
-                    <div id="commRow" class="hidden flex justify-between text-textMuted"><span>Testing, commissioning &amp; handoff</span><span id="commHours" class="text-white font-mono">0.00</span></div>
-                    <div class="flex justify-between text-textMuted"><span>Total labor hours <span id="minNote" class="hidden text-[10px] text-[#888]"></span></span><span id="hoursTotal" class="text-white font-mono">0.00</span></div>
-                    <div id="legacyPricingRow" class="hidden text-[11px] text-[#C7A66A] print-hide">Saved before v8.12 (old pricing: no site, PM, commissioning or trip). <button type="button" onclick="pricingV2 = true; renderQuote(); scheduleDraftSave();" class="underline">Use current pricing</button></div>
-                    <div id="materialsRow" class="hidden flex justify-between text-brandGold pt-1"><span><span id="materialsLabel">Materials fee</span> <span class="text-[10px] text-[#888] font-normal">(automatically added to quote)</span></span><span id="materialsAmount">$0.00</span></div>
+                    <div class="flex justify-between text-mute"><span>Install hours <span class="text-[10px] text-mute">(incl. testing &amp; commissioning)</span></span><span id="installTotal" class="text-ink font-mono">0.00</span></div>
+                    <div class="flex justify-between text-mute"><span>Programming hours</span><span id="programmingTotal" class="text-ink font-mono">0.00</span></div>
+                    <div id="siteRow" class="hidden flex justify-between text-mute"><span id="siteLabel">Site conditions</span><span id="siteHours" class="text-ink font-mono">0.00</span></div>
+                    <div id="pmRow" class="hidden flex justify-between text-mute"><span id="pmLabel">Project management</span><span id="pmHours" class="text-ink font-mono">0.00</span></div>
+                    <div id="commRow" class="hidden flex justify-between text-mute"><span>Testing, commissioning &amp; handoff</span><span id="commHours" class="text-ink font-mono">0.00</span></div>
+                    <div class="flex justify-between text-mute"><span>Total labor hours <span id="minNote" class="hidden text-[10px] text-mute"></span></span><span id="hoursTotal" class="text-ink font-mono">0.00</span></div>
+                    <div id="legacyPricingRow" class="hidden text-[11px] text-accent print-hide">Saved before v8.12 (old pricing: no site, PM, commissioning or trip). <button type="button" onclick="pricingV2 = true; renderQuote(); scheduleDraftSave();" class="underline">Use current pricing</button></div>
+                    <div id="materialsRow" class="hidden flex justify-between text-accent pt-1"><span><span id="materialsLabel">Materials fee</span> <span class="text-[10px] text-mute font-normal">(automatically added to quote)</span></span><span id="materialsAmount">$0.00</span></div>
                     
-                    <div class="flex justify-between text-[#888] text-[11px] pt-1 pb-1 border-t border-gray-800">
+                    <div class="flex justify-between text-mute text-[11px] pt-1 pb-1 border-t border-line">
                         <span>Est. Days (<span id="crewSizeDisplay">1</span> tech)</span>
                         <span id="daysTotal" class="font-mono">0.0 days</span>
                     </div>
 
-                    <div id="tripRow" class="hidden flex justify-between text-brandGold"><span>Trip / mobilization</span><span id="tripAmount">$0.00</span></div>
-                    <div id="recyclingRow" class="hidden flex justify-between text-brandGold"><span id="recyclingLabel">Recycling fee</span><span id="recyclingAmount">$75.00</span></div>
+                    <div id="tripRow" class="hidden flex justify-between text-accent"><span>Trip / mobilization</span><span id="tripAmount">$0.00</span></div>
+                    <div id="recyclingRow" class="hidden flex justify-between text-accent"><span id="recyclingLabel">Recycling fee</span><span id="recyclingAmount">$75.00</span></div>
                 </div>
                 </div>
 
-                <div class="flex justify-between items-end border-t border-gray-700 pt-2 mb-2">
-                    <span class="uppercase tracking-wider text-textMuted font-bold">Total Estimate</span>
-                    <span id="priceTotal" class="text-2xl sm:text-3xl font-bold text-brandGold font-mono">$0.00</span>
+                <div class="flex justify-between items-end border-t border-line pt-2 mb-2">
+                    <span class="uppercase tracking-wider text-mute font-bold">Total Estimate</span>
+                    <span id="priceTotal" class="text-2xl sm:text-3xl font-bold text-accent font-mono">$0.00</span>
                 </div>
 
                 <div class="grid grid-cols-3 gap-2 print-hide">
-                    <button type="button" onclick="clearQuote()" class="bg-[#171717] border border-[#2A2A2A] font-semibold py-3 rounded-xl">Clear</button>
-                    <button type="button" onclick="saveAndPrint()" class="bg-white text-black font-bold py-3 rounded-xl">Save/Print</button>
-                    <button type="button" onclick="shareQuote()" class="bg-brandGold text-bgDark font-bold py-3 rounded-xl">Share</button>
+                    <button type="button" onclick="clearQuote()" class="bg-card border border-line font-semibold py-3 rounded-xl">Clear</button>
+                    <button type="button" onclick="saveAndPrint()" class="bg-white text-ink font-bold py-3 rounded-xl">Save/Print</button>
+                    <button type="button" onclick="shareQuote()" class="bg-go text-on font-bold py-3 rounded-xl">Share</button>
                 </div>
                 
-                <p class="text-[10px] text-textMuted mt-2 text-center leading-snug print-hide px-2">Saved quotes are kept in the Quote Log; the Saved list here shows the last 60 days.</p>
+                <p class="text-[10px] text-mute mt-2 text-center leading-snug print-hide px-2">Saved quotes are kept in the Quote Log; the Saved list here shows the last 60 days.</p>
             </div>
 
             <!-- Formal Client SOW Signature Block (Printed PDF Only) -->
             <div id="signatureBlockPrint" class="hidden text-xs">
-                <div class="text-[10px] text-gray-500 leading-normal mb-4">
+                <div class="text-[10px] text-mute leading-normal mb-4">
                     Labor estimates are formulated based on the defined scope of work, access, and architectural site conditions. Modifications requested during installation or unforeseen concealed site conditions will be billed at the standard hourly labor rate of <span id="disclaimerRate">$200.00/hr</span>.
                 </div>                </div>
             </div>
         </section>
     </main>
 
-    <button id="mobileQuoteBar" type="button" onclick="toggleEstimate(true)" class="lg:hidden fixed z-30 left-3 right-3 bottom-3 bg-brandGold text-bgDark rounded-2xl shadow-2xl px-4 py-3 flex items-center justify-between font-bold safe-bottom">
+    <button id="mobileQuoteBar" type="button" onclick="toggleEstimate(true)" class="lg:hidden fixed z-30 left-3 right-3 bottom-3 bg-go text-on rounded-2xl shadow-2xl px-4 py-3 flex items-center justify-between font-bold safe-bottom">
         <span><span id="mobileItemCount">0</span> items · <span id="mobileHours">0.00</span> hrs</span>
         <span id="mobilePrice" class="font-mono text-lg">$0.00</span>
     </button>
 
-    <div id="estimateBackdrop" onclick="toggleEstimate(false)" class="hidden lg:hidden fixed inset-0 z-30 bg-black/70"></div>
+    <div id="estimateBackdrop" onclick="toggleEstimate(false)" class="hidden lg:hidden fixed inset-0 z-30 bg-scrim"></div>
 
     <!-- Custom Labor Modal -->
-    <div id="customItemModal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 p-4">
-        <div class="bg-bgPanel border border-gray-700 p-5 rounded-2xl shadow-2xl w-full max-w-md">
+    <div id="customItemModal" class="fixed inset-0 bg-scrim hidden items-center justify-center z-50 p-4">
+        <div class="bg-card border border-line p-5 rounded-2xl shadow-2xl w-full max-w-md">
             <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-bold text-brandGold">Add Custom Labor</h3>
-                <button type="button" onclick="toggleCustomModal(false)" class="w-10 h-10 rounded-full bg-gray-800">×</button>
+                <h3 class="text-lg font-bold text-accent">Add Custom Labor</h3>
+                <button type="button" onclick="toggleCustomModal(false)" class="w-10 h-10 rounded-full bg-soft">×</button>
             </div>
 
-            <label class="block text-xs text-textMuted uppercase tracking-wider">
+            <label class="block text-xs text-mute uppercase tracking-wider">
                 Description
-                <input id="customName" type="text" placeholder="e.g. Core drill concrete wall" class="mt-1 w-full bg-gray-900 border border-gray-700 rounded-xl p-3 text-base">
+                <input id="customName" type="text" placeholder="e.g. Core drill concrete wall" class="mt-1 w-full bg-card border border-line rounded-xl p-3 text-base">
             </label>
 
             <div class="grid grid-cols-2 gap-3 mt-4">
-                <label class="text-xs text-textMuted uppercase tracking-wider">
+                <label class="text-xs text-mute uppercase tracking-wider">
                     Install hrs
-                    <input id="customInstall" type="number" inputmode="decimal" min="0" step="0.25" placeholder="0" class="mt-1 w-full min-w-0 bg-gray-900 border border-gray-700 rounded-xl p-3 text-base">
+                    <input id="customInstall" type="number" inputmode="decimal" min="0" step="0.25" placeholder="0" class="mt-1 w-full min-w-0 bg-card border border-line rounded-xl p-3 text-base">
                 </label>
-                <label class="text-xs text-textMuted uppercase tracking-wider">
+                <label class="text-xs text-mute uppercase tracking-wider">
                     Programming hrs
-                    <input id="customProgramming" type="number" inputmode="decimal" min="0" step="0.25" placeholder="0" class="mt-1 w-full min-w-0 bg-gray-900 border border-gray-700 rounded-xl p-3 text-base">
+                    <input id="customProgramming" type="number" inputmode="decimal" min="0" step="0.25" placeholder="0" class="mt-1 w-full min-w-0 bg-card border border-line rounded-xl p-3 text-base">
                 </label>
             </div>
 
-            <button type="button" onclick="addCustomItem()" class="mt-5 w-full bg-brandGold text-bgDark font-bold py-3.5 rounded-xl">Add to Estimate</button>
+            <button type="button" onclick="addCustomItem()" class="mt-5 w-full bg-go text-on font-bold py-3.5 rounded-xl">Add to Estimate</button>
         </div>
     </div>
 
     <!-- Hidden Admin Sheet Editor Modal -->
-    <div id="adminItemModal" class="fixed inset-0 bg-black/85 hidden items-center justify-center z-50 p-4">
-        <div class="bg-bgPanel border border-brandGold/40 p-5 rounded-2xl shadow-2xl w-full max-w-md">
+    <div id="adminItemModal" class="fixed inset-0 bg-scrim hidden items-center justify-center z-50 p-4">
+        <div class="bg-card border border-accent p-5 rounded-2xl shadow-2xl w-full max-w-md">
             <div class="flex justify-between items-center mb-3">
                 <div>
-                    <h3 class="text-lg font-bold text-brandGold">Labor Catalog Database Editor</h3>
-                    <p class="text-[11px] text-textMuted">Add or update items, hours and add-ons in the cloud catalog</p>
+                    <h3 class="text-lg font-bold text-accent">Labor Catalog Database Editor</h3>
+                    <p class="text-[11px] text-mute">Add or update items, hours and add-ons in the cloud catalog</p>
                 </div>
-                <button type="button" onclick="toggleAdminModal(false)" class="w-10 h-10 rounded-full bg-gray-800">×</button>
+                <button type="button" onclick="toggleAdminModal(false)" class="w-10 h-10 rounded-full bg-soft">×</button>
             </div>
 
             <div class="space-y-3 mt-3">
-                <label class="block text-xs text-textMuted uppercase tracking-wider">
+                <label class="block text-xs text-mute uppercase tracking-wider">
                     Existing Catalog Item (Select to edit)
-                    <select id="adminItemSelect" class="mt-1 w-full bg-gray-900 border border-gray-700 rounded-xl p-2.5 text-sm outline-none focus:border-brandGold">
+                    <select id="adminItemSelect" class="mt-1 w-full bg-card border border-line rounded-xl p-2.5 text-sm outline-none fc-border-accent">
                         <option value="">-- Add Brand New Item --</option>
                     </select>
                 </label>
 
                 <div class="grid grid-cols-2 gap-2.5">
-                    <label class="text-xs text-textMuted uppercase tracking-wider">
+                    <label class="text-xs text-mute uppercase tracking-wider">
                         Category
-                        <input id="adminCategory" list="adminCategoryOptions" type="text" placeholder="e.g. Speakers" class="mt-1 w-full bg-gray-900 border border-gray-700 rounded-xl p-2.5 text-sm">
+                        <input id="adminCategory" list="adminCategoryOptions" type="text" placeholder="e.g. Speakers" class="mt-1 w-full bg-card border border-line rounded-xl p-2.5 text-sm">
                         <datalist id="adminCategoryOptions"></datalist>
                     </label>
-                    <label class="text-xs text-textMuted uppercase tracking-wider">
+                    <label class="text-xs text-mute uppercase tracking-wider">
                         Item Name
-                        <input id="adminName" type="text" placeholder="e.g. Beosound Stage" class="mt-1 w-full bg-gray-900 border border-gray-700 rounded-xl p-2.5 text-sm">
+                        <input id="adminName" type="text" placeholder="e.g. Beosound Stage" class="mt-1 w-full bg-card border border-line rounded-xl p-2.5 text-sm">
                     </label>
                 </div>
 
                 <div class="grid grid-cols-2 gap-2.5">
-                    <label class="text-xs text-textMuted uppercase tracking-wider">
+                    <label class="text-xs text-mute uppercase tracking-wider">
                         Install Hours
-                        <input id="adminInstall" type="number" inputmode="decimal" min="0" step="0.25" placeholder="0" class="mt-1 w-full bg-gray-900 border border-gray-700 rounded-xl p-2.5 text-sm">
+                        <input id="adminInstall" type="number" inputmode="decimal" min="0" step="0.25" placeholder="0" class="mt-1 w-full bg-card border border-line rounded-xl p-2.5 text-sm">
                     </label>
-                    <label class="text-xs text-textMuted uppercase tracking-wider">
+                    <label class="text-xs text-mute uppercase tracking-wider">
                         Programming Hours
-                        <input id="adminProgramming" type="number" inputmode="decimal" min="0" step="0.25" placeholder="0" class="mt-1 w-full bg-gray-900 border border-gray-700 rounded-xl p-2.5 text-sm">
+                        <input id="adminProgramming" type="number" inputmode="decimal" min="0" step="0.25" placeholder="0" class="mt-1 w-full bg-card border border-line rounded-xl p-2.5 text-sm">
                     </label>
                 </div>
             </div>
 
             <div class="mt-3">
                 <div class="flex justify-between items-center mb-2">
-                    <span class="text-xs text-textMuted uppercase tracking-wider">Add-ons (per item, optional)</span>
-                    <button type="button" onclick="addAdminAddonRow()" class="text-xs text-brandGold border border-brandGold/50 rounded-lg px-2 py-1">+ Add add-on</button>
+                    <span class="text-xs text-mute uppercase tracking-wider">Add-ons (per item, optional)</span>
+                    <button type="button" onclick="addAdminAddonRow()" class="text-xs text-accent border border-accent rounded-lg px-2 py-1">+ Add add-on</button>
                 </div>
                 <div id="adminAddonsRows" class="space-y-1.5 max-h-40 overflow-y-auto"></div>
-                <p class="text-[10px] text-textMuted mt-1">Extra hours per unit, added on top of the base hours. Leave empty for no dropdown.</p>
+                <p class="text-[10px] text-mute mt-1">Extra hours per unit, added on top of the base hours. Leave empty for no dropdown.</p>
             </div>
 
-            <div class="mt-4 border-t border-gray-800 pt-3 space-y-2">
-                <div class="text-[10px] uppercase tracking-wider text-textMuted font-bold">Catalog Tools</div>
+            <div class="mt-4 border-t border-line pt-3 space-y-2">
+                <div class="text-[10px] uppercase tracking-wider text-mute font-bold">Catalog Tools</div>
                 <div class="grid grid-cols-2 gap-2">
-                    <button id="adminEditModeButton" type="button" onclick="toggleAdminEditMode()" class="text-xs border border-gray-700 text-textMuted py-2 rounded-lg hover:border-brandGold hover:text-brandGold">Toggle Card Edit Mode</button>
-                    <button id="exportCatalogButton" type="button" onclick="exportCatalogJson()" class="text-xs border border-gray-700 text-textMuted py-2 rounded-lg hover:border-brandGold hover:text-brandGold">Download labor-catalog.json</button>
+                    <button id="adminEditModeButton" type="button" onclick="toggleAdminEditMode()" class="text-xs border border-line text-mute py-2 rounded-lg hv-border-accent hv-text-accent">Toggle Card Edit Mode</button>
+                    <button id="exportCatalogButton" type="button" onclick="exportCatalogJson()" class="text-xs border border-line text-mute py-2 rounded-lg hv-border-accent hv-text-accent">Download labor-catalog.json</button>
                 </div>
                 <div class="grid grid-cols-2 gap-2 mt-2">
-                    <select id="adminRenameFrom" class="bg-gray-900 border border-gray-700 rounded-lg p-2 text-xs text-white"><option value="">-- Choose category --</option></select>
-                    <input id="adminRenameTo" type="text" placeholder="New category name" class="bg-gray-900 border border-gray-700 rounded-lg p-2 text-xs text-white">
+                    <select id="adminRenameFrom" class="bg-card border border-line rounded-lg p-2 text-xs text-ink"><option value="">-- Choose category --</option></select>
+                    <input id="adminRenameTo" type="text" placeholder="New category name" class="bg-card border border-line rounded-lg p-2 text-xs text-ink">
                 </div>
-                <button id="renameCategoryButton" type="button" onclick="renameCategory()" class="w-full text-xs border border-gray-700 text-textMuted py-2 rounded-lg hover:border-brandGold hover:text-brandGold mt-2">Rename Category (updates all its items)</button>
-                <details class="bg-gray-900/60 border border-gray-800 rounded-lg">
-                    <summary class="px-3 py-2 text-xs font-bold text-textMuted cursor-pointer uppercase tracking-wider">Global Pricing and Room Presets</summary>
+                <button id="renameCategoryButton" type="button" onclick="renameCategory()" class="w-full text-xs border border-line text-mute py-2 rounded-lg hv-border-accent hv-text-accent mt-2">Rename Category (updates all its items)</button>
+                <details class="bg-soft border border-line rounded-lg">
+                    <summary class="px-3 py-2 text-xs font-bold text-mute cursor-pointer uppercase tracking-wider">Global Pricing and Room Presets</summary>
                     <div class="px-3 pb-3 pt-2 grid grid-cols-3 gap-2">
-                        <label class="text-[10px] text-textMuted block">Hourly rate ($)<input id="settingsHourly" type="number" min="1" step="1" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 mt-1 text-sm text-white"></label>
-                        <label class="text-[10px] text-textMuted block">Recycling fee ($)<input id="settingsRecycling" type="number" min="0" step="1" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 mt-1 text-sm text-white"></label>
-                        <label class="text-[10px] text-textMuted block">Trip charge ($)<input data-pset="tripFee" type="number" min="0" step="1" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 mt-1 text-sm text-white"></label>
-                        <label class="text-[10px] text-textMuted block">Minimum hours<input data-pset="minHours" type="number" min="0" step="0.5" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 mt-1 text-sm text-white"></label>
-                        <label class="text-[10px] text-textMuted block">Project mgmt (%)<input data-pset="pmPct" type="number" min="0" step="0.5" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 mt-1 text-sm text-white"></label>
-                        <label class="text-[10px] text-textMuted block">Commissioning (%)<input data-pset="commissioningPct" type="number" min="0" step="0.5" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 mt-1 text-sm text-white"></label>
-                        <label class="text-[10px] text-textMuted block">Commissioning min (hrs)<input data-pset="commissioningMin" type="number" min="0" step="0.25" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 mt-1 text-sm text-white"></label>
-                        <label class="text-[10px] text-textMuted block">Moderate site (+% install)<input data-pset="moderatePct" type="number" min="0" step="1" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 mt-1 text-sm text-white"></label>
-                        <label class="text-[10px] text-textMuted block">Difficult site (+% install)<input data-pset="difficultPct" type="number" min="0" step="1" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 mt-1 text-sm text-white"></label>
-                        <label class="text-[10px] text-textMuted block">Productive hrs / day<input data-pset="productiveHoursPerDay" type="number" min="1" step="0.5" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 mt-1 text-sm text-white"></label>
+                        <label class="text-[10px] text-mute block">Hourly rate ($)<input id="settingsHourly" type="number" min="1" step="1" class="w-full bg-card border border-line rounded-lg p-2 mt-1 text-sm text-ink"></label>
+                        <label class="text-[10px] text-mute block">Recycling fee ($)<input id="settingsRecycling" type="number" min="0" step="1" class="w-full bg-card border border-line rounded-lg p-2 mt-1 text-sm text-ink"></label>
+                        <label class="text-[10px] text-mute block">Trip charge ($)<input data-pset="tripFee" type="number" min="0" step="1" class="w-full bg-card border border-line rounded-lg p-2 mt-1 text-sm text-ink"></label>
+                        <label class="text-[10px] text-mute block">Minimum hours<input data-pset="minHours" type="number" min="0" step="0.5" class="w-full bg-card border border-line rounded-lg p-2 mt-1 text-sm text-ink"></label>
+                        <label class="text-[10px] text-mute block">Project mgmt (%)<input data-pset="pmPct" type="number" min="0" step="0.5" class="w-full bg-card border border-line rounded-lg p-2 mt-1 text-sm text-ink"></label>
+                        <label class="text-[10px] text-mute block">Commissioning (%)<input data-pset="commissioningPct" type="number" min="0" step="0.5" class="w-full bg-card border border-line rounded-lg p-2 mt-1 text-sm text-ink"></label>
+                        <label class="text-[10px] text-mute block">Commissioning min (hrs)<input data-pset="commissioningMin" type="number" min="0" step="0.25" class="w-full bg-card border border-line rounded-lg p-2 mt-1 text-sm text-ink"></label>
+                        <label class="text-[10px] text-mute block">Moderate site (+% install)<input data-pset="moderatePct" type="number" min="0" step="1" class="w-full bg-card border border-line rounded-lg p-2 mt-1 text-sm text-ink"></label>
+                        <label class="text-[10px] text-mute block">Difficult site (+% install)<input data-pset="difficultPct" type="number" min="0" step="1" class="w-full bg-card border border-line rounded-lg p-2 mt-1 text-sm text-ink"></label>
+                        <label class="text-[10px] text-mute block">Productive hrs / day<input data-pset="productiveHoursPerDay" type="number" min="1" step="0.5" class="w-full bg-card border border-line rounded-lg p-2 mt-1 text-sm text-ink"></label>
                         
                     </div>
                     <div class="px-3 pb-2">
-                        <label class="text-[10px] text-textMuted block">Room presets (one per line)<textarea id="settingsZones" rows="4" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 mt-1 text-xs text-white font-mono"></textarea></label>
+                        <label class="text-[10px] text-mute block">Room presets (one per line)<textarea id="settingsZones" rows="4" class="w-full bg-card border border-line rounded-lg p-2 mt-1 text-xs text-ink font-mono"></textarea></label>
                     </div>
                     <div class="px-3 pb-3">
-                        <button id="saveSettingsButton" type="button" onclick="saveGlobalSettings()" class="w-full text-xs bg-brandGold text-bgDark font-bold py-2 rounded-lg">Save Global Settings</button>
+                        <button id="saveSettingsButton" type="button" onclick="saveGlobalSettings()" class="w-full text-xs bg-go text-on font-bold py-2 rounded-lg">Save Global Settings</button>
                     </div>
                 </details>
-                <a href="./users.html" class="mt-3 block text-center text-xs border border-brandGold text-brandGold font-bold py-2 rounded-lg">User Roles: add people and set what they can see</a>
+                <a href="./users.html" class="mt-3 block text-center text-xs border border-accent text-accent font-bold py-2 rounded-lg">User Roles: add people and set what they can see</a>
                 <details class="mt-3 hidden">
-                    <summary class="text-xs text-brandGold cursor-pointer">Approved users</summary>
-                    <p class="text-[11px] text-textMuted mt-2">One per line: <b>email, Name, role, store</b>, plus <b>, all</b> at the end to let a non-admin see every quote (role = rep, tech or admin; store = San Francisco, Palo Alto, West Hollywood, or none to leave someone off the leaderboard). Name must match the sales rep dropdown. Only these people can create a PIN and use the calculator.</p>
-                    <textarea id="approvedUsersText" rows="8" class="mt-2 w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-[11px] text-white font-mono"></textarea>
-                    <button type="button" onclick="saveApprovedUsers()" class="mt-2 w-full text-xs bg-brandGold text-bgDark font-bold py-2 rounded-lg">Save Approved Users</button>
+                    <summary class="text-xs text-accent cursor-pointer">Approved users</summary>
+                    <p class="text-[11px] text-mute mt-2">One per line: <b>email, Name, role, store</b>, plus <b>, all</b> at the end to let a non-admin see every quote (role = rep, tech or admin; store = San Francisco, Palo Alto, West Hollywood, or none to leave someone off the leaderboard). Name must match the sales rep dropdown. Only these people can create a PIN and use the calculator.</p>
+                    <textarea id="approvedUsersText" rows="8" class="mt-2 w-full bg-card border border-line rounded-lg p-2 text-[11px] text-ink font-mono"></textarea>
+                    <button type="button" onclick="saveApprovedUsers()" class="mt-2 w-full text-xs bg-go text-on font-bold py-2 rounded-lg">Save Approved Users</button>
                 </details>
             </div>
             <div class="mt-5 grid grid-cols-2 gap-2.5">
-                <button id="adminSaveButton" type="button" onclick="saveAdminSheetItem()" class="bg-brandGold text-bgDark font-bold py-3.5 rounded-xl">Save Item</button>
-                <button id="adminDeleteButton" type="button" onclick="deleteAdminSheetItem()" class="bg-transparent border border-[#B0413E] text-[#D98C8A] font-bold py-3.5 rounded-xl">Delete Item</button>
+                <button id="adminSaveButton" type="button" onclick="saveAdminSheetItem()" class="bg-go text-on font-bold py-3.5 rounded-xl">Save Item</button>
+                <button id="adminDeleteButton" type="button" onclick="deleteAdminSheetItem()" class="bg-transparent border border-[#B0413E] text-bad font-bold py-3.5 rounded-xl">Delete Item</button>
             </div>
-            <div id="adminStatus" class="mt-2 text-center text-xs text-textMuted min-h-[1.25rem]"></div>
+            <div id="adminStatus" class="mt-2 text-center text-xs text-mute min-h-[1.25rem]"></div>
         </div>
     </div>
 
@@ -419,41 +419,41 @@
     <script src="./update-check.js" defer></script>
 
     <style>#authGate:not(.ready) #authForm{display:none} #authGate.ready #authLoading{display:none}</style>
-    <div id="authGate" class="fixed inset-0 bg-bgDark z-[60] flex items-center justify-center p-4">
-        <div id="authLoading" class="text-center"><div class="text-xl font-bold text-brandGold">ASBC</div><div class="text-sm text-textMuted mt-2">Loading…</div></div>
-        <form id="authForm" class="bg-bgPanel border border-brandGold/40 p-6 rounded-2xl shadow-2xl w-full max-w-sm space-y-3" autocomplete="on">
+    <div id="authGate" class="fixed inset-0 bg-page z-[60] flex items-center justify-center p-4">
+        <div id="authLoading" class="text-center"><div class="text-xl font-bold text-accent">ASBC</div><div class="text-sm text-mute mt-2">Loading…</div></div>
+        <form id="authForm" class="bg-card border border-accent p-6 rounded-2xl shadow-2xl w-full max-w-sm space-y-3" autocomplete="on">
             <div class="text-center">
-                <h2 class="text-xl font-bold text-brandGold">ASBC Tools</h2>
-                <p id="authTitle" class="text-sm text-textMuted mt-1">Sign in</p>
+                <h2 class="text-xl font-bold text-accent">ASBC Tools</h2>
+                <p id="authTitle" class="text-sm text-mute mt-1">Sign in</p>
             </div>
-            <input id="authEmail" type="email" autocomplete="username" placeholder="Work email (you@asbc.us)" class="w-full h-12 bg-gray-900 border border-gray-700 rounded-lg px-3 text-white text-base">
-            <input id="authPin" type="password" inputmode="numeric" autocomplete="current-password" placeholder="PIN (6+ digits)" class="w-full h-12 bg-gray-900 border border-gray-700 rounded-lg px-3 text-white text-base tracking-widest">
-            <input id="authPin2" type="password" inputmode="numeric" autocomplete="new-password" placeholder="Re-enter new PIN" class="hidden w-full h-12 bg-gray-900 border border-gray-700 rounded-lg px-3 text-white text-base tracking-widest">
-            <button id="authSubmit" type="submit" class="w-full bg-brandGold text-bgDark font-bold py-3 rounded-xl">Sign in</button>
-            <div class="flex justify-between text-xs text-textMuted">
+            <input id="authEmail" type="email" autocomplete="username" placeholder="Work email (you@asbc.us)" class="w-full h-12 bg-card border border-line rounded-lg px-3 text-ink text-base">
+            <input id="authPin" type="password" inputmode="numeric" autocomplete="current-password" placeholder="PIN (6+ digits)" class="w-full h-12 bg-card border border-line rounded-lg px-3 text-ink text-base tracking-widest">
+            <input id="authPin2" type="password" inputmode="numeric" autocomplete="new-password" placeholder="Re-enter new PIN" class="hidden w-full h-12 bg-card border border-line rounded-lg px-3 text-ink text-base tracking-widest">
+            <button id="authSubmit" type="submit" class="w-full bg-go text-on font-bold py-3 rounded-xl">Sign in</button>
+            <div class="flex justify-between text-xs text-mute">
                 <button id="authModeToggle" type="button" class="underline">First time? Create your PIN</button>
                 <button type="button" onclick="sendPinReset()" class="underline">Forgot PIN</button>
             </div>
-            <div id="authStatus" class="text-center text-xs text-textMuted min-h-[1rem]"></div>
-            <button id="authSignOutBtn" type="button" onclick="signOutUser()" class="hidden w-full border border-gray-700 text-textMuted py-2 rounded-xl text-xs">Sign out</button>
+            <div id="authStatus" class="text-center text-xs text-mute min-h-[1rem]"></div>
+            <button id="authSignOutBtn" type="button" onclick="signOutUser()" class="hidden w-full border border-line text-mute py-2 rounded-xl text-xs">Sign out</button>
         </form>
     </div>
 
-    <div id="actualsModal" class="fixed inset-0 bg-black/85 hidden items-center justify-center z-50 p-4">
-        <div class="bg-bgDark border border-gray-700 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col p-4 sm:p-6">
+    <div id="actualsModal" class="fixed inset-0 bg-scrim hidden items-center justify-center z-50 p-4">
+        <div class="bg-page border border-line rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col p-4 sm:p-6">
             <div class="flex items-center justify-between mb-2">
-                <h2 class="text-lg font-bold text-white">Log Actual Hours</h2>
-                <button type="button" onclick="toggleActualsModal(false)" class="w-10 h-10 rounded-full bg-gray-800 text-white">&times;</button>
+                <h2 class="text-lg font-bold text-ink">Log Actual Hours</h2>
+                <button type="button" onclick="toggleActualsModal(false)" class="w-10 h-10 rounded-full bg-soft text-ink">&times;</button>
             </div>
-            <div class="text-xs text-textMuted mb-3">Compare what the estimate said to what the job actually took. Saves against the loaded quote.</div>
+            <div class="text-xs text-mute mb-3">Compare what the estimate said to what the job actually took. Saves against the loaded quote.</div>
             <div id="actualsList" class="flex-1 overflow-y-auto space-y-2 min-h-[8rem]"></div>
-            <div id="actualsTotals" class="mt-3 pt-3 border-t border-gray-800 flex justify-between text-sm text-white font-bold"></div>
-            <textarea id="actualsNotes" rows="2" placeholder="Notes (optional): what ran over, what went faster..." class="mt-2 w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-xs text-white"></textarea>
+            <div id="actualsTotals" class="mt-3 pt-3 border-t border-line flex justify-between text-sm text-ink font-bold"></div>
+            <textarea id="actualsNotes" rows="2" placeholder="Notes (optional): what ran over, what went faster..." class="mt-2 w-full bg-card border border-line rounded-lg p-2 text-xs text-ink"></textarea>
             <div class="grid grid-cols-2 gap-3 mt-3">
-                <button id="actualsSaveButton" type="button" onclick="saveActuals()" class="bg-brandGold text-bgDark font-bold py-3 rounded-xl">Save Actuals</button>
-                <button type="button" onclick="toggleActualsModal(false)" class="bg-transparent border border-gray-700 text-textMuted font-bold py-3 rounded-xl">Close</button>
+                <button id="actualsSaveButton" type="button" onclick="saveActuals()" class="bg-go text-on font-bold py-3 rounded-xl">Save Actuals</button>
+                <button type="button" onclick="toggleActualsModal(false)" class="bg-transparent border border-line text-mute font-bold py-3 rounded-xl">Close</button>
             </div>
-            <div id="actualsStatus" class="mt-2 text-center text-xs text-textMuted min-h-[1.25rem]"></div>
+            <div id="actualsStatus" class="mt-2 text-center text-xs text-mute min-h-[1.25rem]"></div>
         </div>
     </div>
 

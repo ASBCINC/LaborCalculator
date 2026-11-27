@@ -20,7 +20,7 @@
               }
           });
 
-        const APP_VERSION = '11.8.0';
+        const APP_VERSION = '11.9.0';
         const BUILD_DATE = '2026-11-27';
         let HOURLY_RATE = 200;
 
@@ -191,14 +191,14 @@
 
             // Stale-while-revalidate: paint the cached catalog instantly, refresh in the background.
             if (!catalog.length) {
-                productGrid.innerHTML = '<div class="col-span-full text-center text-textMuted py-12">Loading catalog...</div>';
+                productGrid.innerHTML = '<div class="col-span-full text-center text-mute py-12">Loading catalog...</div>';
                 resultCount.textContent = 'Syncing...';
                 const cachedRaw = localStorage.getItem('asbcCachedCatalog');
                 if (cachedRaw) {
                     try {
                         catalog = JSON.parse(cachedRaw);
                         applySeedAddons(catalog);
-                        finalizeCatalogRender('<span class="text-brandGold">Cached catalog active...</span>');
+                        finalizeCatalogRender('<span class="text-accent">Cached catalog active...</span>');
                     } catch (_e) { catalog = []; }
                 }
             }
@@ -216,7 +216,7 @@
                 const snap = await db.collection('config').doc('catalog').get();
                 if (!snap.exists) throw new Error('Catalog document not found.');
                 const items = itemsFromRows(snap.data().items || []);
-                applyLive(items, `<span class="text-green-400">${items.length} products · Live</span>`);
+                applyLive(items, `<span class="text-good">${items.length} products · Live</span>`);
                 return;
             } catch (firestoreError) { catalogLoadError = firestoreError; }
 
@@ -225,7 +225,7 @@
                 const res = await fetch('./labor-catalog.json', { cache: 'no-store' });
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const items = itemsFromRows(await res.json());
-                applyLive(items, '<span class="text-brandGold">Bundled Offline Catalog Active</span>');
+                applyLive(items, '<span class="text-accent">Bundled Offline Catalog Active</span>');
                 return;
             } catch (bundledError) { /* fall through */ }
 
@@ -249,7 +249,7 @@
                     }
                 });
                 const items = itemsFromRows(parsedData.data);
-                applyLive(items, '<span class="text-brandGold">Sheet Archive Active</span>');
+                applyLive(items, '<span class="text-accent">Sheet Archive Active</span>');
                 return;
             } catch (sheetError) { /* fall through */ }
 
@@ -261,9 +261,9 @@
                 resultCount.textContent = 'Catalog unavailable';
                 productGrid.innerHTML = `
                     <div class="col-span-full mx-auto max-w-lg text-center py-12 px-5">
-                        <div class="text-red-400 font-semibold mb-2">Unable to load catalog</div>
-                        <div class="text-sm text-textMuted mb-4">No internet connection and no offline cache found.</div>
-                        <button type="button" onclick="loadCatalog()" class="bg-brandGold text-bgDark font-bold px-4 py-2.5 rounded-xl">Try Again</button>
+                        <div class="text-bad font-semibold mb-2">Unable to load catalog</div>
+                        <div class="text-sm text-mute mb-4">No internet connection and no offline cache found.</div>
+                        <button type="button" onclick="loadCatalog()" class="bg-go text-on font-bold px-4 py-2.5 rounded-xl">Try Again</button>
                     </div>
                 `;
             }

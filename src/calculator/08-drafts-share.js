@@ -107,12 +107,12 @@
                 renderQuote();
                 populateAdminItemList();
 
-                adminStatus.innerHTML = `<span class="text-green-400">Saved. Live on every device.</span>`;
+                adminStatus.innerHTML = `<span class="text-good">Saved. Live on every device.</span>`;
                 setTimeout(() => { toggleAdminModal(false); }, 1200);
 
             } catch (err) {
                 console.error("Failed to save catalog item:", err);
-                adminStatus.innerHTML = `<span class="text-red-400">Failed to save: ${err.message}</span>`;
+                adminStatus.innerHTML = `<span class="text-bad">Failed to save: ${err.message}</span>`;
             } finally {
                 adminSaveButton.disabled = false;
                 adminSaveButton.textContent = "Save Item";
@@ -150,11 +150,11 @@
                 renderQuote();
                 populateAdminItemList();
 
-                adminStatus.innerHTML = '<span class="text-green-400">Deleted. Live on every device.</span>';
+                adminStatus.innerHTML = '<span class="text-good">Deleted. Live on every device.</span>';
                 setTimeout(() => { toggleAdminModal(false); }, 1200);
             } catch (err) {
                 console.error("Failed to delete catalog item:", err);
-                adminStatus.innerHTML = `<span class="text-red-400">Failed to delete: ${err.message}</span>`;
+                adminStatus.innerHTML = `<span class="text-bad">Failed to delete: ${err.message}</span>`;
             } finally {
                 adminDeleteButton.disabled = false;
                 adminDeleteButton.textContent = "Delete Item";

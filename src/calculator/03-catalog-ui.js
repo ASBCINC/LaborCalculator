@@ -22,7 +22,7 @@
                 button.type = 'button';
                 button.innerHTML = `${escapeHtml(label)}<span class="cat-count">${n}</span>`;
                 button.title = category;
-                button.className = 'category-button shrink-0 whitespace-nowrap h-8 px-2.5 sm:px-3 rounded-full border border-[#242424] bg-[#0F0F0F] text-white text-xs sm:text-[13px] transition-colors duration-200 hover:border-[#555555]';
+                button.className = 'category-button shrink-0 whitespace-nowrap h-8 px-2.5 sm:px-3 rounded-full border border-line bg-card text-ink text-xs sm:text-[13px] transition-colors duration-200 hv-border-accent';
                 button.dataset.category = category;
                 button.addEventListener('click', () => {
                     selectedCategory = category;
@@ -91,7 +91,7 @@
         function learnedFor(item) { const st = ITEM_STATS[item.id]; if (!st || (st.n || 0) < 3 || !(st.qty > 0) || !(st.est > 0)) return null;
             const est = (Number(item.installHours) || 0) + (Number(item.programmingHours) || 0), act = st.act / st.qty; if (!(est > 0) || Math.abs(act - est) / est < 0.2) return null; return { est, act, n: st.n }; }
         function learnedHtml(item) { const l = learnedFor(item); if (!l) return '';
-            return `<div class="text-[11px] mt-1" style="color:${l.act > l.est ? '#A1440B' : '#0E7A4D'}">Real jobs: ${l.act.toFixed(2)} hrs/unit vs ${l.est.toFixed(2)} in the catalog (${l.n} jobs)${isAdminUser() ? ` <button type="button" data-learn="${item.id}" class="underline text-brandGold ml-1">Apply</button>` : ''}</div>`; }
+            return `<div class="text-[11px] mt-1" style="color:${l.act > l.est ? '#A1440B' : '#0E7A4D'}">Real jobs: ${l.act.toFixed(2)} hrs/unit vs ${l.est.toFixed(2)} in the catalog (${l.n} jobs)${isAdminUser() ? ` <button type="button" data-learn="${item.id}" class="underline text-accent ml-1">Apply</button>` : ''}</div>`; }
         document.addEventListener('click', async e => { const b = e.target.closest('[data-learn]'); if (!b || !isAdminUser()) return; e.preventDefault(); e.stopPropagation();
             const item = catalog.find(i => i.id === b.dataset.learn), l = item && learnedFor(item); if (!l) return;
             const f = l.act / l.est;
@@ -109,7 +109,7 @@
 
             if (visibleItems.length === 0) {
                 productGrid.className = 'flex-1 overflow-y-auto p-2.5 sm:p-3 flex flex-col gap-2 content-start';
-                productGrid.innerHTML = '<div class="col-span-full text-center text-textMuted py-12">No matching products.</div>';
+                productGrid.innerHTML = '<div class="col-span-full text-center text-mute py-12">No matching products.</div>';
                 return;
             }
 
@@ -126,42 +126,42 @@
                 const card = document.createElement('article');
 
                 if (isListView) {
-                    card.className = 'bg-gray-900 border border-gray-700 rounded-xl p-2.5 flex items-center justify-between hover:border-brandGold transition-colors';
+                    card.className = 'bg-card border border-line rounded-xl p-2.5 flex items-center justify-between hv-border-accent transition-colors';
                     card.innerHTML = `
                         <div class="flex-1 min-w-0 pr-3">
                             <div class="flex items-center gap-2 mb-0.5">
-                                <button type="button" data-favorite-id="${item.id}" class="favorite-button text-lg leading-none mt-[-2px] ${favoriteIds.has(item.id) ? 'text-brandGold' : 'text-textMuted'}">${favoriteIds.has(item.id) ? '★' : '☆'}</button>
-                                <div class="text-[10px] text-brandGold uppercase tracking-wider truncate">${escapeHtml(item.category)}</div>
+                                <button type="button" data-favorite-id="${item.id}" class="favorite-button text-lg leading-none mt-[-2px] ${favoriteIds.has(item.id) ? 'text-accent' : 'text-mute'}">${favoriteIds.has(item.id) ? '★' : '☆'}</button>
+                                <div class="text-[10px] text-accent uppercase tracking-wider truncate">${escapeHtml(item.category)}</div>
                             </div>
                             <h3 class="font-medium text-sm leading-snug truncate whitespace-nowrap">${escapeHtml(item.name)}</h3>
                             ${adminEditMode ? `<button type="button" data-admin-edit="${item.id}" class="admin-edit-btn mt-1">Edit</button>` : ''}
-                            <div class="item-hours-display text-[10px] text-textMuted font-mono mt-0.5">${item.installHours.toFixed(2)} inst + ${item.programmingHours.toFixed(2)} prog${tileAddon ? ` + ${(tileAddon.installHours + tileAddon.programmingHours).toFixed(2)} add-on` : ''}</div>
+                            <div class="item-hours-display text-[10px] text-mute font-mono mt-0.5">${item.installHours.toFixed(2)} inst + ${item.programmingHours.toFixed(2)} prog${tileAddon ? ` + ${(tileAddon.installHours + tileAddon.programmingHours).toFixed(2)} add-on` : ''}</div>
                             ${itemAddonOptions ? `<select data-addon-product-id="${item.id}" class="addon-select mt-1">${addonOptionsHtml(tileAddon ? tileAddon.name : '', itemAddonOptions)}</select>` : ''}
                         </div>
-                        <div class="flex items-center bg-gray-800 rounded-xl overflow-hidden shrink-0">
+                        <div class="flex items-center bg-soft rounded-xl overflow-hidden shrink-0">
                             <button type="button" data-product-id="${item.id}" data-change="-1" class="quantity-button w-9 h-9 text-lg">−</button>
                             <input type="number" inputmode="numeric" pattern="[0-9]*" min="0" step="1" value="${quantity}" data-qty-product-id="${item.id}" aria-label="Quantity" class="qty-input w-11 h-9 text-center text-sm font-mono font-bold">
-                            <button type="button" data-product-id="${item.id}" data-change="1" class="quantity-button w-9 h-9 text-lg hover:bg-brandGold hover:text-bgDark">+</button>
+                            <button type="button" data-product-id="${item.id}" data-change="1" class="quantity-button w-9 h-9 text-lg hv-go hv-text-on">+</button>
                         </div>
                     `;
                 } else {
-                    card.className = 'bg-gray-900 border border-gray-700 rounded-xl p-3 flex flex-col justify-between hover:border-brandGold transition-colors';
+                    card.className = 'bg-card border border-line rounded-xl p-3 flex flex-col justify-between hv-border-accent transition-colors';
                     card.innerHTML = `
                         <div>
                             <div class="flex justify-between gap-3">
-                                <div class="text-xs text-brandGold mb-1 uppercase tracking-wider">${escapeHtml(item.category)}</div>
-                                <button type="button" data-favorite-id="${item.id}" class="favorite-button -mt-1.5 -mr-1.5 w-9 h-9 text-lg ${favoriteIds.has(item.id) ? 'text-brandGold' : 'text-textMuted'}">${favoriteIds.has(item.id) ? '★' : '☆'}</button>
+                                <div class="text-xs text-accent mb-1 uppercase tracking-wider">${escapeHtml(item.category)}</div>
+                                <button type="button" data-favorite-id="${item.id}" class="favorite-button -mt-1.5 -mr-1.5 w-9 h-9 text-lg ${favoriteIds.has(item.id) ? 'text-accent' : 'text-mute'}">${favoriteIds.has(item.id) ? '★' : '☆'}</button>
                             </div>
                             <h3 class="font-medium text-sm leading-snug">${escapeHtml(item.name)}</h3>
                             ${adminEditMode ? `<button type="button" data-admin-edit="${item.id}" class="admin-edit-btn self-start mt-1">Edit</button>` : ''}
                         </div>
-                        <div class="flex justify-between items-center gap-2 border-t border-gray-800 pt-2.5">
-                            <div class="item-hours-display text-xs text-textMuted font-mono">${item.installHours.toFixed(2)} install + ${item.programmingHours.toFixed(2)} prog${tileAddon ? ` + ${(tileAddon.installHours + tileAddon.programmingHours).toFixed(2)} add-on` : ''}</div>
+                        <div class="flex justify-between items-center gap-2 border-t border-line pt-2.5">
+                            <div class="item-hours-display text-xs text-mute font-mono">${item.installHours.toFixed(2)} install + ${item.programmingHours.toFixed(2)} prog${tileAddon ? ` + ${(tileAddon.installHours + tileAddon.programmingHours).toFixed(2)} add-on` : ''}</div>
                             ${itemAddonOptions ? `<select data-addon-product-id="${item.id}" class="addon-select addon-select-row">${addonOptionsHtml(tileAddon ? tileAddon.name : '', itemAddonOptions)}</select>` : ''}
-                            <div class="flex items-center bg-gray-800 rounded-xl overflow-hidden shrink-0 ml-auto">
+                            <div class="flex items-center bg-soft rounded-xl overflow-hidden shrink-0 ml-auto">
                                 <button type="button" data-product-id="${item.id}" data-change="-1" class="quantity-button w-9 h-9 text-lg">−</button>
                                 <input type="number" inputmode="numeric" pattern="[0-9]*" min="0" step="1" value="${quantity}" data-qty-product-id="${item.id}" aria-label="Quantity" class="qty-input w-11 h-9 text-center font-mono text-sm font-bold">
-                                <button type="button" data-product-id="${item.id}" data-change="1" class="quantity-button w-9 h-9 text-lg hover:bg-brandGold hover:text-bgDark">+</button>
+                                <button type="button" data-product-id="${item.id}" data-change="1" class="quantity-button w-9 h-9 text-lg hv-go hv-text-on">+</button>
                             </div>
                         </div>
                     `;

@@ -109,7 +109,7 @@
             const zoneTotals = {};
 
             if (quoteCart.length === 0) {
-                quoteList.innerHTML = '<div class="text-textMuted text-center mt-10 italic">No items added yet.</div>';
+                quoteList.innerHTML = '<div class="text-mute text-center mt-10 italic">No items added yet.</div>';
                 document.getElementById('zoneBreakdownSection').classList.add('hidden');
             } else {
                 document.getElementById('zoneBreakdownSection').classList.remove('hidden');
@@ -128,25 +128,25 @@
 
                 Object.keys(zonesObj).sort().forEach(zoneName => {
                     const zoneCard = document.createElement('div');
-                    zoneCard.className = 'print-zone-card bg-gray-900 rounded-xl border border-gray-800 overflow-hidden';
+                    zoneCard.className = 'print-zone-card bg-card rounded-xl border border-line overflow-hidden';
 
                     const zoneHeader = document.createElement('div');
-                    zoneHeader.className = 'print-zone-header bg-gray-800/80 px-3 py-2 border-b border-gray-800 flex justify-between items-center cursor-pointer select-none';
+                    zoneHeader.className = 'print-zone-header bg-soft px-3 py-2 border-b border-line flex justify-between items-center cursor-pointer select-none';
                     zoneHeader.dataset.zoneToggle = zoneName;
                     
                     const zoneTotalHours = zoneTotals[zoneName] || 0;
                     const zoneCost = zoneTotalHours * HOURLY_RATE;
 
                     zoneHeader.innerHTML = `
-                        <div class="text-[11px] text-brandGold uppercase tracking-wider font-bold"><span class="print-hide inline-block w-3 text-textMuted">${collapsedZones.has(zoneName) ? '▸' : '▾'}</span>${escapeHtml(zoneName)} <span class="print-hide normal-case tracking-normal font-normal text-textMuted">(${zonesObj[zoneName].length})</span><button type="button" data-rename-zone="${escapeHtml(zoneName)}" class="zone-rename-btn ml-2 print-hide" title="Rename this space">Rename</button></div>
-                        <div class="text-[10px] text-textMuted font-mono">
+                        <div class="text-[11px] text-accent uppercase tracking-wider font-bold"><span class="print-hide inline-block w-3 text-mute">${collapsedZones.has(zoneName) ? '▸' : '▾'}</span>${escapeHtml(zoneName)} <span class="print-hide normal-case tracking-normal font-normal text-mute">(${zonesObj[zoneName].length})</span><button type="button" data-rename-zone="${escapeHtml(zoneName)}" class="zone-rename-btn ml-2 print-hide" title="Rename this space">Rename</button></div>
+                        <div class="text-[10px] text-mute font-mono">
                             ${isHoursShown ? `${zoneTotalHours.toFixed(2)} hrs · ` : ''}${currencyFormatter.format(zoneCost)}
                         </div>
                     `;
                     zoneCard.appendChild(zoneHeader);
 
                     const itemsContainer = document.createElement('div');
-                    itemsContainer.className = 'divide-y divide-gray-800/60' + (collapsedZones.has(zoneName) ? ' zone-collapsed' : '');
+                    itemsContainer.className = 'divide-y divide-line' + (collapsedZones.has(zoneName) ? ' zone-collapsed' : '');
 
                     zonesObj[zoneName].forEach(item => {
                         const installHours = Number(item.installHours) || 0;
@@ -169,25 +169,25 @@
                         const cartCatalogItem = (!item.isCustom && catalog.find(ci => ci.id === item.id)) || item;
                         const lineAddonOptions = (!item.isCustom && cartCatalogItem.addons && cartCatalogItem.addons.length) ? cartCatalogItem.addons : null;
                         const addonCell = lineAddonOptions
-                            ? `<select data-quote-addon-index="${item.originalIndex}" class="addon-select mt-1 print-hide">${addonOptionsHtml(item.addon ? item.addon.name : '', lineAddonOptions)}</select>${item.addon ? `<div class="text-[11px] text-brandGold font-mono mt-0.5">+ ${(addonHoursPerItem * quantity).toFixed(2)} hrs add-on</div>` : ''}`
-                            : (item.addon ? `<div class="text-[11px] text-brandGold font-mono mt-0.5">+ ${escapeHtml(item.addon.name)} · ${(addonHoursPerItem * quantity).toFixed(2)} hrs add-on</div>` : '');
+                            ? `<select data-quote-addon-index="${item.originalIndex}" class="addon-select mt-1 print-hide">${addonOptionsHtml(item.addon ? item.addon.name : '', lineAddonOptions)}</select>${item.addon ? `<div class="text-[11px] text-accent font-mono mt-0.5">+ ${(addonHoursPerItem * quantity).toFixed(2)} hrs add-on</div>` : ''}`
+                            : (item.addon ? `<div class="text-[11px] text-accent font-mono mt-0.5">+ ${escapeHtml(item.addon.name)} · ${(addonHoursPerItem * quantity).toFixed(2)} hrs add-on</div>` : '');
                         const row = document.createElement('div');
-                        row.className = 'print-item-row px-2.5 py-1.5 flex justify-between items-center hover:bg-gray-800/30 transition-colors';
+                        row.className = 'print-item-row px-2.5 py-1.5 flex justify-between items-center hv-tint transition-colors';
                         row.innerHTML = `
                             <div class="flex-1 pr-3">
-                                <div class="text-sm font-medium leading-tight mb-0.5 text-white flex items-center gap-2">
+                                <div class="text-sm font-medium leading-tight mb-0.5 text-ink flex items-center gap-2">
                                     <span class="hidden print:inline-block w-3 h-3 border border-gray-400 rounded-sm"></span>
-                                    <span>${escapeHtml(item.name)}${item.addon ? `<span class="hidden print:inline text-xs text-gray-500"> - ${escapeHtml(item.addon.name)}</span>` : ''}</span>
+                                    <span>${escapeHtml(item.name)}${item.addon ? `<span class="hidden print:inline text-xs text-mute"> - ${escapeHtml(item.addon.name)}</span>` : ''}</span>
                                 </div>
-                                <div class="item-hours-display text-xs text-textMuted font-mono">${(totalHoursPerItem * quantity).toFixed(2)} hrs (${installHours.toFixed(2)} inst + ${programmingHours.toFixed(2)} prog)</div>
+                                <div class="item-hours-display text-xs text-mute font-mono">${(totalHoursPerItem * quantity).toFixed(2)} hrs (${installHours.toFixed(2)} inst + ${programmingHours.toFixed(2)} prog)</div>
                                 ${addonCell}
                             </div>
-                            <div class="flex items-center bg-gray-800 rounded-lg print-hide shrink-0">
+                            <div class="flex items-center bg-soft rounded-lg print-hide shrink-0">
                                 <button type="button" data-quote-index="${item.originalIndex}" data-change="-1" class="quote-quantity-button w-8 h-8 text-lg">−</button>
                                 <input type="number" inputmode="numeric" pattern="[0-9]*" min="0" step="1" value="${quantity}" data-qty-quote-index="${item.originalIndex}" aria-label="Quantity" class="qty-input w-10 h-8 text-center font-mono text-sm">
                                 <button type="button" data-quote-index="${item.originalIndex}" data-change="1" class="quote-quantity-button w-8 h-8 text-lg">+</button>
                             </div>
-                            <div class="hidden print:block text-xs font-mono font-bold text-black">
+                            <div class="hidden print:block text-xs font-mono font-bold text-ink">
                                 Qty: ${quantity}
                             </div>
                         `;
@@ -204,11 +204,11 @@
             zoneBreakdownList.innerHTML = Object.entries(zoneTotals).sort((a,b) => b[1] - a[1]).map(([zName, hrs]) => {
                 const cost = hrs * HOURLY_RATE;
                 return `
-                    <div class="flex justify-between items-center text-textMuted">
+                    <div class="flex justify-between items-center text-mute">
                         <span class="truncate pr-2">${escapeHtml(zName)}</span>
-                        <span class="font-mono text-white shrink-0">
-                            ${isHoursShown ? `<span class="text-textMuted mr-2">${hrs.toFixed(2)} hrs</span>` : ''}
-                            <span class="text-brandGold font-medium">${currencyFormatter.format(cost)}</span>
+                        <span class="font-mono text-ink shrink-0">
+                            ${isHoursShown ? `<span class="text-mute mr-2">${hrs.toFixed(2)} hrs</span>` : ''}
+                            <span class="text-accent font-medium">${currencyFormatter.format(cost)}</span>
                         </span>
                     </div>
                 `;
@@ -269,7 +269,7 @@
             const categoryTotals = {};
             quoteCart.forEach(item => { categoryTotals[item.category] = (categoryTotals[item.category] || 0) + (item.totalHours * item.qty); });
             const breakdown = document.getElementById('categoryBreakdown');
-            breakdown.innerHTML = quoteCart.length ? '<div class="text-xs uppercase tracking-wider text-textMuted mb-2 font-medium">Labor by category</div>' + Object.entries(categoryTotals).sort((a, b) => b[1] - a[1]).map(([category, hours]) => `<div class="flex justify-between text-xs sm:text-sm text-textMuted"><span>${escapeHtml(category)}</span><span class="font-mono text-white">${isHoursShown ? `${hours.toFixed(2)} hrs · ` : ''}${currencyFormatter.format(hours * HOURLY_RATE)}</span></div>`).join('') : '';
+            breakdown.innerHTML = quoteCart.length ? '<div class="text-xs uppercase tracking-wider text-mute mb-2 font-medium">Labor by category</div>' + Object.entries(categoryTotals).sort((a, b) => b[1] - a[1]).map(([category, hours]) => `<div class="flex justify-between text-xs sm:text-sm text-mute"><span>${escapeHtml(category)}</span><span class="font-mono text-ink">${isHoursShown ? `${hours.toFixed(2)} hrs · ` : ''}${currencyFormatter.format(hours * HOURLY_RATE)}</span></div>`).join('') : '';
 
             // Update Print Header Details
             const data = currentProjectData();

@@ -136,10 +136,10 @@
             if (!wrap) return;
             wrap.innerHTML = adminAddons.map((addon, index) => `
                 <div class="grid grid-cols-[1fr_4.5rem_4.5rem_2rem] gap-1.5 items-center">
-                    <input type="text" value="${escapeHtml(addon.name || '')}" placeholder="Add-on name" data-admin-addon-name="${index}" class="bg-gray-900 border border-gray-700 rounded-lg p-2 text-xs w-full">
-                    <input type="number" min="0" step="0.25" value="${addon.installHours ?? ''}" placeholder="Inst" data-admin-addon-inst="${index}" class="bg-gray-900 border border-gray-700 rounded-lg p-2 text-xs w-full">
-                    <input type="number" min="0" step="0.25" value="${addon.programmingHours ?? ''}" placeholder="Prog" data-admin-addon-prog="${index}" class="bg-gray-900 border border-gray-700 rounded-lg p-2 text-xs w-full">
-                    <button type="button" onclick="removeAdminAddonRow(${index})" class="w-8 h-8 rounded-lg bg-gray-800 text-red-400 text-sm">×</button>
+                    <input type="text" value="${escapeHtml(addon.name || '')}" placeholder="Add-on name" data-admin-addon-name="${index}" class="bg-card border border-line rounded-lg p-2 text-xs w-full">
+                    <input type="number" min="0" step="0.25" value="${addon.installHours ?? ''}" placeholder="Inst" data-admin-addon-inst="${index}" class="bg-card border border-line rounded-lg p-2 text-xs w-full">
+                    <input type="number" min="0" step="0.25" value="${addon.programmingHours ?? ''}" placeholder="Prog" data-admin-addon-prog="${index}" class="bg-card border border-line rounded-lg p-2 text-xs w-full">
+                    <button type="button" onclick="removeAdminAddonRow(${index})" class="w-8 h-8 rounded-lg bg-soft text-bad text-sm">×</button>
                 </div>
             `).join('');
         }
@@ -247,9 +247,9 @@
             applyAppSettings();
             try {
                 await db.collection('config').doc('settings').set(Object.assign({}, appSettings, { updatedAt: new Date().toISOString() }));
-                adminStatus.innerHTML = '<span class="text-green-400">Global settings saved. Live everywhere.</span>';
+                adminStatus.innerHTML = '<span class="text-good">Global settings saved. Live everywhere.</span>';
             } catch (err) {
-                adminStatus.innerHTML = `<span class="text-red-400">Settings kept locally; cloud save failed: ${err.message}</span>`;
+                adminStatus.innerHTML = `<span class="text-bad">Settings kept locally; cloud save failed: ${err.message}</span>`;
             }
         }
 

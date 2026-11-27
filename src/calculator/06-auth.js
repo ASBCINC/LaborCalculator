@@ -97,15 +97,15 @@
             let g = document.getElementById('verifyGate');
             if (!g) {
                 g = document.createElement('div'); g.id = 'verifyGate';
-                g.className = 'fixed inset-0 bg-bgDark z-[61] flex items-center justify-center p-4';
-                g.innerHTML = `<div class="bg-bgPanel border border-brandGold/40 p-6 rounded-2xl shadow-2xl w-full max-w-sm space-y-3 text-center">
-                    <h2 class="text-xl font-bold text-brandGold">Confirm your email</h2>
-                    <p class="text-sm text-gray-300">We sent a link to <b id="vgEmail" class="text-white"></b>. Open it (check Junk), tap the link, then come back and tap <b>I confirmed it</b>.</p>
-                    <p class="text-xs text-textMuted">One-time step. It keeps job and pricing data limited to ASBC staff.</p>
-                    <button id="vgDone" type="button" class="w-full bg-brandGold text-bgDark font-bold py-3 rounded-xl">I confirmed it</button>
-                    <button id="vgResend" type="button" class="w-full border border-gray-700 text-white py-3 rounded-xl text-sm">Send the email again</button>
-                    <button id="vgOut" type="button" class="w-full text-textMuted py-2 text-xs underline">Sign out</button>
-                    <div id="vgMsg" class="text-xs text-textMuted min-h-[1rem]"></div></div>`;
+                g.className = 'fixed inset-0 bg-page z-[61] flex items-center justify-center p-4';
+                g.innerHTML = `<div class="bg-card border border-accent p-6 rounded-2xl shadow-2xl w-full max-w-sm space-y-3 text-center">
+                    <h2 class="text-xl font-bold text-accent">Confirm your email</h2>
+                    <p class="text-sm text-ink2">We sent a link to <b id="vgEmail" class="text-ink"></b>. Open it (check Junk), tap the link, then come back and tap <b>I confirmed it</b>.</p>
+                    <p class="text-xs text-mute">One-time step. It keeps job and pricing data limited to ASBC staff.</p>
+                    <button id="vgDone" type="button" class="w-full bg-go text-on font-bold py-3 rounded-xl">I confirmed it</button>
+                    <button id="vgResend" type="button" class="w-full border border-line text-ink py-3 rounded-xl text-sm">Send the email again</button>
+                    <button id="vgOut" type="button" class="w-full text-mute py-2 text-xs underline">Sign out</button>
+                    <div id="vgMsg" class="text-xs text-mute min-h-[1rem]"></div></div>`;
                 document.body.appendChild(g);
                 const msg = t => document.getElementById('vgMsg').textContent = t;
                 document.getElementById('vgDone').onclick = async () => {
@@ -208,13 +208,13 @@
                 const [e, n, r, st, all] = l.split(',').map(x => (x || '').trim());
                 if (!/@/.test(e || '') || !n) bad.push(l); else users[e.toLowerCase()] = { name: n, role: ['admin', 'tech'].includes(r) ? r : 'rep', store: st || '', allQuotes: /^(all|yes|all quotes)$/i.test(all || '') };
             });
-            if (bad.length) { adminStatus.innerHTML = '<span class="text-red-400">Fix these lines: ' + escapeHtml(bad.join(' | ')) + '</span>'; return; }
+            if (bad.length) { adminStatus.innerHTML = '<span class="text-bad">Fix these lines: ' + escapeHtml(bad.join(' | ')) + '</span>'; return; }
             ADMIN_EMAILS.forEach(e => users[e] = users[e] || { name: 'Anthony Ward', role: 'admin' });
             try {
                 await db.collection('config').doc('users').set({ users, updatedAt: new Date(), updatedBy: currentUserProfile.email });
                 approvedUsers = users;
-                adminStatus.innerHTML = '<span class="text-green-400">Approved users saved (' + Object.keys(users).length + ').</span>';
-            } catch (e) { adminStatus.innerHTML = '<span class="text-red-400">Save failed: ' + escapeHtml(e.message) + '</span>'; }
+                adminStatus.innerHTML = '<span class="text-good">Approved users saved (' + Object.keys(users).length + ').</span>';
+            } catch (e) { adminStatus.innerHTML = '<span class="text-bad">Save failed: ' + escapeHtml(e.message) + '</span>'; }
         }
         function promptAdminAccess() {
             if (isAdminUser()) { toggleAdminModal(true); return; }

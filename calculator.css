@@ -5,8 +5,8 @@
 
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: #F3F5F8; }
-        ::-webkit-scrollbar-thumb { background: #F1F4F8; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #D4AF37; }
+        ::-webkit-scrollbar-thumb { background: #D5DBE4; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #C5CDD8; }
 
         .category-active {
             background: #1F6FD1 !important;
@@ -158,8 +158,9 @@
             }
 
             .print-zone-header {
-                background: #111 !important;
-                color: white !important;
+                background: #EEF2F7 !important;  /* v11.9.0 light header (was black): matches the app, saves ink */
+                color: #1F2937 !important;
+                border-bottom: 1px solid #D5DBE4;
                 padding: 6px 12px !important;
                 font-weight: 700 !important;
                 font-size: 11px !important;
@@ -173,7 +174,7 @@
             }
 
             .print-zone-header * {
-                color: white !important;
+                color: #1F2937 !important;
             }
 
             .print-item-row {
@@ -215,7 +216,7 @@
         }
     /* Typed quantity boxes (v8.1.0) */
     .qty-input { background: transparent; color: inherit; border: 0; outline: none; padding: 0; -moz-appearance: textfield; appearance: textfield; }
-    .qty-input:focus { background: rgba(31,111,209,0.06); box-shadow: inset 0 0 0 1px #C5A572; border-radius: 6px; }
+    .qty-input:focus { background: rgba(31,111,209,0.06); box-shadow: inset 0 0 0 1px #1F6FD1; border-radius: 6px; }
     .qty-input::-webkit-outer-spin-button, .qty-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
         @keyframes asbcTicker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
         .asbc-ticker-wrap { overflow: hidden; white-space: nowrap; max-width: 100%; }
@@ -228,3 +229,16 @@
         .asbc-ticker-inner { display: inline-block; white-space: nowrap; animation: asbcTicker 26s linear infinite; will-change: transform; }
         .asbc-ticker-wrap:hover .asbc-ticker-inner { animation-play-state: paused; }
     
+
+/* v11.9.0 light theme, named for what it looks like (replaces the old dark Tailwind classes that tools.css used to repaint) */
+.bg-page { background-color: #F3F5F8; } .bg-card { background-color: #FFFFFF; } .bg-soft { background-color: #F1F4F8; }
+.bg-go { background-color: #14945C; } .hv-go:hover { background-color: #0F7A4B; } .bg-scrim { background-color: rgba(15, 23, 42, .45); }
+.hv-tint:hover { background-color: #E8F1FC; }
+.text-ink { color: #1F2937; } .text-ink2 { color: #374151; } .text-mute { color: #4B5563; } .ph-mute::placeholder { color: #4B5563; }
+.text-on, .hv-text-on:hover { color: #FFFFFF; } .text-accent, .hv-text-accent:hover { color: #1F6FD1; }
+.text-bad { color: #B42318; } .text-good { color: #0E7A4D; }
+.border-line { border-color: #E3E7EE; } .divide-line > * + * { border-color: #E3E7EE; }
+.border-accent, .hv-border-accent:hover, .fc-border-accent:focus { border-color: #1F6FD1; }
+.fc-ring-accent:focus { --tw-ring-color: #1F6FD1; }
+.shadow-bar { box-shadow: 0 -6px 16px rgba(15, 23, 42, .12); }
+.font-mono { font-family: inherit; font-variant-numeric: tabular-nums; }  /* v11.9.0 numbers in the app font, still lined up */

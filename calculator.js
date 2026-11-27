@@ -21,7 +21,7 @@
               }
           });
 
-        const APP_VERSION = '11.8.0';
+        const APP_VERSION = '11.9.0';
         const BUILD_DATE = '2026-11-27';
         let HOURLY_RATE = 200;
 
@@ -192,14 +192,14 @@
 
             // Stale-while-revalidate: paint the cached catalog instantly, refresh in the background.
             if (!catalog.length) {
-                productGrid.innerHTML = '<div class="col-span-full text-center text-textMuted py-12">Loading catalog...</div>';
+                productGrid.innerHTML = '<div class="col-span-full text-center text-mute py-12">Loading catalog...</div>';
                 resultCount.textContent = 'Syncing...';
                 const cachedRaw = localStorage.getItem('asbcCachedCatalog');
                 if (cachedRaw) {
                     try {
                         catalog = JSON.parse(cachedRaw);
                         applySeedAddons(catalog);
-                        finalizeCatalogRender('<span class="text-brandGold">Cached catalog active...</span>');
+                        finalizeCatalogRender('<span class="text-accent">Cached catalog active...</span>');
                     } catch (_e) { catalog = []; }
                 }
             }
@@ -217,7 +217,7 @@
                 const snap = await db.collection('config').doc('catalog').get();
                 if (!snap.exists) throw new Error('Catalog document not found.');
                 const items = itemsFromRows(snap.data().items || []);
-                applyLive(items, `<span class="text-green-400">${items.length} products · Live</span>`);
+                applyLive(items, `<span class="text-good">${items.length} products · Live</span>`);
                 return;
             } catch (firestoreError) { catalogLoadError = firestoreError; }
 
@@ -226,7 +226,7 @@
                 const res = await fetch('./labor-catalog.json', { cache: 'no-store' });
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const items = itemsFromRows(await res.json());
-                applyLive(items, '<span class="text-brandGold">Bundled Offline Catalog Active</span>');
+                applyLive(items, '<span class="text-accent">Bundled Offline Catalog Active</span>');
                 return;
             } catch (bundledError) { /* fall through */ }
 
@@ -250,7 +250,7 @@
                     }
                 });
                 const items = itemsFromRows(parsedData.data);
-                applyLive(items, '<span class="text-brandGold">Sheet Archive Active</span>');
+                applyLive(items, '<span class="text-accent">Sheet Archive Active</span>');
                 return;
             } catch (sheetError) { /* fall through */ }
 
@@ -262,9 +262,9 @@
                 resultCount.textContent = 'Catalog unavailable';
                 productGrid.innerHTML = `
                     <div class="col-span-full mx-auto max-w-lg text-center py-12 px-5">
-                        <div class="text-red-400 font-semibold mb-2">Unable to load catalog</div>
-                        <div class="text-sm text-textMuted mb-4">No internet connection and no offline cache found.</div>
-                        <button type="button" onclick="loadCatalog()" class="bg-brandGold text-bgDark font-bold px-4 py-2.5 rounded-xl">Try Again</button>
+                        <div class="text-bad font-semibold mb-2">Unable to load catalog</div>
+                        <div class="text-sm text-mute mb-4">No internet connection and no offline cache found.</div>
+                        <button type="button" onclick="loadCatalog()" class="bg-go text-on font-bold px-4 py-2.5 rounded-xl">Try Again</button>
                     </div>
                 `;
             }
@@ -653,7 +653,7 @@
                 button.type = 'button';
                 button.innerHTML = `${escapeHtml(label)}<span class="cat-count">${n}</span>`;
                 button.title = category;
-                button.className = 'category-button shrink-0 whitespace-nowrap h-8 px-2.5 sm:px-3 rounded-full border border-[#242424] bg-[#0F0F0F] text-white text-xs sm:text-[13px] transition-colors duration-200 hover:border-[#555555]';
+                button.className = 'category-button shrink-0 whitespace-nowrap h-8 px-2.5 sm:px-3 rounded-full border border-line bg-card text-ink text-xs sm:text-[13px] transition-colors duration-200 hv-border-accent';
                 button.dataset.category = category;
                 button.addEventListener('click', () => {
                     selectedCategory = category;
@@ -722,7 +722,7 @@
         function learnedFor(item) { const st = ITEM_STATS[item.id]; if (!st || (st.n || 0) < 3 || !(st.qty > 0) || !(st.est > 0)) return null;
             const est = (Number(item.installHours) || 0) + (Number(item.programmingHours) || 0), act = st.act / st.qty; if (!(est > 0) || Math.abs(act - est) / est < 0.2) return null; return { est, act, n: st.n }; }
         function learnedHtml(item) { const l = learnedFor(item); if (!l) return '';
-            return `<div class="text-[11px] mt-1" style="color:${l.act > l.est ? '#A1440B' : '#0E7A4D'}">Real jobs: ${l.act.toFixed(2)} hrs/unit vs ${l.est.toFixed(2)} in the catalog (${l.n} jobs)${isAdminUser() ? ` <button type="button" data-learn="${item.id}" class="underline text-brandGold ml-1">Apply</button>` : ''}</div>`; }
+            return `<div class="text-[11px] mt-1" style="color:${l.act > l.est ? '#A1440B' : '#0E7A4D'}">Real jobs: ${l.act.toFixed(2)} hrs/unit vs ${l.est.toFixed(2)} in the catalog (${l.n} jobs)${isAdminUser() ? ` <button type="button" data-learn="${item.id}" class="underline text-accent ml-1">Apply</button>` : ''}</div>`; }
         document.addEventListener('click', async e => { const b = e.target.closest('[data-learn]'); if (!b || !isAdminUser()) return; e.preventDefault(); e.stopPropagation();
             const item = catalog.find(i => i.id === b.dataset.learn), l = item && learnedFor(item); if (!l) return;
             const f = l.act / l.est;
@@ -740,7 +740,7 @@
 
             if (visibleItems.length === 0) {
                 productGrid.className = 'flex-1 overflow-y-auto p-2.5 sm:p-3 flex flex-col gap-2 content-start';
-                productGrid.innerHTML = '<div class="col-span-full text-center text-textMuted py-12">No matching products.</div>';
+                productGrid.innerHTML = '<div class="col-span-full text-center text-mute py-12">No matching products.</div>';
                 return;
             }
 
@@ -757,42 +757,42 @@
                 const card = document.createElement('article');
 
                 if (isListView) {
-                    card.className = 'bg-gray-900 border border-gray-700 rounded-xl p-2.5 flex items-center justify-between hover:border-brandGold transition-colors';
+                    card.className = 'bg-card border border-line rounded-xl p-2.5 flex items-center justify-between hv-border-accent transition-colors';
                     card.innerHTML = `
                         <div class="flex-1 min-w-0 pr-3">
                             <div class="flex items-center gap-2 mb-0.5">
-                                <button type="button" data-favorite-id="${item.id}" class="favorite-button text-lg leading-none mt-[-2px] ${favoriteIds.has(item.id) ? 'text-brandGold' : 'text-textMuted'}">${favoriteIds.has(item.id) ? '★' : '☆'}</button>
-                                <div class="text-[10px] text-brandGold uppercase tracking-wider truncate">${escapeHtml(item.category)}</div>
+                                <button type="button" data-favorite-id="${item.id}" class="favorite-button text-lg leading-none mt-[-2px] ${favoriteIds.has(item.id) ? 'text-accent' : 'text-mute'}">${favoriteIds.has(item.id) ? '★' : '☆'}</button>
+                                <div class="text-[10px] text-accent uppercase tracking-wider truncate">${escapeHtml(item.category)}</div>
                             </div>
                             <h3 class="font-medium text-sm leading-snug truncate whitespace-nowrap">${escapeHtml(item.name)}</h3>
                             ${adminEditMode ? `<button type="button" data-admin-edit="${item.id}" class="admin-edit-btn mt-1">Edit</button>` : ''}
-                            <div class="item-hours-display text-[10px] text-textMuted font-mono mt-0.5">${item.installHours.toFixed(2)} inst + ${item.programmingHours.toFixed(2)} prog${tileAddon ? ` + ${(tileAddon.installHours + tileAddon.programmingHours).toFixed(2)} add-on` : ''}</div>
+                            <div class="item-hours-display text-[10px] text-mute font-mono mt-0.5">${item.installHours.toFixed(2)} inst + ${item.programmingHours.toFixed(2)} prog${tileAddon ? ` + ${(tileAddon.installHours + tileAddon.programmingHours).toFixed(2)} add-on` : ''}</div>
                             ${itemAddonOptions ? `<select data-addon-product-id="${item.id}" class="addon-select mt-1">${addonOptionsHtml(tileAddon ? tileAddon.name : '', itemAddonOptions)}</select>` : ''}
                         </div>
-                        <div class="flex items-center bg-gray-800 rounded-xl overflow-hidden shrink-0">
+                        <div class="flex items-center bg-soft rounded-xl overflow-hidden shrink-0">
                             <button type="button" data-product-id="${item.id}" data-change="-1" class="quantity-button w-9 h-9 text-lg">−</button>
                             <input type="number" inputmode="numeric" pattern="[0-9]*" min="0" step="1" value="${quantity}" data-qty-product-id="${item.id}" aria-label="Quantity" class="qty-input w-11 h-9 text-center text-sm font-mono font-bold">
-                            <button type="button" data-product-id="${item.id}" data-change="1" class="quantity-button w-9 h-9 text-lg hover:bg-brandGold hover:text-bgDark">+</button>
+                            <button type="button" data-product-id="${item.id}" data-change="1" class="quantity-button w-9 h-9 text-lg hv-go hv-text-on">+</button>
                         </div>
                     `;
                 } else {
-                    card.className = 'bg-gray-900 border border-gray-700 rounded-xl p-3 flex flex-col justify-between hover:border-brandGold transition-colors';
+                    card.className = 'bg-card border border-line rounded-xl p-3 flex flex-col justify-between hv-border-accent transition-colors';
                     card.innerHTML = `
                         <div>
                             <div class="flex justify-between gap-3">
-                                <div class="text-xs text-brandGold mb-1 uppercase tracking-wider">${escapeHtml(item.category)}</div>
-                                <button type="button" data-favorite-id="${item.id}" class="favorite-button -mt-1.5 -mr-1.5 w-9 h-9 text-lg ${favoriteIds.has(item.id) ? 'text-brandGold' : 'text-textMuted'}">${favoriteIds.has(item.id) ? '★' : '☆'}</button>
+                                <div class="text-xs text-accent mb-1 uppercase tracking-wider">${escapeHtml(item.category)}</div>
+                                <button type="button" data-favorite-id="${item.id}" class="favorite-button -mt-1.5 -mr-1.5 w-9 h-9 text-lg ${favoriteIds.has(item.id) ? 'text-accent' : 'text-mute'}">${favoriteIds.has(item.id) ? '★' : '☆'}</button>
                             </div>
                             <h3 class="font-medium text-sm leading-snug">${escapeHtml(item.name)}</h3>
                             ${adminEditMode ? `<button type="button" data-admin-edit="${item.id}" class="admin-edit-btn self-start mt-1">Edit</button>` : ''}
                         </div>
-                        <div class="flex justify-between items-center gap-2 border-t border-gray-800 pt-2.5">
-                            <div class="item-hours-display text-xs text-textMuted font-mono">${item.installHours.toFixed(2)} install + ${item.programmingHours.toFixed(2)} prog${tileAddon ? ` + ${(tileAddon.installHours + tileAddon.programmingHours).toFixed(2)} add-on` : ''}</div>
+                        <div class="flex justify-between items-center gap-2 border-t border-line pt-2.5">
+                            <div class="item-hours-display text-xs text-mute font-mono">${item.installHours.toFixed(2)} install + ${item.programmingHours.toFixed(2)} prog${tileAddon ? ` + ${(tileAddon.installHours + tileAddon.programmingHours).toFixed(2)} add-on` : ''}</div>
                             ${itemAddonOptions ? `<select data-addon-product-id="${item.id}" class="addon-select addon-select-row">${addonOptionsHtml(tileAddon ? tileAddon.name : '', itemAddonOptions)}</select>` : ''}
-                            <div class="flex items-center bg-gray-800 rounded-xl overflow-hidden shrink-0 ml-auto">
+                            <div class="flex items-center bg-soft rounded-xl overflow-hidden shrink-0 ml-auto">
                                 <button type="button" data-product-id="${item.id}" data-change="-1" class="quantity-button w-9 h-9 text-lg">−</button>
                                 <input type="number" inputmode="numeric" pattern="[0-9]*" min="0" step="1" value="${quantity}" data-qty-product-id="${item.id}" aria-label="Quantity" class="qty-input w-11 h-9 text-center font-mono text-sm font-bold">
-                                <button type="button" data-product-id="${item.id}" data-change="1" class="quantity-button w-9 h-9 text-lg hover:bg-brandGold hover:text-bgDark">+</button>
+                                <button type="button" data-product-id="${item.id}" data-change="1" class="quantity-button w-9 h-9 text-lg hv-go hv-text-on">+</button>
                             </div>
                         </div>
                     `;
@@ -913,7 +913,7 @@
             const zoneTotals = {};
 
             if (quoteCart.length === 0) {
-                quoteList.innerHTML = '<div class="text-textMuted text-center mt-10 italic">No items added yet.</div>';
+                quoteList.innerHTML = '<div class="text-mute text-center mt-10 italic">No items added yet.</div>';
                 document.getElementById('zoneBreakdownSection').classList.add('hidden');
             } else {
                 document.getElementById('zoneBreakdownSection').classList.remove('hidden');
@@ -932,25 +932,25 @@
 
                 Object.keys(zonesObj).sort().forEach(zoneName => {
                     const zoneCard = document.createElement('div');
-                    zoneCard.className = 'print-zone-card bg-gray-900 rounded-xl border border-gray-800 overflow-hidden';
+                    zoneCard.className = 'print-zone-card bg-card rounded-xl border border-line overflow-hidden';
 
                     const zoneHeader = document.createElement('div');
-                    zoneHeader.className = 'print-zone-header bg-gray-800/80 px-3 py-2 border-b border-gray-800 flex justify-between items-center cursor-pointer select-none';
+                    zoneHeader.className = 'print-zone-header bg-soft px-3 py-2 border-b border-line flex justify-between items-center cursor-pointer select-none';
                     zoneHeader.dataset.zoneToggle = zoneName;
                     
                     const zoneTotalHours = zoneTotals[zoneName] || 0;
                     const zoneCost = zoneTotalHours * HOURLY_RATE;
 
                     zoneHeader.innerHTML = `
-                        <div class="text-[11px] text-brandGold uppercase tracking-wider font-bold"><span class="print-hide inline-block w-3 text-textMuted">${collapsedZones.has(zoneName) ? '▸' : '▾'}</span>${escapeHtml(zoneName)} <span class="print-hide normal-case tracking-normal font-normal text-textMuted">(${zonesObj[zoneName].length})</span><button type="button" data-rename-zone="${escapeHtml(zoneName)}" class="zone-rename-btn ml-2 print-hide" title="Rename this space">Rename</button></div>
-                        <div class="text-[10px] text-textMuted font-mono">
+                        <div class="text-[11px] text-accent uppercase tracking-wider font-bold"><span class="print-hide inline-block w-3 text-mute">${collapsedZones.has(zoneName) ? '▸' : '▾'}</span>${escapeHtml(zoneName)} <span class="print-hide normal-case tracking-normal font-normal text-mute">(${zonesObj[zoneName].length})</span><button type="button" data-rename-zone="${escapeHtml(zoneName)}" class="zone-rename-btn ml-2 print-hide" title="Rename this space">Rename</button></div>
+                        <div class="text-[10px] text-mute font-mono">
                             ${isHoursShown ? `${zoneTotalHours.toFixed(2)} hrs · ` : ''}${currencyFormatter.format(zoneCost)}
                         </div>
                     `;
                     zoneCard.appendChild(zoneHeader);
 
                     const itemsContainer = document.createElement('div');
-                    itemsContainer.className = 'divide-y divide-gray-800/60' + (collapsedZones.has(zoneName) ? ' zone-collapsed' : '');
+                    itemsContainer.className = 'divide-y divide-line' + (collapsedZones.has(zoneName) ? ' zone-collapsed' : '');
 
                     zonesObj[zoneName].forEach(item => {
                         const installHours = Number(item.installHours) || 0;
@@ -973,25 +973,25 @@
                         const cartCatalogItem = (!item.isCustom && catalog.find(ci => ci.id === item.id)) || item;
                         const lineAddonOptions = (!item.isCustom && cartCatalogItem.addons && cartCatalogItem.addons.length) ? cartCatalogItem.addons : null;
                         const addonCell = lineAddonOptions
-                            ? `<select data-quote-addon-index="${item.originalIndex}" class="addon-select mt-1 print-hide">${addonOptionsHtml(item.addon ? item.addon.name : '', lineAddonOptions)}</select>${item.addon ? `<div class="text-[11px] text-brandGold font-mono mt-0.5">+ ${(addonHoursPerItem * quantity).toFixed(2)} hrs add-on</div>` : ''}`
-                            : (item.addon ? `<div class="text-[11px] text-brandGold font-mono mt-0.5">+ ${escapeHtml(item.addon.name)} · ${(addonHoursPerItem * quantity).toFixed(2)} hrs add-on</div>` : '');
+                            ? `<select data-quote-addon-index="${item.originalIndex}" class="addon-select mt-1 print-hide">${addonOptionsHtml(item.addon ? item.addon.name : '', lineAddonOptions)}</select>${item.addon ? `<div class="text-[11px] text-accent font-mono mt-0.5">+ ${(addonHoursPerItem * quantity).toFixed(2)} hrs add-on</div>` : ''}`
+                            : (item.addon ? `<div class="text-[11px] text-accent font-mono mt-0.5">+ ${escapeHtml(item.addon.name)} · ${(addonHoursPerItem * quantity).toFixed(2)} hrs add-on</div>` : '');
                         const row = document.createElement('div');
-                        row.className = 'print-item-row px-2.5 py-1.5 flex justify-between items-center hover:bg-gray-800/30 transition-colors';
+                        row.className = 'print-item-row px-2.5 py-1.5 flex justify-between items-center hv-tint transition-colors';
                         row.innerHTML = `
                             <div class="flex-1 pr-3">
-                                <div class="text-sm font-medium leading-tight mb-0.5 text-white flex items-center gap-2">
+                                <div class="text-sm font-medium leading-tight mb-0.5 text-ink flex items-center gap-2">
                                     <span class="hidden print:inline-block w-3 h-3 border border-gray-400 rounded-sm"></span>
-                                    <span>${escapeHtml(item.name)}${item.addon ? `<span class="hidden print:inline text-xs text-gray-500"> - ${escapeHtml(item.addon.name)}</span>` : ''}</span>
+                                    <span>${escapeHtml(item.name)}${item.addon ? `<span class="hidden print:inline text-xs text-mute"> - ${escapeHtml(item.addon.name)}</span>` : ''}</span>
                                 </div>
-                                <div class="item-hours-display text-xs text-textMuted font-mono">${(totalHoursPerItem * quantity).toFixed(2)} hrs (${installHours.toFixed(2)} inst + ${programmingHours.toFixed(2)} prog)</div>
+                                <div class="item-hours-display text-xs text-mute font-mono">${(totalHoursPerItem * quantity).toFixed(2)} hrs (${installHours.toFixed(2)} inst + ${programmingHours.toFixed(2)} prog)</div>
                                 ${addonCell}
                             </div>
-                            <div class="flex items-center bg-gray-800 rounded-lg print-hide shrink-0">
+                            <div class="flex items-center bg-soft rounded-lg print-hide shrink-0">
                                 <button type="button" data-quote-index="${item.originalIndex}" data-change="-1" class="quote-quantity-button w-8 h-8 text-lg">−</button>
                                 <input type="number" inputmode="numeric" pattern="[0-9]*" min="0" step="1" value="${quantity}" data-qty-quote-index="${item.originalIndex}" aria-label="Quantity" class="qty-input w-10 h-8 text-center font-mono text-sm">
                                 <button type="button" data-quote-index="${item.originalIndex}" data-change="1" class="quote-quantity-button w-8 h-8 text-lg">+</button>
                             </div>
-                            <div class="hidden print:block text-xs font-mono font-bold text-black">
+                            <div class="hidden print:block text-xs font-mono font-bold text-ink">
                                 Qty: ${quantity}
                             </div>
                         `;
@@ -1008,11 +1008,11 @@
             zoneBreakdownList.innerHTML = Object.entries(zoneTotals).sort((a,b) => b[1] - a[1]).map(([zName, hrs]) => {
                 const cost = hrs * HOURLY_RATE;
                 return `
-                    <div class="flex justify-between items-center text-textMuted">
+                    <div class="flex justify-between items-center text-mute">
                         <span class="truncate pr-2">${escapeHtml(zName)}</span>
-                        <span class="font-mono text-white shrink-0">
-                            ${isHoursShown ? `<span class="text-textMuted mr-2">${hrs.toFixed(2)} hrs</span>` : ''}
-                            <span class="text-brandGold font-medium">${currencyFormatter.format(cost)}</span>
+                        <span class="font-mono text-ink shrink-0">
+                            ${isHoursShown ? `<span class="text-mute mr-2">${hrs.toFixed(2)} hrs</span>` : ''}
+                            <span class="text-accent font-medium">${currencyFormatter.format(cost)}</span>
                         </span>
                     </div>
                 `;
@@ -1073,7 +1073,7 @@
             const categoryTotals = {};
             quoteCart.forEach(item => { categoryTotals[item.category] = (categoryTotals[item.category] || 0) + (item.totalHours * item.qty); });
             const breakdown = document.getElementById('categoryBreakdown');
-            breakdown.innerHTML = quoteCart.length ? '<div class="text-xs uppercase tracking-wider text-textMuted mb-2 font-medium">Labor by category</div>' + Object.entries(categoryTotals).sort((a, b) => b[1] - a[1]).map(([category, hours]) => `<div class="flex justify-between text-xs sm:text-sm text-textMuted"><span>${escapeHtml(category)}</span><span class="font-mono text-white">${isHoursShown ? `${hours.toFixed(2)} hrs · ` : ''}${currencyFormatter.format(hours * HOURLY_RATE)}</span></div>`).join('') : '';
+            breakdown.innerHTML = quoteCart.length ? '<div class="text-xs uppercase tracking-wider text-mute mb-2 font-medium">Labor by category</div>' + Object.entries(categoryTotals).sort((a, b) => b[1] - a[1]).map(([category, hours]) => `<div class="flex justify-between text-xs sm:text-sm text-mute"><span>${escapeHtml(category)}</span><span class="font-mono text-ink">${isHoursShown ? `${hours.toFixed(2)} hrs · ` : ''}${currencyFormatter.format(hours * HOURLY_RATE)}</span></div>`).join('') : '';
 
             // Update Print Header Details
             const data = currentProjectData();
@@ -1299,15 +1299,15 @@
             let g = document.getElementById('verifyGate');
             if (!g) {
                 g = document.createElement('div'); g.id = 'verifyGate';
-                g.className = 'fixed inset-0 bg-bgDark z-[61] flex items-center justify-center p-4';
-                g.innerHTML = `<div class="bg-bgPanel border border-brandGold/40 p-6 rounded-2xl shadow-2xl w-full max-w-sm space-y-3 text-center">
-                    <h2 class="text-xl font-bold text-brandGold">Confirm your email</h2>
-                    <p class="text-sm text-gray-300">We sent a link to <b id="vgEmail" class="text-white"></b>. Open it (check Junk), tap the link, then come back and tap <b>I confirmed it</b>.</p>
-                    <p class="text-xs text-textMuted">One-time step. It keeps job and pricing data limited to ASBC staff.</p>
-                    <button id="vgDone" type="button" class="w-full bg-brandGold text-bgDark font-bold py-3 rounded-xl">I confirmed it</button>
-                    <button id="vgResend" type="button" class="w-full border border-gray-700 text-white py-3 rounded-xl text-sm">Send the email again</button>
-                    <button id="vgOut" type="button" class="w-full text-textMuted py-2 text-xs underline">Sign out</button>
-                    <div id="vgMsg" class="text-xs text-textMuted min-h-[1rem]"></div></div>`;
+                g.className = 'fixed inset-0 bg-page z-[61] flex items-center justify-center p-4';
+                g.innerHTML = `<div class="bg-card border border-accent p-6 rounded-2xl shadow-2xl w-full max-w-sm space-y-3 text-center">
+                    <h2 class="text-xl font-bold text-accent">Confirm your email</h2>
+                    <p class="text-sm text-ink2">We sent a link to <b id="vgEmail" class="text-ink"></b>. Open it (check Junk), tap the link, then come back and tap <b>I confirmed it</b>.</p>
+                    <p class="text-xs text-mute">One-time step. It keeps job and pricing data limited to ASBC staff.</p>
+                    <button id="vgDone" type="button" class="w-full bg-go text-on font-bold py-3 rounded-xl">I confirmed it</button>
+                    <button id="vgResend" type="button" class="w-full border border-line text-ink py-3 rounded-xl text-sm">Send the email again</button>
+                    <button id="vgOut" type="button" class="w-full text-mute py-2 text-xs underline">Sign out</button>
+                    <div id="vgMsg" class="text-xs text-mute min-h-[1rem]"></div></div>`;
                 document.body.appendChild(g);
                 const msg = t => document.getElementById('vgMsg').textContent = t;
                 document.getElementById('vgDone').onclick = async () => {
@@ -1410,13 +1410,13 @@
                 const [e, n, r, st, all] = l.split(',').map(x => (x || '').trim());
                 if (!/@/.test(e || '') || !n) bad.push(l); else users[e.toLowerCase()] = { name: n, role: ['admin', 'tech'].includes(r) ? r : 'rep', store: st || '', allQuotes: /^(all|yes|all quotes)$/i.test(all || '') };
             });
-            if (bad.length) { adminStatus.innerHTML = '<span class="text-red-400">Fix these lines: ' + escapeHtml(bad.join(' | ')) + '</span>'; return; }
+            if (bad.length) { adminStatus.innerHTML = '<span class="text-bad">Fix these lines: ' + escapeHtml(bad.join(' | ')) + '</span>'; return; }
             ADMIN_EMAILS.forEach(e => users[e] = users[e] || { name: 'Anthony Ward', role: 'admin' });
             try {
                 await db.collection('config').doc('users').set({ users, updatedAt: new Date(), updatedBy: currentUserProfile.email });
                 approvedUsers = users;
-                adminStatus.innerHTML = '<span class="text-green-400">Approved users saved (' + Object.keys(users).length + ').</span>';
-            } catch (e) { adminStatus.innerHTML = '<span class="text-red-400">Save failed: ' + escapeHtml(e.message) + '</span>'; }
+                adminStatus.innerHTML = '<span class="text-good">Approved users saved (' + Object.keys(users).length + ').</span>';
+            } catch (e) { adminStatus.innerHTML = '<span class="text-bad">Save failed: ' + escapeHtml(e.message) + '</span>'; }
         }
         function promptAdminAccess() {
             if (isAdminUser()) { toggleAdminModal(true); return; }
@@ -1561,10 +1561,10 @@
             if (!wrap) return;
             wrap.innerHTML = adminAddons.map((addon, index) => `
                 <div class="grid grid-cols-[1fr_4.5rem_4.5rem_2rem] gap-1.5 items-center">
-                    <input type="text" value="${escapeHtml(addon.name || '')}" placeholder="Add-on name" data-admin-addon-name="${index}" class="bg-gray-900 border border-gray-700 rounded-lg p-2 text-xs w-full">
-                    <input type="number" min="0" step="0.25" value="${addon.installHours ?? ''}" placeholder="Inst" data-admin-addon-inst="${index}" class="bg-gray-900 border border-gray-700 rounded-lg p-2 text-xs w-full">
-                    <input type="number" min="0" step="0.25" value="${addon.programmingHours ?? ''}" placeholder="Prog" data-admin-addon-prog="${index}" class="bg-gray-900 border border-gray-700 rounded-lg p-2 text-xs w-full">
-                    <button type="button" onclick="removeAdminAddonRow(${index})" class="w-8 h-8 rounded-lg bg-gray-800 text-red-400 text-sm">×</button>
+                    <input type="text" value="${escapeHtml(addon.name || '')}" placeholder="Add-on name" data-admin-addon-name="${index}" class="bg-card border border-line rounded-lg p-2 text-xs w-full">
+                    <input type="number" min="0" step="0.25" value="${addon.installHours ?? ''}" placeholder="Inst" data-admin-addon-inst="${index}" class="bg-card border border-line rounded-lg p-2 text-xs w-full">
+                    <input type="number" min="0" step="0.25" value="${addon.programmingHours ?? ''}" placeholder="Prog" data-admin-addon-prog="${index}" class="bg-card border border-line rounded-lg p-2 text-xs w-full">
+                    <button type="button" onclick="removeAdminAddonRow(${index})" class="w-8 h-8 rounded-lg bg-soft text-bad text-sm">×</button>
                 </div>
             `).join('');
         }
@@ -1672,9 +1672,9 @@
             applyAppSettings();
             try {
                 await db.collection('config').doc('settings').set(Object.assign({}, appSettings, { updatedAt: new Date().toISOString() }));
-                adminStatus.innerHTML = '<span class="text-green-400">Global settings saved. Live everywhere.</span>';
+                adminStatus.innerHTML = '<span class="text-good">Global settings saved. Live everywhere.</span>';
             } catch (err) {
-                adminStatus.innerHTML = `<span class="text-red-400">Settings kept locally; cloud save failed: ${err.message}</span>`;
+                adminStatus.innerHTML = `<span class="text-bad">Settings kept locally; cloud save failed: ${err.message}</span>`;
             }
         }
 
@@ -1811,12 +1811,12 @@
                 renderQuote();
                 populateAdminItemList();
 
-                adminStatus.innerHTML = `<span class="text-green-400">Saved. Live on every device.</span>`;
+                adminStatus.innerHTML = `<span class="text-good">Saved. Live on every device.</span>`;
                 setTimeout(() => { toggleAdminModal(false); }, 1200);
 
             } catch (err) {
                 console.error("Failed to save catalog item:", err);
-                adminStatus.innerHTML = `<span class="text-red-400">Failed to save: ${err.message}</span>`;
+                adminStatus.innerHTML = `<span class="text-bad">Failed to save: ${err.message}</span>`;
             } finally {
                 adminSaveButton.disabled = false;
                 adminSaveButton.textContent = "Save Item";
@@ -1854,11 +1854,11 @@
                 renderQuote();
                 populateAdminItemList();
 
-                adminStatus.innerHTML = '<span class="text-green-400">Deleted. Live on every device.</span>';
+                adminStatus.innerHTML = '<span class="text-good">Deleted. Live on every device.</span>';
                 setTimeout(() => { toggleAdminModal(false); }, 1200);
             } catch (err) {
                 console.error("Failed to delete catalog item:", err);
-                adminStatus.innerHTML = `<span class="text-red-400">Failed to delete: ${err.message}</span>`;
+                adminStatus.innerHTML = `<span class="text-bad">Failed to delete: ${err.message}</span>`;
             } finally {
                 adminDeleteButton.disabled = false;
                 adminDeleteButton.textContent = "Delete Item";
@@ -2024,12 +2024,12 @@
             if (!currentLoadedEstimateId) { alert('Save the quote first (Save/Print), then log actuals against it.'); return; }
             const rows = actualsRowsFromCart();
             document.getElementById('actualsList').innerHTML = rows.map((row, i) => `
-                <div class="flex items-center gap-2 bg-gray-900 border border-gray-800 rounded-lg p-2">
+                <div class="flex items-center gap-2 bg-card border border-line rounded-lg p-2">
                     <div class="flex-1 min-w-0">
-                        <div class="text-sm text-white truncate">${escapeHtml(row.name)}${row.qty > 1 ? ` ×${row.qty}` : ''}</div>
-                        <div class="text-[10px] text-textMuted">${escapeHtml(row.zone)} · est ${row.estHours.toFixed(2)} hrs</div>
+                        <div class="text-sm text-ink truncate">${escapeHtml(row.name)}${row.qty > 1 ? ` ×${row.qty}` : ''}</div>
+                        <div class="text-[10px] text-mute">${escapeHtml(row.zone)} · est ${row.estHours.toFixed(2)} hrs</div>
                     </div>
-                    <input type="number" min="0" step="0.25" inputmode="decimal" data-actual-index="${i}" value="${row.actualHours}" placeholder="actual" class="w-24 bg-gray-900 border border-gray-700 rounded-lg p-2 text-sm text-white text-right font-mono">
+                    <input type="number" min="0" step="0.25" inputmode="decimal" data-actual-index="${i}" value="${row.actualHours}" placeholder="actual" class="w-24 bg-card border border-line rounded-lg p-2 text-sm text-ink text-right font-mono">
                 </div>
             `).join('');
             document.getElementById('actualsNotes').value = (currentActuals && currentActuals.notes) || '';
@@ -2051,7 +2051,7 @@
             });
             document.getElementById('actualsTotals').innerHTML =
                 `<span>Estimate: ${estTotal.toFixed(2)} hrs</span>` +
-                `<span class="${actTotal > estTotal ? 'text-red-400' : 'text-green-400'}">Actual${entered ? ` (${entered} line${entered > 1 ? 's' : ''})` : ''}: ${actTotal.toFixed(2)} hrs</span>`;
+                `<span class="${actTotal > estTotal ? 'text-bad' : 'text-good'}">Actual${entered ? ` (${entered} line${entered > 1 ? 's' : ''})` : ''}: ${actTotal.toFixed(2)} hrs</span>`;
         }
 
         async function saveActuals() {
@@ -2084,11 +2084,11 @@
             try {
                 await db.collection('quotes').doc(quoteId).set({ actuals: payload, updatedAt: new Date() }, { merge: true });
                 currentActuals = payload;
-                document.getElementById('actualsStatus').innerHTML = '<span class="text-green-400">Actual hours saved to the quote.</span>';
+                document.getElementById('actualsStatus').innerHTML = '<span class="text-good">Actual hours saved to the quote.</span>';
                 setTimeout(() => toggleActualsModal(false), 1000);
             } catch (err) {
                 console.error('Failed to save actuals:', err);
-                document.getElementById('actualsStatus').innerHTML = `<span class="text-red-400">Save failed: ${err.message}</span>`;
+                document.getElementById('actualsStatus').innerHTML = `<span class="text-bad">Save failed: ${err.message}</span>`;
             } finally {
                 saveBtn.disabled = false;
                 saveBtn.textContent = 'Save Actuals';

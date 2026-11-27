@@ -42,25 +42,4 @@ html.has-side body { padding-left: 236px !important; }
 }
 @media print { #asbcSide, #asbcBar, #asbcScrim { display: none !important; } html.has-side body { padding: 0 !important; } }
 
-/* ---- calculator (index.html): prebuilt Tailwind color classes ---- */
-.bg-bgDark, .bg-\[\#050505\], .bg-black { background-color: #F3F5F8 !important; }
-.bg-bgPanel, .bg-gray-900, .bg-\[\#0b0d11\], .bg-\[\#101216\], .bg-\[\#171717\], .bg-\[\#0F0F0F\] { background-color: #FFFFFF !important; }
-.bg-gray-800, .bg-\[\#1a1d23\], .bg-gray-900\/60, .bg-gray-800\/80 { background-color: #F1F4F8 !important; }
-.hover\:bg-\[\#23262d\]:hover, .hover\:bg-gray-800\/30:hover { background-color: #E8F1FC !important; }
-.bg-brandGold { background-color: #14945C !important; }
-.hover\:bg-brandGold:hover { background-color: #0F7A4B !important; }
-.bg-black\/85, .bg-black\/80, .bg-black\/70 { background-color: rgba(15, 23, 42, .45) !important; }
-.text-white { color: #1F2937 !important; }
-.text-black, .text-bgDark, .hover\:text-bgDark:hover { color: #FFFFFF !important; }
-.bg-brandGold.text-black, .bg-brandGold .text-black { color: #FFFFFF !important; }
-.text-textMuted, .text-\[\#8b8f98\], .text-\[\#888\], .text-gray-500, .text-gray-600, .placeholder\:text-\[\#8b8f98\]::placeholder { color: #4B5563 !important; }
-.text-gray-300, .text-gray-700 { color: #374151 !important; }
-.text-brandGold, .text-\[\#C7A66A\], .hover\:text-brandGold:hover { color: #1F6FD1 !important; }
-.text-red-400, .text-\[\#D98C8A\] { color: #B42318 !important; }
-.text-green-400 { color: #0E7A4D !important; }
-.border-gray-700, .border-gray-800, .border-\[\#26292f\], .border-\[\#2A2A2A\], .border-\[\#242424\], .border-gray-500, .border-black, .divide-gray-800\/60 > * + * { border-color: #E3E7EE !important; }
-.border-brandGold, .border-brandGold\/40, .border-brandGold\/50, .hover\:border-brandGold:hover, .focus\:border-brandGold:focus, .hover\:border-\[\#555555\]:hover { border-color: #1F6FD1 !important; }
-.focus\:ring-brandGold:focus, .focus\:ring-\[\#C7A66A\]:focus { --tw-ring-color: #1F6FD1 !important; }
-.shadow-\[0_-10px_20px_rgba\(0\2c 0\2c 0\2c 0\.45\)\] { box-shadow: 0 -6px 16px rgba(15, 23, 42, .12) !important; }
-.bg-white.text-black, .bg-white .text-black { color: #1F2937 !important; }
-.bg-white { border-color: #D5DBE4; }
+/* v11.9.0: the calculator's colors now live in calculator.css under honest names (bg-card, text-ink, ...). */
