@@ -308,3 +308,7 @@ D-Tools handoff panel (paste-ready labor block); Quote Log search wording.
 - tool-ip.html: VLANs + devices, Next free IP (skips gateway, DHCP, used), IP/MAC checks. Saves to quotes/{id}.ipPlan {vlans, devices, updatedAt, by} (installers only on their own jobs per rules). Without ?quote= it keeps a local draft and offers a job picker (&draft=1 carries the draft over).
 - jobs.html: ipPlanCard on the recap, IP plan button in report actions, link in edit step 4 (new tab), "Network / IP plan" section in the PDF.
 - design.html SEED_V=2 adds the three tools (seeds now carry v so removed older seeds don't come back).
+
+## v11.4.1 — Lighting count by switch location (2026-11-27)
+- tool-lighting.html now models rooms → switch locations → positions {l: label/engraving, d: D dimmer | S switch | F fan | C companion | K scene keypad | H shade keypad | P wall Pico | B blank}. Gang = positions. Flags >4-gang, unlabeled positions, companions with no matching load label. Switch schedule draws faceplates left to right; CSV is one row per position.
+- Storage key asbc-lighting-v2; old v1 count-only drafts convert automatically (Load 1, Load 2… labels).

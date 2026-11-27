@@ -57,7 +57,7 @@ td input, td select { min-height:36px; font-size:14px; }
 <div class="wrap">
   <header><h1>ASBC <span>Lighting Control Count</span></h1><nav id="asbcNav" data-page="design"></nav></header>
   <a class="back" href="./design.html">‹ Design Center</a>
-  <p class="intro">Count the lighting controls for a Lutron bid room by room. Pick a room type for a starting point, then adjust the loads and switch locations. It saves on this device until you start a new count.</p>
+  <p class="intro">Lay out each room's switch locations: how many gangs each wall box has and what every position controls. The device count, wall boxes and an engraving-style switch schedule build themselves. It saves on this device until you start a new count.</p>
 <style>
 .wc { background:#F8FAFC; border:1px solid var(--line); border-radius:10px; padding:12px; margin-bottom:10px; }
 .wc .top { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px; font-weight:700; }
@@ -68,15 +68,26 @@ td input, td select { min-height:36px; font-size:14px; }
 .chk { flex-direction:row; align-items:center; gap:8px; min-height:42px; } .chk input { width:20px; min-height:20px; }
 .printhead { display:none; } @media print { .printhead { display:block; margin-bottom:10px; } .wc { break-inside:avoid; } }
 </style>
+<style>
+.loc { border:1px dashed #C5CDD8; border-radius:10px; padding:10px; margin-top:10px; background:#FFFFFF; }
+.loc .lh { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:8px; }
+.loc .lh input { flex:1 1 180px; } .gang { font-weight:700; font-size:13px; padding:4px 10px; border-radius:999px; background:#E8F1FC; color:#16529C; white-space:nowrap; }
+.pos { display:grid; grid-template-columns:28px minmax(0, 1fr) minmax(0, 200px) 36px; gap:6px; align-items:center; margin-bottom:6px; }
+.pos .no { font-weight:700; color:#4B5563; text-align:center; }
+.mini { min-height:34px; padding:0 10px; font-size:13px; }
+.plate { display:inline-flex; border:2px solid #9AA4B2; border-radius:6px; overflow:hidden; vertical-align:middle; margin:2px 0; }
+.plate span { display:flex; flex-direction:column; align-items:center; justify-content:center; min-width:74px; padding:4px 6px; font-size:11px; line-height:1.2; text-align:center; border-left:1px solid #D5DBE4; background:#FBFCFD; }
+.plate span:first-child { border-left:0; } .plate b { font-size:12px; } .plate i { font-style:normal; color:#4B5563; }
+</style>
   <div class="box"><h2>Project</h2><div class="fields">
     <label>Project / client<input id="proj"></label><label>System<select id="sys"><option>RadioRA 3</option><option>HomeWorks</option><option>Caséta</option><option>Not decided</option></select></label><label>Prepared by<input id="by"></label>
   </div></div>
   <div class="box noprint"><h2>Rooms</h2><div id="rows"></div>
     <div class="acts"><select id="newType" style="width:auto"></select><button type="button" class="btn green" id="add">+ Add room</button></div></div>
   <div class="box"><div class="printhead"><b id="ph"></b></div><h2>Device count</h2><div class="tiles" id="sum"></div>
-    <div class="tbl" style="margin-top:12px"><table><thead><tr><th>Room</th><th>Loads</th><th>Dimmers</th><th>Switches</th><th>Companions</th><th>Keypads</th><th>Picos</th><th>Main box</th></tr></thead><tbody id="tb"></tbody><tfoot id="tf"></tfoot></table></div>
+    <h2 style="margin-top:16px">Switch schedule</h2><div class="tbl"><table><thead><tr><th>Room</th><th>Location</th><th>Box</th><th>Positions (left to right)</th></tr></thead><tbody id="tb"></tbody></table></div>
     <div class="acts noprint"><button type="button" class="btn" onclick="print()">Print / Save PDF</button><button type="button" class="btn" id="csvBtn">Download CSV</button><button type="button" class="btn" id="clr">Start a new count</button></div>
-    <div class="note">Loads = separately controlled lighting circuits (cans, pendants, under-cabinet, fan, exterior). Dimmable loads get dimmers, the rest get switches. Multi-location loads need a companion (or Pico) at each extra location. A scene keypad is counted at the main entry. Room types are only starting points. Before pricing, check every load's type (LED, ELV, MLV, 0-10 V) and wattage, and check the system's device limits, in Lutron Designer.</div></div>
+    <div class="note">Positions run left to right in the wall box, so the gang count is the number of positions. Dimmer, switch and fan control are the loads. A companion (3-way) at another location controls a load with the same label, and the tool flags a companion whose label doesn't match a load in the room. Labels double as engraving text. Room types are only starting points. Before pricing, check every load's type (LED, ELV, MLV, 0-10 V) and wattage, and check the system's device limits, in Lutron Designer.</div></div>
 </div>
 <script>
 // v11.3.0 Design Center tool. Runs entirely in the browser; nothing is saved.
@@ -89,42 +100,78 @@ const fmt = (n, d = 1) => Number(n).toLocaleString('en-US', { maximumFractionDig
 const store = { get(k) { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
 function csv(name, rows) { const t = rows.map(r => r.map(c => '"' + String(c ?? '').replace(/"/g, '""') + '"').join(',')).join('\r\n'); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([t], { type: 'text/csv' })); a.download = name.replace(/[\\/:*?"<>|]+/g, '-') + '.csv'; document.body.appendChild(a); a.click(); a.remove(); }
 const tile = (k, v, s, cls) => `<div class="tile ${cls || ''}"><div class="k">${k}</div><div class="v">${v}</div>${s ? `<div class="s">${s}</div>` : ''}</div>`;
-const KEY = 'asbc-lighting-v1';
-const P = { 'Kitchen': [4, 3, 1, 2, 0], 'Living / Family': [3, 3, 1, 2, 1], 'Dining': [2, 2, 0, 1, 0], 'Primary bedroom': [3, 3, 1, 2, 1], 'Bedroom': [2, 2, 1, 2, 0], 'Bathroom': [3, 2, 0, 1, 0], 'Hall / Stairs': [1, 1, 1, 3, 0],
-  'Entry / Foyer': [2, 2, 1, 2, 1], 'Office': [2, 2, 0, 1, 0], 'Theater / Media': [3, 3, 0, 1, 1], 'Closet / Laundry': [1, 0, 0, 1, 0], 'Garage': [2, 0, 1, 2, 0], 'Exterior': [3, 1, 0, 1, 0], 'Other': [1, 1, 0, 1, 0] };
-const mk = t => { const [loads, dim, multi, locs, kp] = P[t] || P.Other; return { room: t, type: t, loads, dim, multi, locs, kp: !!kp, pico: 0 }; };
-let S = store.get(KEY) || { proj: '', sys: 'RadioRA 3', by: '', rows: [mk('Kitchen'), mk('Living / Family'), mk('Primary bedroom')] };
+const KEY = 'asbc-lighting-v2';
+const DEV = { D: 'Dimmer', S: 'Switch', F: 'Fan control', C: 'Companion (3-way)', K: 'Scene keypad', H: 'Shade keypad', P: 'Wall Pico', B: 'Blank / other' }, LOAD = ['D', 'S', 'F'];
+const P = {
+  'Kitchen': [['Main entry', [['Cans', 'D'], ['Pendants', 'D'], ['Under-cabinet', 'D']]], ['Second entry', [['Cans', 'C']]]],
+  'Living / Family': [['Main entry', [['Scenes', 'K'], ['Cans', 'D'], ['Accent', 'D']]], ['Second entry', [['Cans', 'C']]]],
+  'Dining': [['Main entry', [['Chandelier', 'D'], ['Cans', 'D']]]],
+  'Primary bedroom': [['Main entry', [['Scenes', 'K'], ['Cans', 'D'], ['Accent', 'D']]], ['Bedside', [['Cans', 'C']]]],
+  'Bedroom': [['Main entry', [['Cans', 'D'], ['Fan', 'F']]]],
+  'Bathroom': [['Main entry', [['Cans', 'D'], ['Vanity', 'D'], ['Exhaust fan', 'S']]]],
+  'Hall / Stairs': [['Top', [['Cans', 'D']]], ['Bottom', [['Cans', 'C']]]],
+  'Entry / Foyer': [['Front door', [['Scenes', 'K'], ['Foyer', 'D'], ['Porch', 'S']]]],
+  'Office': [['Main entry', [['Cans', 'D'], ['Accent', 'D']]]],
+  'Theater / Media': [['Main entry', [['Scenes', 'K'], ['Cans', 'D'], ['Step lights', 'D'], ['Sconces', 'D']]]],
+  'Closet / Laundry': [['Main entry', [['Light', 'S']]]],
+  'Garage': [['House door', [['Lights', 'S'], ['Exterior', 'S']]], ['Side door', [['Lights', 'C']]]],
+  'Exterior': [['Back door', [['Patio', 'S'], ['Landscape', 'S'], ['Flood', 'S']]]],
+  'Other': [['Main entry', [['Light', 'D']]]] };
+const mk = t => ({ room: t, type: t, pico: 0, locs: (P[t] || P.Other).map(([name, pos]) => ({ name, pos: pos.map(([l, d]) => ({ l, d })) })) });
+function fromV1(o) {  // v11.4.0 count-only rooms → locations
+  return Object.assign({}, o, { rows: (o.rows || []).map(r => { const n = v => Math.max(0, Math.floor(+v || 0)), loads = n(r.loads), dim = Math.min(n(r.dim), loads), multi = Math.min(n(r.multi), loads), locs = Math.max(1, n(r.locs));
+    const main = [].concat(r.kp ? [{ l: 'Scenes', d: 'K' }] : [], Array.from({ length: loads }, (_, i) => ({ l: 'Load ' + (i + 1), d: i < dim ? 'D' : 'S' })));
+    const extra = Array.from({ length: locs - 1 }, (_, k) => ({ name: 'Location ' + (k + 2), pos: Array.from({ length: multi }, (_, i) => ({ l: 'Load ' + (i + 1), d: 'C' })) })).filter(x => x.pos.length);
+    return { room: r.room, type: r.type, pico: n(r.pico), locs: [{ name: 'Main entry', pos: main }].concat(extra) }; }) }); }
+let S = store.get(KEY) || (store.get('asbc-lighting-v1') ? fromV1(store.get('asbc-lighting-v1')) : null) || { proj: '', sys: 'RadioRA 3', by: '', rows: [mk('Kitchen'), mk('Living / Family'), mk('Primary bedroom')] };
 $('newType').innerHTML = Object.keys(P).map(t => `<option>${t}</option>`).join('');
-const n = v => Math.max(0, Math.floor(+v || 0));
-function room(r) { const loads = n(r.loads), dim = Math.min(n(r.dim), loads), multi = Math.min(n(r.multi), loads), locs = Math.max(1, n(r.locs)), kp = r.kp ? 1 : 0;
-  return { loads, dim, sw: loads - dim, comp: multi * (locs - 1), kp, pico: n(r.pico), main: loads + kp, extra: locs - 1, multi }; }
-const numIn = (f, i, v) => `<input data-i="${i}" data-f="${f}" type="number" min="0" value="${v}" inputmode="numeric">`;
+const at = (e) => { const d = e.dataset; return { r: S.rows[d.r], l: d.l !== undefined ? S.rows[d.r].locs[d.l] : null, p: d.p !== undefined ? S.rows[d.r].locs[d.l].pos[d.p] : null }; };
 function drawRows() {
-  $('rows').innerHTML = S.rows.map((r, i) => `<div class="wc"><div class="top"><span>${esc(r.type)}</span><button type="button" class="x" data-del="${i}" aria-label="Remove room">×</button></div><div class="fields">
-    <label>Room name<input data-i="${i}" data-f="room" value="${esc(r.room)}"></label><label>Lighting loads${numIn('loads', i, r.loads)}</label><label>Dimmable loads${numIn('dim', i, r.dim)}</label>
-    <label>Multi-location loads${numIn('multi', i, r.multi)}</label><label>Switch locations (doors)${numIn('locs', i, r.locs)}</label><label>Extra Picos${numIn('pico', i, r.pico)}</label>
-    <label class="chk"><input type="checkbox" data-i="${i}" data-f="kp" ${r.kp ? 'checked' : ''}> Scene keypad at main entry</label></div><div class="res" id="res${i}"></div></div>`).join('');
+  $('rows').innerHTML = S.rows.map((r, ri) => `<div class="wc"><div class="top"><span>${esc(r.type)}</span><button type="button" class="x" data-act="delRoom" data-r="${ri}" aria-label="Remove room">×</button></div>
+    <div class="fields"><label>Room name<input data-r="${ri}" data-f="room" value="${esc(r.room)}"></label><label>Handheld / table Picos<input data-r="${ri}" data-f="pico" type="number" min="0" value="${r.pico || 0}" inputmode="numeric"></label></div>
+    <datalist id="lab${ri}">${[...new Set(r.locs.flatMap(l => l.pos.filter(p => LOAD.includes(p.d)).map(p => p.l)).filter(Boolean))].map(x => `<option value="${esc(x)}">`).join('')}</datalist>
+    ${r.locs.map((L, li) => `<div class="loc"><div class="lh"><input data-r="${ri}" data-l="${li}" data-f="name" value="${esc(L.name)}" placeholder="Location (e.g. Main entry)" aria-label="Location name"><span class="gang" id="g${ri}_${li}">${L.pos.length}-gang</span><button type="button" class="x" data-act="delLoc" data-r="${ri}" data-l="${li}" aria-label="Remove location">×</button></div>
+      ${L.pos.map((p, pi) => `<div class="pos"><span class="no">${pi + 1}</span><input data-r="${ri}" data-l="${li}" data-p="${pi}" data-f="l" value="${esc(p.l)}" placeholder="What it controls" list="lab${ri}" aria-label="Label"><select data-r="${ri}" data-l="${li}" data-p="${pi}" data-f="d">${Object.entries(DEV).map(([k, t]) => `<option value="${k}" ${p.d === k ? 'selected' : ''}>${t}</option>`).join('')}</select><button type="button" class="x" data-act="delPos" data-r="${ri}" data-l="${li}" data-p="${pi}" aria-label="Remove position">×</button></div>`).join('')}
+      <div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btn mini" data-act="addPos" data-r="${ri}" data-l="${li}">+ Add gang</button></div><div id="w${ri}_${li}"></div></div>`).join('')}
+    <div class="acts"><button type="button" class="btn mini" data-act="addLoc" data-r="${ri}">+ Add switch location</button></div><div class="res" id="res${ri}"></div></div>`).join('');
   calc();
 }
 function calc() {
   ['proj', 'sys', 'by'].forEach(k => S[k] = $(k).value); store.set(KEY, S);
-  const R = S.rows.map(room), T = { loads: 0, dim: 0, sw: 0, comp: 0, kp: 0, pico: 0 }, G = {};
-  R.forEach((o, i) => { Object.keys(T).forEach(k => T[k] += o[k]); if (o.main) G[o.main] = (G[o.main] || 0) + 1; if (o.multi) G[o.multi] = (G[o.multi] || 0) + o.extra;
-    const big = o.main > 4, el = $('res' + i); if (el) el.innerHTML = `<b>${o.dim}</b> dimmer${o.dim === 1 ? '' : 's'}, <b>${o.sw}</b> switch${o.sw === 1 ? '' : 'es'}, <b>${o.comp}</b> companion${o.comp === 1 ? '' : 's'}${o.kp ? ', <b>1</b> keypad' : ''}${o.pico ? ', <b>' + o.pico + '</b> Pico' + (o.pico > 1 ? 's' : '') : ''} · main box ${o.main}-gang` + (big ? `<span class="flag warn">⚠ ${o.main}-gang at the main entry: split the location or use a keypad with remote dimming</span>` : '') + (n(S.rows[i].dim) > o.loads ? '<span class="flag warn">⚠ More dimmable loads than loads</span>' : ''); });
-  const wall = T.dim + T.sw + T.comp + T.kp, boxes = Object.values(G).reduce((a, b) => a + b, 0);
-  $('sum').innerHTML = tile('Rooms', S.rows.length, T.loads + ' loads') + tile('Wall devices', wall, T.dim + ' dimmers · ' + T.sw + ' switches · ' + T.comp + ' companions · ' + T.kp + ' keypads') + tile('Picos', T.pico, 'wireless remotes')
-    + tile('Total devices', wall + T.pico, 'check against ' + S.sys + ' limits') + tile('Wall boxes', boxes, Object.keys(G).sort((a, b) => a - b).map(g => G[g] + ' × ' + g + '-gang').join(', ') || '—');
-  $('tb').innerHTML = R.map((o, i) => `<tr><td>${esc(S.rows[i].room)}</td><td>${o.loads}</td><td>${o.dim}</td><td>${o.sw}</td><td>${o.comp}</td><td>${o.kp}</td><td>${o.pico}</td><td>${o.main}-gang</td></tr>`).join('');
-  $('tf').innerHTML = `<tr><th>Total</th><th>${T.loads}</th><th>${T.dim}</th><th>${T.sw}</th><th>${T.comp}</th><th>${T.kp}</th><th>${T.pico}</th><th>${boxes} boxes</th></tr>`;
+  const T = Object.fromEntries(Object.keys(DEV).map(k => [k, 0])), G = {}; let picos = 0, loads = 0, boxes = 0;
+  S.rows.forEach((r, ri) => {
+    const loadLabels = new Set(r.locs.flatMap(l => l.pos.filter(p => LOAD.includes(p.d)).map(p => p.l.trim().toLowerCase())));
+    const c = Object.fromEntries(Object.keys(DEV).map(k => [k, 0]));
+    r.locs.forEach((L, li) => { const g = L.pos.length; if (g) { G[g] = (G[g] || 0) + 1; boxes++; } L.pos.forEach(p => { c[p.d]++; T[p.d]++; });
+      const w = []; if (g > 4) w.push(g + '-gang box: consider a keypad with remote dimming or splitting the location');
+      L.pos.forEach((p, pi) => { if (!p.l.trim() && p.d !== 'B') w.push('Position ' + (pi + 1) + ' needs a label'); if (p.d === 'C' && p.l.trim() && !loadLabels.has(p.l.trim().toLowerCase())) w.push('Position ' + (pi + 1) + ' companion "' + p.l + '" has no matching load in this room'); });
+      const ge = $('g' + ri + '_' + li); if (ge) ge.textContent = g + '-gang'; const we = $('w' + ri + '_' + li); if (we) we.innerHTML = w.map(t => `<span class="flag warn">⚠ ${esc(t)}</span>`).join(''); });
+    const rl = c.D + c.S + c.F; loads += rl; picos += Math.max(0, Math.floor(+r.pico || 0));
+    const el = $('res' + ri); if (el) el.innerHTML = `${rl} load${rl === 1 ? '' : 's'}: ` + Object.keys(DEV).filter(k => c[k]).map(k => `<b>${c[k]}</b> ${DEV[k].toLowerCase()}`).join(', ') + (r.pico ? `, <b>${r.pico}</b> handheld Pico${r.pico > 1 ? 's' : ''}` : '');
+  });
+  const wall = Object.keys(DEV).filter(k => k !== 'B').reduce((a, k) => a + T[k], 0);
+  $('sum').innerHTML = tile('Rooms', S.rows.length, loads + ' loads') + tile('Wall devices', wall, Object.keys(DEV).filter(k => k !== 'B' && T[k]).map(k => T[k] + ' ' + DEV[k].toLowerCase()).join(' · ') || '—')
+    + tile('Handheld Picos', picos, '') + tile('Total devices', wall + picos, 'check against ' + S.sys + ' limits') + tile('Wall boxes', boxes, Object.keys(G).sort((a, b) => a - b).map(g => G[g] + ' × ' + g + '-gang').join(', ') || '—');
+  $('tb').innerHTML = S.rows.flatMap(r => r.locs.map((L, li) => `<tr><td>${li ? '' : '<b>' + esc(r.room) + '</b>'}</td><td>${esc(L.name)}</td><td>${L.pos.length}-gang</td><td><span class="plate">${L.pos.map(p => `<span><b>${esc(p.l || '—')}</b><i>${esc(DEV[p.d])}</i></span>`).join('')}</span></td></tr>`)).join('');
   $('ph').textContent = [S.proj, S.sys, S.by && 'Prepared by ' + S.by].filter(Boolean).join(' · ');
 }
 ['proj', 'sys', 'by'].forEach(k => { $(k).value = S[k] || (k === 'sys' ? 'RadioRA 3' : ''); $(k).oninput = calc; $(k).onchange = calc; });
-document.addEventListener('input', e => { const i = e.target.dataset.i; if (i === undefined) return; const f = e.target.dataset.f; S.rows[i][f] = f === 'kp' ? e.target.checked : e.target.value; calc(); });
-document.addEventListener('change', e => { const i = e.target.dataset.i; if (i === undefined || e.target.dataset.f !== 'kp') return; S.rows[i].kp = e.target.checked; calc(); });
-document.addEventListener('click', e => { const d = e.target.closest('[data-del]'); if (d && confirm('Remove this room?')) { S.rows.splice(+d.dataset.del, 1); drawRows(); } });
+function setVal(e) { const d = e.target.dataset; if (d.r === undefined || !d.f) return false; const o = at(e.target), tgt = o.p || o.l || o.r; tgt[d.f] = e.target.value; return true; }
+document.addEventListener('input', e => { if (setVal(e)) calc(); });
+document.addEventListener('change', e => { if (!setVal(e)) return; const f = e.target.dataset.f;
+  if (f === 'd') return drawRows();
+  if (f === 'l') { const ri = e.target.dataset.r, r = S.rows[ri], dl = $('lab' + ri); if (dl) dl.innerHTML = [...new Set(r.locs.flatMap(l => l.pos.filter(p => LOAD.includes(p.d)).map(p => p.l)).filter(Boolean))].map(x => `<option value="${esc(x)}">`).join(''); }
+  calc(); });
+document.addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (!b) return; const d = b.dataset, r = S.rows[d.r];
+  if (d.act === 'delRoom') { if (!confirm('Remove this room?')) return; S.rows.splice(+d.r, 1); }
+  else if (d.act === 'addLoc') r.locs.push({ name: '', pos: [{ l: '', d: 'C' }] });
+  else if (d.act === 'delLoc') { if (r.locs[d.l].pos.length && !confirm('Remove this switch location?')) return; r.locs.splice(+d.l, 1); }
+  else if (d.act === 'addPos') r.locs[d.l].pos.push({ l: '', d: 'D' });
+  else if (d.act === 'delPos') r.locs[d.l].pos.splice(+d.p, 1);
+  drawRows(); });
 $('add').onclick = () => { S.rows.push(mk($('newType').value)); drawRows(); };
 $('clr').onclick = () => { if (confirm('Start a new count? This clears the rooms saved on this device.')) { S = { proj: '', sys: S.sys, by: S.by, rows: [] }; $('proj').value = ''; drawRows(); } };
-$('csvBtn').onclick = () => { const R = S.rows.map(room); csv((S.proj || 'Lighting') + ' - lighting control count', [['Room', 'Loads', 'Dimmers', 'Switches', 'Companions', 'Keypads', 'Picos', 'Main box (gang)', 'Switch locations']].concat(R.map((o, i) => [S.rows[i].room, o.loads, o.dim, o.sw, o.comp, o.kp, o.pico, o.main, n(S.rows[i].locs)]))); };
+$('csvBtn').onclick = () => csv((S.proj || 'Lighting') + ' - switch schedule', [['Room', 'Location', 'Box (gang)', 'Position', 'Label / engraving', 'Device']].concat(S.rows.flatMap(r => r.locs.flatMap(L => L.pos.map((p, i) => [r.room, L.name, L.pos.length, i + 1, p.l, DEV[p.d]]))).concat(S.rows.filter(r => +r.pico).map(r => [r.room, 'Handheld', '', '', r.pico + ' Pico(s)', 'Pico']))));
 drawRows();
 
 </script>
