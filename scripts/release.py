@@ -60,6 +60,7 @@ def bump(v):
     s, n2 = re.subn(r"const BUILD_DATE = '[\d-]+';", f"const BUILD_DATE = '{today}';", s, 1)
     w = rd("sw.js")
     w, n3 = re.subn(r"asbc-(?:calc|tools)-v[\d.]+", f"asbc-tools-v{v}", w, 1)
+    w = re.sub(r"(update marker[^\n]*?)asbc-calc-v[\d.]+", lambda m: m.group(1) + f"asbc-calc-v{v}", w)  # v11.11.1 old update checks
     w = re.sub(r"service worker \(v[\d.]+\)", f"service worker (v{v})", w, 1)
     if (n1, n2, n3) != (1, 1, 1): sys.exit(f"bump failed: APP_VERSION={n1} BUILD_DATE={n2} CACHE_NAME={n3}")
     u = rd("update-check.js")
@@ -117,7 +118,7 @@ def rollback(good, new):
     if os.path.exists(P("src", "calculator", "01-setup.js")) and '<script src="./calculator.js"' in rd("index.html"): bump(new)
     else:
         s = rd("index.html"); s = re.sub(r"const APP_VERSION = '[\d.]+';", f"const APP_VERSION = '{new}';", s, 1); wr("index.html", s)
-        w = rd("sw.js"); w = re.sub(r"asbc-(?:calc|tools)-v[\d.]+", f"asbc-tools-v{new}", w, 1); wr("sw.js", w)
+        w = rd("sw.js"); w = re.sub(r"asbc-(?:calc|tools)-v[\d.]+", f"asbc-tools-v{new}", w, 1); w = re.sub(r"(update marker[^\n]*?)asbc-calc-v[\d.]+", lambda m: m.group(1) + f"asbc-calc-v{new}", w); wr("sw.js", w)
         u = rd("update-check.js"); u = re.sub(r"const ASBC_VERSION = '[\d.]+';", f"const ASBC_VERSION = '{new}';", u, 1); wr("update-check.js", u)
     print(f"commit message: v{new}: rollback to v{good}")
 

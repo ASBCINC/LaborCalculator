@@ -4,7 +4,7 @@
 // If a newer version is live, a gold button appears at the top; tapping it saves any open recap and reloads.
 // ASBC_VERSION is kept in step by `python3 scripts/release.py bump X.Y.Z`.
 (function () {
-  const ASBC_VERSION = '11.11.0'; window.ASBC_VERSION = ASBC_VERSION;  // v10.8.0 read by diag.js
+  const ASBC_VERSION = '11.12.0'; window.ASBC_VERSION = ASBC_VERSION;  // v10.8.0 read by diag.js
   const newer = (a, b) => { const x = a.split('.').map(Number), y = b.split('.').map(Number); for (let i = 0; i < 3; i++) { if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); } return false; };
   let shown = false, last = 0;
   function show(v) {
@@ -26,7 +26,7 @@
     if (shown || !navigator.onLine || Date.now() - last < 60000) return; last = Date.now();
     try {
       const r = await fetch('./sw.js?t=' + Date.now(), { cache: 'no-store' }); if (!r.ok) return;
-      const m = (await r.text()).match(/asbc-calc-v([\d.]+)/);
+      const m = (await r.text()).match(/asbc-(?:calc|tools)-v([\d.]+)/);  // v11.11.1: the cache was renamed asbc-tools-v in v11.0.0, so the old pattern never matched
       if (m && newer(m[1], ASBC_VERSION)) show(m[1]);
     } catch (e) {}
   }

@@ -52,6 +52,7 @@ function wire() {
   on('stepNext', () => goStep(STEP + 1));
   on('stepBack', () => goStep(STEP - 1));
   on('pdfJob', () => jobPdf(document.getElementById('pdfJob')));  // v10.6.0
+  on('linkQuote', () => linkQuotePicker());  // v11.12.0
   on('markUploaded', async () => { const j = Q.job || {}; await save(REF, { job: Object.assign({}, j, { dtoolsUploaded: { for: j.submittedAt, at: new Date().toISOString(), by: ME.email } }) }); showJob(qid); });  // v11.10.0
   on('markTask', async () => { const j = Q.job || {}; await save(REF, { dtoolsTasks: { for: j.submittedAt, at: new Date().toISOString(), result: 'marked by ' + (ME.name || ME.email) } }); showJob(qid); });
   on('editJob', () => { EDIT = true; STEP = 1; showJob(qid); });

@@ -80,10 +80,13 @@ const noSuggest = id => db.collection('quotes').doc(id).get().then(s => flagSet(
 const ackMissing = id => flagSet(id, { missingAck: true });
 const ackUnsched = id => flagSet(id, { unschedAck: true });
 const ackNoLabor = id => flagSet(id, { noLaborAck: true });
-async function attachQuote(jobId) {  // v10.9.0 confirm a client-name match: the labor quote becomes (or joins) this scheduled job
-  const jref = db.collection('quotes').doc(jobId), j = (await jref.get()).data() || {}, sid = (j.quoteSuggest || {}).id; if (!sid) return;
+async function attachQuote(jobId, pick, opts) {  // v10.9.0 confirm a client-name match: the labor quote becomes (or joins) this scheduled job
+  // v11.12.0 pick = any quote chosen from "Link a quote" on the job (else the suggested one); returns the id that now carries the job
+  const jref = db.collection('quotes').doc(jobId), j = (await jref.get()).data() || {}, sid = pick || (j.quoteSuggest || {}).id; if (!sid) return;
   const qref = db.collection('quotes').doc(sid), q = (await qref.get()).data(); if (!q) return alert('That quote no longer exists.');
-  if (!confirm('Attach the labor quote "' + (q.label || sid) + '" to the job "' + label(j) + '"?')) return;
+  const old = (j.laborQuote || {}).id && j.laborQuote.id !== sid ? j.laborQuote : null;
+  if (!confirm((old ? 'Replace the linked quote "' + (old.label || old.id) + '" with "' : 'Attach the labor quote "') + (q.label || sid) + '" to the job "' + label(j) + '"?')) return;
+  if (old) await db.collection('quotes').doc(old.id).set({ mergedInto: null }, { merge: true });  // the old quote goes back to the Quote Log only
   const pj = j.project || {}, link = Object.fromEntries(['dtoolsOpportunityId', 'dtoolsOppNumber', 'dtoolsProjectName', 'dtoolsClientName', 'proposalPdf', 'files'].filter(k => pj[k] && (!Array.isArray(pj[k]) || pj[k].length)).map(k => [k, pj[k]]));
   if (!j.job && !j.signoff) {  // nothing reported yet: the quote carries the job from now on
     await qref.set({ status: 'scheduled', schedule: j.schedule || {}, project: Object.assign({}, q.project || {}, link), dtoolsLabor: j.dtoolsLabor || null, parts: j.parts || q.parts || null, jobHidden: false, jobDeleted: false, mergedInto: null }, { merge: true });
@@ -92,7 +95,34 @@ async function attachQuote(jobId) {  // v10.9.0 confirm a client-name match: the
     await jref.set({ items: q.items || [], options: q.options || {}, laborQuote: { id: sid, label: q.label || '', at: new Date().toISOString() }, quoteSuggest: null }, { merge: true });
     await qref.set({ jobHidden: true, mergedInto: jobId, project: Object.assign({}, q.project || {}, link) }, { merge: true });
   }
+  if (opts && opts.open) return location.replace('?quote=' + encodeURIComponent(!j.job && !j.signoff ? sid : jobId));
   showList();
+}
+// v11.12.0 admin "Link a quote" on a job with no calculator quote (or "Change linked quote"): pick any saved calculator quote.
+// Quotes that already carry their own job report are left out, so two reported jobs are never merged.
+async function linkQuotePicker() {
+  const jobId = qid, j = Q || {}, pj = j.project || {};
+  document.querySelectorAll('.lqbg').forEach(x => x.remove());
+  const bg = document.createElement('div'); bg.className = 'lqbg no-print';
+  bg.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:60;display:flex;align-items:flex-start;justify-content:center;padding:6vh 12px;overflow:auto';
+  bg.innerHTML = `<div class="card" style="width:min(640px,100%);margin:0"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b>Link a calculator quote to “${esc(label(j))}”</b><button class="qbtn" data-x>✕</button></div>
+    <input id="lqQ" type="search" placeholder="Search quote name, client or rep" style="margin:10px 0"><div id="lqL" class="qmeta">Loading quotes…</div></div>`;
+  bg.addEventListener('click', e => { if (e.target === bg || e.target.closest('[data-x]')) bg.remove(); });
+  document.body.appendChild(bg);
+  const all = (await db.collection('quotes').get()).docs.map(d => ({ _id: d.id, ...d.data() }))
+    .filter(q => q._id !== jobId && !q.isTemplate && !q.jobDeleted && (q.items || []).length && !q.job && !q.signoff && (!q.mergedInto || q.mergedInto === jobId));
+  const f = s => String(s || '').toLowerCase(), names = [pj.dtoolsClientName, pj.customerName, pj.dtoolsProjectName, j.label].map(f).filter(Boolean);
+  const client = q => (q.project || {}).dtoolsClientName || (q.project || {}).customerName || '';
+  const near = q => names.some(n => [q.label, client(q), (q.project || {}).dtoolsProjectName].map(f).some(v => v && (v.includes(n) || n.includes(v))));
+  const when = q => { const v = q.updatedAt || q.savedAt; return v && v.toMillis ? v.toMillis() : (Date.parse(v || '') || 0); };
+  all.sort((a, b) => (near(b) - near(a)) || (((b.project || {}).salesManagerName === pj.salesManagerName) - ((a.project || {}).salesManagerName === pj.salesManagerName)) || when(b) - when(a));
+  const draw = () => { const t = f(document.getElementById('lqQ').value);
+    const list = all.filter(q => !t || [q.label, client(q), (q.project || {}).salesManagerName, (q.project || {}).dtoolsProjectName].map(f).some(v => v.includes(t))).slice(0, 40);
+    document.getElementById('lqL').innerHTML = list.length ? list.map(q => `<div class="row" style="display:flex;justify-content:space-between;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--line)">
+      <div><b>${esc(q.label || q._id)}</b>${near(q) ? ' <span class="qmeta" style="color:#0E7A4D">same client</span>' : ''}<div class="qmeta">${esc([client(q), 'Rep: ' + ((q.project || {}).salesManagerName || '—'), hrs(quotedHrs(q).est) + ' hrs', when(q) ? new Date(when(q)).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''].filter(Boolean).join(' · '))}${((q.schedule || {}).dates || []).length ? ' · has its own install dates (this job\'s dates are used)' : ''}</div></div>
+      <button class="qbtn gold" data-pick="${esc(q._id)}">Link</button></div>`).join('') : '<div class="qmeta">No matching calculator quotes. Quotes that already have their own job report are not listed.</div>'; };
+  document.getElementById('lqQ').addEventListener('input', draw); draw();
+  document.getElementById('lqL').addEventListener('click', async e => { const b = e.target.closest('[data-pick]'); if (!b) return; b.disabled = true; await attachQuote(jobId, b.dataset.pick, { open: true }); b.disabled = false; });
 }
 // v8.20.2: admin Delete on every job in the lists. A job report made without a quote (or a return visit) is deleted for good;
 // a job built on a labor quote is taken off the Jobs page only, so the quote, its actuals and the client sign-off are kept

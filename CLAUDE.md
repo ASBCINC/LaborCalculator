@@ -391,3 +391,17 @@ D-Tools handoff panel (paste-ready labor block); Quote Log search wording.
   notify gets the SA OAuth token). Writes config/feedStatus {at, ok, problem, summary}. --dry / --force for manual runs.
 - tests/feed_test.js (runs in the smoke workflow): synthetic feed -> build() -> real importer in Node with the stand-in Firebase.
   Checked against the real feed on Nov 27: the same 10 install events and 3 meetings as the last bookmark import, same times.
+
+## v11.11.1 Update prompt fixed (Nov 27, 2026)
+- Bug since v11.0.0: sw.js cache was renamed asbc-calc-v -> asbc-tools-v, but update-check.js still looked for asbc-calc-v, so the
+  "Update available" button never appeared; installed copies (e.g. Eugene's iPhone, still on v10.9.7/10.9.8) stayed old.
+- update-check.js now matches either name. sw.js carries a comment marker "…asbc-calc-v<version>" so copies older than v11.11.1 also
+  see the new version and show the button; release.py bump/rollback keep the marker in step.
+
+## v11.12.0 Link a calculator quote from the job (Nov 27, 2026)
+- Job view header (admin): "Link a calculator quote" on a job with no quote items (e.g. a D-Tools calendar placeholder), or
+  "Change linked quote" when job.laborQuote is set. Picker (linkQuotePicker in src/jobs/04-list.js): every saved calculator quote with
+  items, not a template/deleted, no job report or sign-off of its own; same-client and same-rep quotes first; search by name/client/rep.
+- Uses the existing attachQuote(jobId, pick, {open:true}): no report yet -> the quote takes over the job (schedule, D-Tools links) and
+  the placeholder is removed; report exists -> items copied in, laborQuote set, quote hidden (mergedInto). Changing: the old quote's
+  mergedInto is cleared (back to the Quote Log only). Tested with Playwright.

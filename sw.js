@@ -1,5 +1,6 @@
-// ASBC Labor Calculator service worker (v11.11.0): offline-ready, network-first.
-const CACHE_NAME = 'asbc-tools-v11.11.0';
+// ASBC Labor Calculator service worker (v11.12.0): offline-ready, network-first.
+const CACHE_NAME = 'asbc-tools-v11.12.0';
+// update marker for app copies older than v11.11.1 (their update check only looks for this name): asbc-calc-v11.12.0
 const CORE_ASSETS = [
   './',
   './index.html',
