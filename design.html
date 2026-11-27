@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#2F7FD1">
+<meta name="robots" content="noindex">
+<title>Design Center | ASBC Tools</title>
+<link rel="icon" href="./tools-favicon.svg">
+<link rel="manifest" href="./manifest.json">
+<script src="./diag.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+<script src="./roles.js"></script>
+<script src="./nav.js" defer></script>
+<script src="./update-check.js" defer></script>
+<style>
+:root { --gold:#1F6FD1; --bg:#F3F5F8; --card:#FFFFFF; --line:#E3E7EE; --muted:#4B5563; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:#1F2937; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; }
+.wrap { max-width:1100px; margin:0 auto; padding:14px 14px 60px; }
+header { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:6px; flex-wrap:wrap; }
+h1 { font-size:20px; margin:0; } h1 span { color:var(--gold); }
+.intro { color:var(--muted); font-size:13px; margin:0 0 14px; }
+.bar { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+.bar input { flex:1 1 260px; }
+input, select, textarea { background:#FFFFFF; border:1px solid #D5DBE4; color:#1F2937; border-radius:9px; min-height:42px; padding:0 12px; font-size:15px; width:100%; font-family:inherit; }
+textarea { padding:10px 12px; min-height:70px; }
+.btn { display:inline-flex; align-items:center; justify-content:center; min-height:42px; padding:0 14px; border-radius:9px; border:1px solid #D5DBE4; color:#1F2937; background:#FFFFFF; text-decoration:none; font-size:14px; font-weight:600; cursor:pointer; }
+.btn.blue { border-color:#1F6FD1; color:#1F6FD1; } .btn.green { background:#14945C; border-color:#14945C; color:#FFFFFF; }
+.sect { font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); font-weight:700; margin:20px 0 10px; }
+.grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(250px, 1fr)); gap:12px; }
+.lk { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; display:flex; flex-direction:column; gap:6px; min-height:130px; }
+.lk:hover { border-color:#1F6FD1; }
+.lk .nm { font-weight:700; font-size:16px; } .lk .ds { color:var(--muted); font-size:13px; flex:1; }
+.lk .cat { align-self:flex-start; font-size:11px; font-weight:700; padding:2px 8px; border-radius:999px; background:#E8F1FC; color:#16529C; }
+.lk .row { display:flex; gap:8px; align-items:center; margin-top:4px; }
+.lk .open { flex:1; }
+.adm { background:none; border:0; color:#4B5563; font-size:12px; text-decoration:underline; cursor:pointer; padding:6px; min-height:32px; }
+.empty { background:var(--card); border:1px dashed #C5CDD8; border-radius:12px; padding:18px; color:var(--muted); font-size:14px; }
+.form { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px; margin-bottom:14px; }
+.form label { display:flex; flex-direction:column; gap:4px; font-size:12px; font-weight:600; color:#374151; }
+.form .full { grid-column:1 / -1; }
+@media (max-width:640px) { .form { grid-template-columns:1fr; } }
+</style>
+<script>window.ASBC_TOOLS = true;</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./tools.css">
+</head>
+<body>
+<div class="wrap">
+  <header><h1>ASBC <span>Design Center</span></h1><nav id="asbcNav" data-page="design"></nav></header>
+  <p class="intro">Vendor design centers and forms, plus tools built for the ASBC team. Links open in a new tab.</p>
+  <div id="app"><div class="muted">Loading…</div></div>
+</div>
+<script>
+// v11.2.0 Design Center (everyone): links to vendors' design centers and forms, and ASBC-built tools.
+// Stored in config/designCenter {links: [{id, section: 'vendor'|'tool', name, url, desc, cat}]}; admins add, edit and remove.
+firebase.initializeApp({ apiKey: "AIzaSyCSf560VkBf2esIH5rC-_Vcx349o7iIC-0", authDomain: "asbc-calculator.firebaseapp.com", projectId: "asbc-calculator" });
+const db = firebase.firestore();
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const REF = db.collection('config').doc('designCenter');
+const SECTIONS = [['vendor', 'Vendor design centers & forms', 'No vendor links yet.'], ['tool', 'ASBC tools', 'Tools built for the team will show up here.']];
+let LINKS = [], ADMIN = false, EDIT = null, Q = '';
+const okUrl = u => /^https:\/\/[^\s]+$/i.test(u) || /^\.\/[\w.-]+(\?[^\s]*)?$/.test(u);
+function card(l) {
+  const ext = /^https:/i.test(l.url);
+  return `<div class="lk">${l.cat ? `<span class="cat">${esc(l.cat)}</span>` : ''}<div class="nm">${esc(l.name)}</div><div class="ds">${esc(l.desc || '')}</div>
+    <div class="row"><a class="btn blue open" href="${esc(l.url)}"${ext ? ' target="_blank" rel="noopener"' : ''}>Open ›</a>${ADMIN ? `<button type="button" class="adm" data-edit="${esc(l.id)}">Edit</button><button type="button" class="adm" data-del="${esc(l.id)}">Remove</button>` : ''}</div></div>`;
+}
+function form() {
+  if (!ADMIN || EDIT === null) return ADMIN ? '<div class="bar" style="margin-top:-4px"><button type="button" class="btn green" id="addBtn">+ Add link</button></div>' : '';
+  const l = LINKS.find(x => x.id === EDIT) || { section: 'vendor' };
+  return `<div class="form"><label>Section<select id="fSec">${SECTIONS.map(([k, t]) => `<option value="${k}" ${l.section === k ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>
+    <label>Category (optional)<input id="fCat" value="${esc(l.cat || '')}" placeholder="e.g. Shades, Audio, Forms"></label>
+    <label>Name<input id="fName" value="${esc(l.name || '')}" placeholder="e.g. Lutron Design Center"></label>
+    <label>Link<input id="fUrl" value="${esc(l.url || '')}" placeholder="https://…"></label>
+    <label class="full">Short description<textarea id="fDesc" placeholder="What it's for, who uses it">${esc(l.desc || '')}</textarea></label>
+    <div class="full" style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn green" id="saveBtn">Save link</button><button type="button" class="btn" id="cancelBtn">Cancel</button><span id="fMsg" class="muted" style="align-self:center;color:#B42318;font-size:13px"></span></div></div>`;
+}
+function render() {
+  const q = Q.toLowerCase(), match = l => !q || [l.name, l.desc, l.cat].some(v => String(v || '').toLowerCase().includes(q));
+  document.getElementById('app').innerHTML = `<div class="bar"><input type="search" id="q" placeholder="Search vendors, forms and tools…" value="${esc(Q)}" aria-label="Search"></div>${form()}` +
+    SECTIONS.map(([k, t, none]) => { const list = LINKS.filter(l => l.section === k && match(l)).sort((a, b) => String(a.cat || '').localeCompare(String(b.cat || '')) || a.name.localeCompare(b.name));
+      return `<div class="sect">${esc(t)}</div>` + (list.length ? `<div class="grid">${list.map(card).join('')}</div>` : `<div class="empty">${q ? 'Nothing matches your search.' : esc(none)}${ADMIN && !q ? ' Use <b>+ Add link</b> to add one.' : ''}</div>`); }).join('');
+  const qi = document.getElementById('q'); qi.oninput = () => { Q = qi.value; const pos = qi.selectionStart; render(); const n = document.getElementById('q'); n.focus(); n.setSelectionRange(pos, pos); };
+  const ab = document.getElementById('addBtn'); if (ab) ab.onclick = () => { EDIT = ''; render(); };
+  const cb = document.getElementById('cancelBtn'); if (cb) cb.onclick = () => { EDIT = null; render(); };
+  const sb = document.getElementById('saveBtn'); if (sb) sb.onclick = save;
+}
+async function save() {
+  const v = id => document.getElementById(id).value.trim(), msg = t => document.getElementById('fMsg').textContent = t;
+  const l = { id: EDIT || ('l' + Date.now().toString(36)), section: v('fSec'), cat: v('fCat').slice(0, 40), name: v('fName').slice(0, 80), url: v('fUrl'), desc: v('fDesc').slice(0, 300) };
+  if (!l.name) return msg('Add a name.');
+  if (!okUrl(l.url)) return msg('The link must start with https:// (or ./ for a page in this app).');
+  const next = LINKS.filter(x => x.id !== l.id).concat([l]);
+  try { await REF.set({ links: next, updatedAt: new Date() }, { merge: true }); LINKS = next; EDIT = null; render(); } catch (e) { msg('Could not save: ' + (e.code || e.message)); }
+}
+document.addEventListener('click', async e => {
+  const ed = e.target.closest && e.target.closest('[data-edit]'); if (ed) { EDIT = ed.dataset.edit; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+  const dl = e.target.closest && e.target.closest('[data-del]'); if (!dl) return;
+  const l = LINKS.find(x => x.id === dl.dataset.del); if (!l || !confirm('Remove "' + l.name + '" from the Design Center?')) return;
+  const next = LINKS.filter(x => x.id !== l.id);
+  try { await REF.set({ links: next, updatedAt: new Date() }, { merge: true }); LINKS = next; render(); } catch (err) { alert('Could not remove: ' + (err.code || err.message)); }
+});
+firebase.auth().onAuthStateChanged(async u => {
+  if (!u || !u.emailVerified) { location.replace('./index.html'); return; }
+  try { if (!(await u.getIdTokenResult()).claims.email_verified) { await u.reload(); await u.getIdToken(true); } } catch (e) {}
+  const email = (u.email || '').toLowerCase();
+  const s = await db.collection('config').doc('users').get().catch(() => null);
+  const access = ASBCRoles.accessOf(((s && s.exists && s.data().users) || {})[email], email);
+  if (!ASBCRoles.can(access, 'design')) return ASBCRoles.deny('design', document.getElementById('app'));
+  ADMIN = access === 'admin';
+  try { const d = await REF.get(); LINKS = ((d.exists && d.data().links) || []).filter(l => l && l.name && l.url); } catch (e) { LINKS = []; }
+  window.ASBCDiag && ASBCDiag.ready('design');
+  render();
+});
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
+</script>
+<script src="./sidebar.js" defer></script>
+</body>
+</html>
