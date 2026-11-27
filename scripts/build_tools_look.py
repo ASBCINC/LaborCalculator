@@ -106,7 +106,7 @@ def html(name, s):
     s = s.replace('content="#b08d57"', 'content="#2F7FD1"').replace('content="#050505"', 'content="#2F7FD1"')
     if 'tools.css' not in s: s = s.replace('</head>', HEAD_ADD + '</head>', 1)
     if name not in NO_SIDEBAR and 'sidebar.js' not in s and './roles.js' in s:
-        extra = '<script src="./alerts.js"></script>\n' if name in ('home.html', 'jobs.html', 'index.html') and 'alerts.js' not in s else ''
+        extra = '<script src="./alerts.js"></script>\n' if name in ('home.html', 'jobs.html', 'index.html') and 'src="./alerts.js"' not in s else ''
         s = s.replace('</body>', extra + '<script src="./sidebar.js" defer></script>\n</body>', 1)
     return s
 
