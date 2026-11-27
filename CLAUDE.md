@@ -312,3 +312,9 @@ D-Tools handoff panel (paste-ready labor block); Quote Log search wording.
 ## v11.4.1 — Lighting count by switch location (2026-11-27)
 - tool-lighting.html now models rooms → switch locations → positions {l: label/engraving, d: D dimmer | S switch | F fan | C companion | K scene keypad | H shade keypad | P wall Pico | B blank}. Gang = positions. Flags >4-gang, unlabeled positions, companions with no matching load label. Switch schedule draws faceplates left to right; CSV is one row per position.
 - Storage key asbc-lighting-v2; old v1 count-only drafts convert automatically (Load 1, Load 2… labels).
+
+## v11.5.0 — Knowledge Center (2026-11-27)
+- knowledge.html (sidebar "Knowledge Center", every role): drill-down Category › Sub-category › Product › manuals, breadcrumbs, #hash paths (back button works), global search. Categories fixed in CATS (Audio, Video, Network, Control, Lighting & Shading, Security, Racks & Power); sub-categories/products come from the data.
+- Data: config/knowledgeCenter {items:[{id, cat, sub, product, title, url, kind, src}], seedV}; admins add/edit/remove on the page.
+- Seed (SEED_V=1): 50 entries for the 45 B&O PDFs pulled from BeoWise (bogob2b.custhelp.com) into Anthony's OneDrive › Documents › B&O Install Manuals/{Speakers,Sound systems,TVs,Accessories}; urls are SharePoint webUrls, so readers need access to that folder.
+- BeoWise rate-limits (HTTP 429) fast crawls; ~1.6 s between requests worked.
