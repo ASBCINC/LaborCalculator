@@ -708,7 +708,7 @@
               }
           });
 
-        const APP_VERSION = '11.1.0';
+        const APP_VERSION = '11.1.1';
         const BUILD_DATE = '2026-11-27';
         let HOURLY_RATE = 200;
 
@@ -1946,7 +1946,7 @@
             ev.preventDefault();
             const email = document.getElementById('authEmail').value.trim().toLowerCase();
             const pin = document.getElementById('authPin').value.trim();
-            if (!/@asbc\.us$/.test(email)) return authMsg('Use your @asbc.us work email.');
+            if (!/@(asbc\.us|asbis\.com)$/i.test(email)) return authMsg('Use your @asbc.us or @asbis.com work email.');
             if (!/^\d{6,}$/.test(pin)) return authMsg('PIN must be at least 6 digits (numbers only).');
             if (!fbAuth) return authMsg('Sign-in unavailable. Check the connection and reload.');
             try {

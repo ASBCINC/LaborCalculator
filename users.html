@@ -93,7 +93,7 @@ document.addEventListener('click', async e => {
 function rowHtml(r, i) {
   const owner = r.email === R.OWNER;
   return `<tr data-i="${i}" class="${r.dirty ? 'chg' : ''}"><td><input class="f-name" value="${esc(r.name)}" placeholder="Full name (as in D-Tools)"></td>
-    <td>${r.isNew ? `<input class="f-email" value="${esc(r.email)}" placeholder="name@asbc.us" type="email">` : `<span style="font-size:13px">${esc(r.email)}</span>`}</td>
+    <td>${r.isNew ? `<input class="f-email" value="${esc(r.email)}" placeholder="name@asbc.us or name@asbis.com" type="email">` : `<span style="font-size:13px">${esc(r.email)}</span>`}</td>
     <td><select class="f-role" ${owner ? 'disabled' : ''}>${R.ORDER.map(k => `<option value="${k}" ${k === r.access ? 'selected' : ''}>${esc(R.DEFS[k].label)}</option>`).join('')}</select></td>
     <td><select class="f-store">${STORES.map(s => `<option value="${s}" ${s === (r.store || '') ? 'selected' : ''}>${s === '' ? '—' : s === 'none' ? 'Not ranked' : s}</option>`).join('')}</select></td>
     <td>${signCell(r)}</td>
@@ -149,12 +149,12 @@ async function save() {
   for (const r of ROWS) {
     if (r.removed) continue;
     const email = (r.email || '').trim().toLowerCase(), name = (r.name || '').trim();
-    if (!/^[^@\s]+@asbc\.us$/.test(email) || !name) { bad.push(r.name || r.email || 'new row'); continue; }
+    if (!/^[^@\s]+@(asbc\.us|asbis\.com)$/i.test(email) || !name) { bad.push(r.name || r.email || 'new row'); continue; }
     if (out[email]) { bad.push(email + ' (twice)'); continue; }
     const access = email === R.OWNER ? 'admin' : r.access;
     out[email] = Object.assign({}, USERS[email] || {}, { name, access, store: r.store || '' }, R.LEGACY[access]);
   }
-  if (bad.length) return msg('Fix these first (name and an @asbc.us email): ' + bad.join(', '));
+  if (bad.length) return msg('Fix these first (name and an @asbc.us or @asbis.com email): ' + bad.join(', '));
   if (!out[R.OWNER]) out[R.OWNER] = Object.assign({ name: 'Anthony Ward', store: '' }, USERS[R.OWNER] || {}, { access: 'admin' }, R.LEGACY.admin);
   msg('Saving…');
   try {

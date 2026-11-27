@@ -125,7 +125,7 @@ async function recap(request, env) {
   try { q = await getDoc('quotes/' + encodeURIComponent(id), token); } catch (e) { return json({ error: 'cannot read job: ' + e.message }, 403); }
   if (!['submitted', 'closed'].includes(q.status) || !(q.job || {}).submittedAt) return json({ error: 'job not submitted' }, 409);
   try { users = (await getDoc('config/users', token)).users || {}; } catch (e) {}
-  const work = e => /@asbc\.us$/.test(e);
+  const work = e => /@(asbc\.us|asbis\.com)$/i.test(e);
   const admins = (env.ADMIN_EMAIL ? [String(env.ADMIN_EMAIL)] : Object.keys(users).filter(e => (users[e] || {}).role === 'admin'))
     .map(e => e.trim().toLowerCase()).filter(work);
   if (!admins.length) return json({ error: 'no admin recipient' }, 500);
@@ -174,9 +174,9 @@ async function notifyTechs(request, env) {
   const caller = jwtEmail(token);  // the token passed Firestore's own check above, so its email is genuine
   if (!((env.ADMIN_EMAIL && caller === String(env.ADMIN_EMAIL).toLowerCase()) || (users[caller] || {}).role === 'admin' || (users[caller] || {}).access === 'admin')) return json({ error: 'admin only' }, 403);
   const sc = q.schedule || {}, p = q.project || {};
-  const techs = (sc.techs || []).map(e => String(e).toLowerCase()).filter(e => /@asbc\.us$/.test(e));
+  const techs = (sc.techs || []).map(e => String(e).toLowerCase()).filter(e => /@(asbc\.us|asbis\.com)$/i.test(e));
   const repEmail = (Object.keys(users).find(e => (users[e] || {}).name === p.salesManagerName) || '').toLowerCase();
-  const to = kind === 'prep' ? [repEmail].filter(e => /@asbc\.us$/.test(e)) : techs;
+  const to = kind === 'prep' ? [repEmail].filter(e => /@(asbc\.us|asbis\.com)$/i.test(e)) : techs;
   if (!to.length) return json({ ok: true, sent: {}, note: kind === 'prep' ? 'rep not found' : 'no techs' });
   const name = e => ((users[e] || {}).name) || e;
   const job = p.dtoolsProjectName || q.label || p.customerName || 'Job';
@@ -209,7 +209,7 @@ async function notifyOpp(token, b, env, json) {
   const caller = jwtEmail(token);
   if (!((env.ADMIN_EMAIL && caller === String(env.ADMIN_EMAIL).toLowerCase()) || (users[caller] || {}).role === 'admin' || (users[caller] || {}).access === 'admin')) return json({ error: 'admin only' }, 403);
   const rep = (Object.keys(users).find(e => (users[e] || {}).name === o.owner) || '').toLowerCase();
-  if (!/@asbc\.us$/.test(rep)) return json({ ok: true, sent: {}, note: 'rep not found' });
+  if (!/@(asbc\.us|asbis\.com)$/i.test(rep)) return json({ ok: true, sent: {}, note: 'rep not found' });
   const card = { type: 'AdaptiveCard', $schema: 'http://adaptivecards.io/schemas/adaptive-card.json', version: '1.4', body: [
     { type: 'TextBlock', size: 'Medium', weight: 'Bolder', wrap: true, text: 'Labor quote needed: ' + clip(o.name, 90) },
     { type: 'TextBlock', wrap: true, text: 'This opportunity is in ' + (o.stage || 'Proposal') + ' but has no labor quote in the labor calculator. If it includes installation, please build the labor quote before the proposal goes to the client.' },
@@ -308,7 +308,7 @@ async function photoUsage(env, month, delta, users) {
   Object.keys(u.months).forEach(m => { if (m < cut) delete u.months[m]; });
   const live = Object.values(u.months).reduce((a, b) => a + b, 0); u.live = live;
   if (users && live > 0.8 * PHOTO_LIMIT && (!u.warnedAt || Date.now() - Date.parse(u.warnedAt) > 7 * 864e5)) {
-    const admins = (env.ADMIN_EMAIL ? [String(env.ADMIN_EMAIL)] : Object.keys(users).filter(e => (users[e] || {}).role === 'admin')).map(e => e.trim().toLowerCase()).filter(e => /@asbc\.us$/.test(e));
+    const admins = (env.ADMIN_EMAIL ? [String(env.ADMIN_EMAIL)] : Object.keys(users).filter(e => (users[e] || {}).role === 'admin')).map(e => e.trim().toLowerCase()).filter(e => /@(asbc\.us|asbis\.com)$/i.test(e));
     const pct = Math.round(live / PHOTO_LIMIT * 100), card = { type: 'AdaptiveCard', $schema: 'http://adaptivecards.io/schemas/adaptive-card.json', version: '1.4', body: [
       { type: 'TextBlock', weight: 'Bolder', size: 'Medium', wrap: true, color: 'Attention', text: 'Job photo storage is ' + pct + '% full' },
       { type: 'TextBlock', wrap: true, text: 'About ' + Math.round(live / 1e6) + ' MB of the 1 GB free Cloudflare plan is used by install photos. Photos delete themselves after 18 months; to make room sooner, shorten the keep time, move to Cloudflare R2 (10 GB free) or the $5/month Workers plan.' }] };
@@ -362,7 +362,7 @@ async function invite(request, env) {
   const caller = jwtEmail(token), admin = caller === String(env.ADMIN_EMAIL || '-').toLowerCase() || (users[caller] || {}).role === 'admin' || (users[caller] || {}).access === 'admin';
   if (!admin) return json({ error: 'admins only' }, 403);
   const to = String(b.email || '').trim().toLowerCase();
-  if (!/^[^@\s]+@asbc\.us$/.test(to) || !users[to]) return json({ error: 'that person is not on User Roles' }, 400);
+  if (!/^[^@\s]+@(asbc\.us|asbis\.com)$/i.test(to) || !users[to]) return json({ error: 'that person is not on User Roles' }, 400);
   const first = String((users[to] || {}).name || '').split(' ')[0] || 'there', from = String((users[caller] || {}).name || 'Anthony Ward');
   const APP = 'https://asbcinc.github.io/LaborCalculator/';
   const card = { type: 'AdaptiveCard', $schema: 'http://adaptivecards.io/schemas/adaptive-card.json', version: '1.4', body: [
