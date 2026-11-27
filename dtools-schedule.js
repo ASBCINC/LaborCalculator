@@ -121,7 +121,9 @@
         if (p.client && !pr.dtoolsClientName) link['dtoolsClientName'] = p.client;
         if (p.rep && !pr.salesManagerName) link['salesManagerName'] = p.rep;
         if (p.name && pr.dtoolsProjectName !== p.name) link['dtoolsProjectName'] = p.name;
-        if (p.pid && pr.dtoolsNum !== p.pid) link['dtoolsNum'] = p.pid;  // v10.9.4 numeric D-Tools project id -> Open in D-Tools link
+        if (p.pid && pr.dtoolsNum !== p.pid) link['dtoolsNum'] = p.pid;
+        const ppc = (pipeByName[fold(p.name)] || {}).clientContact;  // v10.9.8 client name + phone for the techs
+        if (ppc && JSON.stringify(ppc) !== JSON.stringify(pr.clientContact || null)) link['clientContact'] = ppc;  // v10.9.4 numeric D-Tools project id -> Open in D-Tools link
         const pp = pipeByName[fold(p.name)] || {};  // v9.3.0 proposal PDF + parts readiness from the pipeline sync
         if (pp.proposalPdf && pr.proposalPdf !== pp.proposalPdf) link['proposalPdf'] = pp.proposalPdf;
         if ((pp.files || []).length && JSON.stringify(pp.files) !== JSON.stringify(pr.files || [])) link['files'] = pp.files;  // v9.4.0 all project files
@@ -133,7 +135,7 @@
           if (JSON.stringify(sug) !== JSON.stringify(q.quoteSuggest || null) && !(sug && q.quoteSuggestNo === sug.id)) extraSet.quoteSuggest = sug; }
         if (sc.dtoolsMissing) { extraSet.schedule = { dtoolsMissing: null }; extraSet.jobHidden = false; }
         if (Object.keys(extraSet).length) await ref.set(extraSet, { merge: true });
-        if (Object.keys(link).some(k => !['dtoolsProjectName', 'dtoolsNum'].includes(k))) out.linked.push(p.name);
+        if (Object.keys(link).some(k => !['dtoolsProjectName', 'dtoolsNum', 'clientContact'].includes(k))) out.linked.push(p.name);
         if (sc.dtoolsHash === sig && !Object.keys(link).length && !partsChanged) { out.unchanged++; }
         else if (sc.dtoolsHash === sig) { await ref.set(Object.assign({ project: Object.assign({}, pr, link) }, partsChanged ? { parts: partsNow } : {}), { merge: true }); out.unchanged++; }
         else {
@@ -160,7 +162,7 @@
         await db.collection('quotes').doc(id).set({
           id, label: p.name, noQuote: true, status: 'scheduled', items: [], isTemplate: false, counted: 'dtools-schedule', updatedAt: new Date(),
           dtoolsLabor: ppL, quoteSuggest: weak ? { id: weak.id, label: weak.data().label || (weak.data().project || {}).customerName || '', client: p.client || '' } : null,
-          project: { customerName: p.name, dtoolsProjectName: p.name, dtoolsNum: p.pid || null, salesManagerName: p.rep || '', dtoolsOpportunityId: dtoolsId, dtoolsOppNumber: p.number || '', dtoolsClientName: p.client || '', proposalPdf: (pipeByName[fold(p.name)] || {}).proposalPdf || '', files: (pipeByName[fold(p.name)] || {}).files || [] },
+          project: { customerName: p.name, dtoolsProjectName: p.name, dtoolsNum: p.pid || null, clientContact: (pipeByName[fold(p.name)] || {}).clientContact || null, salesManagerName: p.rep || '', dtoolsOpportunityId: dtoolsId, dtoolsOppNumber: p.number || '', dtoolsClientName: p.client || '', proposalPdf: (pipeByName[fold(p.name)] || {}).proposalPdf || '', files: (pipeByName[fold(p.name)] || {}).files || [] },
           schedule: { dates, techs, start, end, times, notes, address, dtoolsHash: sig, dtoolsImport: { dates, techs, at: now }, dtoolsEventIds: crew.map(t => t.id), fromDtools: true, updatedAt: now, updatedBy: 'D-Tools calendar' }
         }, { merge: true });
         out.created.push(p.name);

@@ -92,6 +92,14 @@ def run_query(body):
     with urllib.request.urlopen(req, timeout=60) as r:
         return [x['document'] for x in json.loads(r.read().decode()) if 'document' in x]
 
+def client_contact(d):
+    """v10.9.8 the client's primary contact: name + best number (mobile first) for the techs; nothing else is copied"""
+    cs = [c for c in (d.get('contacts') or []) if c.get('isActive', True) is not False]
+    c = next((c for c in cs if c.get('isPrimary') and (c.get('mobile') or c.get('phone'))), None) or next((c for c in cs if c.get('mobile') or c.get('phone')), None)
+    if not c: return None
+    name = (c.get('name') or ' '.join(x for x in (c.get('firstName'), c.get('lastName')) if x) or '').strip()
+    return {'name': name, 'phone': (c.get('mobile') or c.get('phone') or '').strip()}
+
 def to_fs(v):
     """plain Python -> Firestore REST value (maps and lists too)"""
     if v is None: return {'nullValue': None}
@@ -127,11 +135,11 @@ def other_jobs_labor():
         hit = next((p for p in (res.get('projects') or []) if p.get('name') == name or (number and p.get('number') == number)), None)
         if not hit:
             print(f'::warning::details for {name}: project not found by D-Tools search'); continue
-        if f.get('dtoolsModified') == hit.get('modifiedDate') and (f.get('dtoolsLabor') or {}).get('v') == 3: continue  # nothing changed in D-Tools
+        if f.get('dtoolsModified') == hit.get('modifiedDate') and (f.get('dtoolsLabor') or {}).get('v') == 3 and 'clientContact' in pr: continue  # nothing changed in D-Tools
         det = api('Projects/GetProject', {'id': hit['id']})
         files = file_list(det)
         pdfs = [x for x in files if str(x.get('name') or '').lower().endswith('.pdf')]
-        proj = {'files': files, 'proposalPdf': pdfs[0]['url'] if pdfs else '', 'dtoolsOpportunityId': hit['id']}
+        proj = {'files': files, 'proposalPdf': pdfs[0]['url'] if pdfs else '', 'dtoolsOpportunityId': hit['id'], 'clientContact': client_contact(det)}
         if det.get('salesperson') and not pr.get('salesManagerName'): proj['salesManagerName'] = det['salesperson']
         fields = {'dtoolsLabor': to_fs(labor_q(det.get('items'))), 'dtoolsLaborAt': {'timestampValue': NOW}, 'dtoolsModified': to_fs(hit.get('modifiedDate')),
                   'project': to_fs(proj)}
@@ -170,7 +178,7 @@ def main():
                 push(rec, 'stage', f"Stage: {old.get('stage') or '—'} → {p.get('stage')}")
             if old.get('price') is not None and abs(money(old.get('price')) - rec['price']) >= 0.01:
                 push(rec, 'value', f"Contract value ${old['price']:,.2f} → ${rec['price']:,.2f}")
-        if not old or old.get('modified') != rec['modified'] or not old.get('detailAt') or 'parts' not in old or 'files' not in old or (old.get('parts') or {}).get('rule') != 'staged' or (old.get('laborQ') or {}).get('v') != 3:  # v9.3.0/9.4.0: one-time refetch for parts, proposal PDF, all files
+        if not old or old.get('modified') != rec['modified'] or not old.get('detailAt') or 'parts' not in old or 'files' not in old or (old.get('parts') or {}).get('rule') != 'staged' or (old.get('laborQ') or {}).get('v') != 3 or 'clientContact' not in old:  # v9.3.0/9.4.0: one-time refetch for parts, proposal PDF, all files
             try:
                 d = api('Projects/GetProject', {'id': pid})
                 rec.update({'rep': d.get('salesperson'), 'start': utc(d.get('startDate')), 'end': utc(d.get('endDate')),
@@ -200,6 +208,7 @@ def main():
                                 # v9.9.0: products not yet set to Staged (or later) in D-Tools, for the rep's 2-day warning
                                 'notStaged': [{'name': i.get('model') or i.get('name') or 'Item', 'qty': i.get('quantity') or 1, 'install': i.get('installStatus') or ''} for i in prods if str(i.get('installStatus') or '').lower() not in ('staged', 'delivered', 'installed')][:15]}
                 rec['laborQ'] = labor_q(d.get('items'))  # v10.9.0
+                rec['clientContact'] = client_contact(d)  # v10.9.8
                 rec['paid'] = round(sum(x['paid'] for x in pays), 2)
                 cos = api('ChangeOrders/GetChangeOrders', {'projectId': pid})
                 cos = cos if isinstance(cos, list) else (cos.get('changeOrders') or [])

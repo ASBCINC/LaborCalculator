@@ -177,12 +177,13 @@ function renderAgenda(byDay) {
 // v9.2.0 tapping a job opens a customer card (name, address, appointment days and times, crew, sales rep) instead of the full job page
 document.getElementById('agenda').addEventListener('click', e => { const c = e.target.closest('[data-q],[data-ev]'); if (!c) return; e.preventDefault(); c.dataset.q ? infoJob(c.dataset.q) : infoEv(c.dataset.ev); });
 const pfold = s => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
-function infoCard({ title, client, address, when, crew, team, rep, notes, href, pdf, files, parts, dt }) {
+function infoCard({ title, client, contact, address, when, crew, team, rep, notes, href, pdf, files, parts, dt }) {
   document.querySelectorAll('.icbg').forEach(x => x.remove());
   const bg = document.createElement('div'); bg.className = 'icbg';
   const row = (k, v) => v ? `<div class="icr"><div class="ick">${k}</div><div class="icv">${v}</div></div>` : '';
   bg.innerHTML = `<div class="ic" role="dialog" aria-label="${esc(title)}"><div class="ich"><div><div class="ict">${esc(title)}</div>${team ? teamTag(team) : ''}</div><button class="btn" data-x aria-label="Close">✕</button></div>
     ${row('Customer', esc(client || '—'))}
+    ${contact && contact.phone ? row('Client phone', `${contact.name ? esc(contact.name) + ' · ' : ''}<a href="tel:${esc(String(contact.phone).replace(/[^\d+]/g, ''))}">${esc(contact.phone)}</a>`) : ''}
     ${row('Address', address ? `<a href="https://maps.google.com/?q=${encodeURIComponent(address)}" target="_blank" rel="noopener">${esc(address)}</a>` : '—')}
     ${row('Appointment', when.map(w => esc(w)).join('<br>') || '—')}
     ${row('Assigned', esc(crew || 'Nobody assigned'))}
@@ -198,7 +199,7 @@ function infoCard({ title, client, address, when, crew, team, rep, notes, href, 
 const dayLbl = d => new Date(d + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 function infoJob(id) {
   const q = JOBS.find(x => x._id === id); if (!q) return; const sc = q.schedule || {}, p = q.project || {};
-  infoCard({ title: label(q), client: p.dtoolsClientName || p.customerName || q.label, address: sc.address, when: (sc.dates || []).map(d => dayLbl(d) + ' · ' + windowOf(sc, d)),
+  infoCard({ title: label(q), client: p.dtoolsClientName || p.customerName || q.label, contact: p.clientContact, address: sc.address, when: (sc.dates || []).map(d => dayLbl(d) + ' · ' + windowOf(sc, d)),
     crew: (sc.techs || []).map(nameOf).join(', '), team: teamOf(sc.techs), rep: p.salesManagerName, notes: (sc.notes || []).join(' · '), href: './jobs.html?quote=' + encodeURIComponent(id),
     pdf: p.proposalPdf, files: p.files || [], parts: partsTxt(q.parts), dt: PURL[pfold(p.dtoolsProjectName)] || PURL[pfold(label(q))] || dtLink(p.dtoolsNum) });
 }
