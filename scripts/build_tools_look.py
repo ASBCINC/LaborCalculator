@@ -41,6 +41,22 @@ VARS = {'--gold': '#1F6FD1', '--bg': '#F3F5F8', '--card': '#FFFFFF', '--line': '
 HEX = re.compile(r'(?<![\[\w-])#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b')
 PROP = re.compile(r'(?<![\w-])((?:background(?:-color)?|color|fill|stroke|border(?:-(?:top|right|bottom|left))?(?:-color)?|outline(?:-color)?|box-shadow)\s*:\s*)([^;"\'}{<>\n]*)', re.I)
 
+def lum(h):
+    h = h.lstrip('#'); h = ''.join(c * 2 for c in h) if len(h) == 3 else h
+    r, g, b = (int(h[i:i + 2], 16) / 255 for i in (0, 2, 4))
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+def fallback(kind, h):  # shades not in the tables: decide by brightness
+    L = lum(h)
+    if kind == 'bg' and L < 0.35:  # any dark fill -> a very light tint of the same hue
+        h2 = h.lstrip('#'); h2 = ''.join(c * 2 for c in h2) if len(h2) == 3 else h2
+        ch = [int(h2[i:i + 2], 16) for i in (0, 2, 4)]
+        if max(ch) - min(ch) < 24: return '#F1F4F8'
+        return '#' + ''.join('%02X' % round(255 - (255 - c) * 0.12) for c in ch)
+    if kind == 'bd' and L < 0.22: return '#E3E7EE'
+    if kind == 'tx' and L > 0.80: return '#374151'
+    return h
+
 def table(prop):
     p = prop.lower()
     if p.startswith('background'): return BG
@@ -65,9 +81,12 @@ def recolor(text):
 def _recolor(text):
     def per_prop(m):
         t = table(m.group(1).split(':')[0].strip())
-        return m.group(1) + HEX.sub(lambda h: t.get(h.group(0).lower(), h.group(0)), m.group(2))
+        kind = 'bg' if t is BG else 'bd' if t is BD else 'tx'
+        return m.group(1) + HEX.sub(lambda h: t.get(h.group(0).lower()) or fallback(kind, h.group(0)), m.group(2))
     text = PROP.sub(per_prop, text)
     text = HEX.sub(lambda h: ANY.get(h.group(0).lower(), h.group(0)), text)
+    for a, b in (('rgba(5,5,5,.96)', 'rgba(255,255,255,.97)'), ('rgba(199,166,106,.08)', 'rgba(31,111,209,.06)'), ('rgba(255,255,255,0.08)', 'rgba(31,111,209,0.06)')):
+        text = text.replace(a, b)
     for k, v in VARS.items():
         text = re.sub(r'(%s\s*:\s*)#[0-9a-fA-F]{3,6}\b' % re.escape(k), r'\g<1>' + v, text)
     return text
@@ -79,6 +98,7 @@ HEAD_ADD = ('<link rel="preconnect" href="https://fonts.googleapis.com">\n'
 def html(name, s):
     s = recolor(s)
     s = s.replace('ASBC Labor Calculator', 'ASBC Tools').replace('Labor Calculator | ASBC', 'Calculator | ASBC Tools')
+    s = s.replace('<title>ASBC | ', '<title>ASBC Tools | ')
     s = re.sub(r'<title>([^<|]*)\| ASBC</title>', r'<title>\1| ASBC Tools</title>', s)
     s = s.replace('<span class="text-[#C7A66A]">Labor Calculator</span>', '<span class="text-[#C7A66A]">Calculator</span>')
     s = s.replace('./apple-touch-icon.png', './tools-apple-touch-icon.png').replace('href="./icon-192.png"', 'href="./tools-icon-192.png"').replace('./favicon.svg', './tools-favicon.svg')
