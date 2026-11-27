@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#050505">
-<title>Jobs | ASBC Labor Calculator</title>
-<link rel="icon" href="./favicon.svg">
+<meta name="theme-color" content="#2F7FD1">
+<title>Jobs | ASBC Tools</title>
+<link rel="icon" href="./tools-favicon.svg">
 <link rel="manifest" href="./manifest.json">
-<link rel="apple-touch-icon" href="./icon-192.png">
+<link rel="apple-touch-icon" href="./tools-icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <script src="./diag.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
@@ -19,74 +19,74 @@
 <script src="./nav.js" defer></script>
 <script src="./update-check.js" defer></script>
 <style>
-:root { --gold:#C7A66A; --bg:#050505; --card:#111318; --line:#26292f; --muted:#8b8f98; }
+:root { --gold:#1F6FD1; --bg:#F3F5F8; --card:#FFFFFF; --line:#E3E7EE; --muted:#4B5563; }
 * { box-sizing:border-box; }
-body { margin:0; background:var(--bg); color:#fff; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; }
+body { margin:0; background:var(--bg); color:#1F2937; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; }
 .wrap { max-width:860px; margin:0 auto; padding:16px 14px 60px; }
 header { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px; }
 h1 { font-size:20px; margin:0; letter-spacing:.02em; }
 h1 span { color:var(--gold); }
-.btn { display:inline-flex; align-items:center; height:34px; padding:0 12px; border-radius:8px; border:1px solid var(--line); color:#fff; text-decoration:none; font-size:12px; font-weight:600; background:#1a1d23; }
-input, select { background:#101216; border:1px solid var(--line); color:#fff; border-radius:10px; padding:10px 12px; font-size:14px; width:100%; }
+.btn { display:inline-flex; align-items:center; height:34px; padding:0 12px; border-radius:8px; border:1px solid var(--line); color:#1F2937; text-decoration:none; font-size:12px; font-weight:600; background:#FFFFFF; }
+input, select { background:#FFFFFF; border:1px solid var(--line); color:#1F2937; border-radius:10px; padding:10px 12px; font-size:14px; width:100%; }
 .controls { display:flex; gap:8px; margin-bottom:12px; }
 .badge { display:inline-block; font-size:9px; font-weight:700; letter-spacing:.06em; padding:2px 7px; border-radius:999px; border:1px solid; vertical-align:middle; }
-.b-t { color:#8fb3ff; border-color:#33518f; }
-.b-l { color:#ffd479; border-color:#8a6d2f; }
-.b-a { color:#7ee2a0; border-color:#2f7a4c; }
+.b-t { color:#1F6FD1; border-color:#A9C6EE; }
+.b-l { color:#8A5A00; border-color:#E0B860; }
+.b-a { color:#0E7A4D; border-color:#8FD3B0; }
 .qrow { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin-bottom:8px; cursor:pointer; }
 .qrow:hover { border-color:var(--gold); }
 .qrow.SF { border-left:4px solid #f59e0b; } .qrow.LA { border-left:4px solid #3b82f6; } .qrow.BOTH { border-left:4px solid #f59e0b; box-shadow:inset 4px 0 0 0 #3b82f6; }
-.tm { font-size:10px; font-weight:800; padding:1px 6px; border-radius:999px; border:1px solid; margin-left:4px; } .tm.SF { color:#f59e0b; } .tm.LA { color:#3b82f6; }
+.tm { font-size:10px; font-weight:800; padding:1px 6px; border-radius:999px; border:1px solid; margin-left:4px; } .tm.SF { color:#B45309; } .tm.LA { color:#1D4ED8; }
 .qtop { display:flex; justify-content:space-between; gap:10px; align-items:baseline; }
 .qname { font-weight:700; font-size:15px; }
 .qmeta { color:var(--muted); font-size:11px; margin-top:2px; }
 .qnums { text-align:right; font-variant-numeric:tabular-nums; font-size:13px; white-space:nowrap; }
 .qnum-b { color:var(--gold); font-weight:700; }
-.qdetail { display:none; border-top:1px solid var(--line); margin-top:10px; padding-top:10px; font-size:12px; color:#d7d9de; overflow-x:auto; }
+.qdetail { display:none; border-top:1px solid var(--line); margin-top:10px; padding-top:10px; font-size:12px; color:#374151; overflow-x:auto; }
 .qrow.open .qdetail { display:block; }
 table { width:100%; border-collapse:collapse; }
-th, td { text-align:left; padding:4px 6px; border-bottom:1px solid #1d2026; font-variant-numeric:tabular-nums; }
+th, td { text-align:left; padding:4px 6px; border-bottom:1px solid #E3E7EE; font-variant-numeric:tabular-nums; }
 th { color:var(--muted); font-size:10px; text-transform:uppercase; letter-spacing:.05em; }
-.pos { color:#7ee2a0; } .neg { color:#ff8b8b; }
+.pos { color:#0E7A4D; } .neg { color:#B42318; }
 .sect { margin:18px 0 8px; font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); font-weight:700; }
 .empty { text-align:center; color:var(--muted); padding:30px 0; }
 details summary { cursor:pointer; color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.08em; font-weight:700; }
 details[open] summary { margin-bottom:8px; }
 .qactions { display:flex; gap:6px; margin-top:8px; }
-.qbtn { height:28px; padding:0 12px; border-radius:7px; border:1px solid var(--line); background:#1a1d23; color:#fff; font-size:11px; font-weight:600; cursor:pointer; }
-.qbtn-load { border-color:#8a6d2f; color:#ffd479; }
-.qbtn-del { border-color:#5a2b2b; color:#ff8b8b; }
+.qbtn { height:28px; padding:0 12px; border-radius:7px; border:1px solid var(--line); background:#FFFFFF; color:#1F2937; font-size:11px; font-weight:600; cursor:pointer; }
+.qbtn-load { border-color:#E0B860; color:#8A5A00; }
+.qbtn-del { border-color:#F1A9A0; color:#B42318; }
 .qbtn:hover { border-color:var(--gold); }
 /* v10.9.0 tech job list: big, obvious cards */
-.hello { font-size:15px; color:#d7d9de; margin:2px 0 6px; } .hello b { color:#fff; }
+.hello { font-size:15px; color:#374151; margin:2px 0 6px; } .hello b { color:#1F2937; }
 .tsec { margin:18px 0 8px; font-size:13px; text-transform:uppercase; letter-spacing:.08em; font-weight:800; color:var(--gold); }
-.tsec.warn { color:#ffb36b; } .tsec.dim { color:var(--muted); }
+.tsec.warn { color:#A1440B; } .tsec.dim { color:var(--muted); }
 .tcard { background:var(--card); border:2px solid var(--gold); border-radius:16px; padding:16px; margin-bottom:12px; }
-.tcard.warn { border-color:#ffb36b; } .tcard.done { border-color:#2f7a4c; }
-.tname { font-size:20px; font-weight:800; line-height:1.2; } .tline { font-size:15px; color:#d7d9de; margin-top:6px; }
-.tline a { color:#8fb3ff; } .tchip { display:inline-block; font-size:12px; font-weight:800; padding:3px 10px; border-radius:999px; margin-top:8px; border:1px solid; }
-.tchip.new { color:#ffd479; border-color:#8a6d2f; } .tchip.saved { color:#8fb3ff; border-color:#33518f; } .tchip.sent { color:#7ee2a0; border-color:#2f7a4c; }
-.tbtn { display:block; width:100%; text-align:center; padding:15px; font-size:17px; font-weight:800; border-radius:12px; background:var(--gold); color:#050505 !important; text-decoration:none; margin-top:12px; border:0; cursor:pointer; }
-.tbtn.ghost { background:transparent; color:#fff !important; border:1px solid var(--line); font-size:15px; padding:13px; }
+.tcard.warn { border-color:#A1440B; } .tcard.done { border-color:#8FD3B0; }
+.tname { font-size:20px; font-weight:800; line-height:1.2; } .tline { font-size:15px; color:#374151; margin-top:6px; }
+.tline a { color:#1F6FD1; } .tchip { display:inline-block; font-size:12px; font-weight:800; padding:3px 10px; border-radius:999px; margin-top:8px; border:1px solid; }
+.tchip.new { color:#8A5A00; border-color:#E0B860; } .tchip.saved { color:#1F6FD1; border-color:#A9C6EE; } .tchip.sent { color:#0E7A4D; border-color:#8FD3B0; }
+.tbtn { display:block; width:100%; text-align:center; padding:15px; font-size:17px; font-weight:800; border-radius:12px; background:var(--gold); color:#FFFFFF !important; text-decoration:none; margin-top:12px; border:0; cursor:pointer; }
+.tbtn.ghost { background:transparent; color:#1F2937 !important; border:1px solid var(--line); font-size:15px; padding:13px; }
 .trow { display:flex; justify-content:space-between; gap:10px; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin-bottom:8px; text-decoration:none; color:inherit; }
 .trow .d { color:var(--gold); font-weight:800; white-space:nowrap; font-size:14px; } .trow .n { font-weight:700; font-size:15px; }
-.attn { background:#1a1408; border:1px solid #8a6d2f; border-radius:12px; padding:12px 14px; margin-bottom:12px; }
-.attn .row { display:flex; justify-content:space-between; gap:8px; align-items:center; padding:8px 0; border-bottom:1px solid #2a2212; font-size:13px; } .attn .row:last-child { border-bottom:0; }
+.attn { background:#FFF7E6; border:1px solid #E0B860; border-radius:12px; padding:12px 14px; margin-bottom:12px; }
+.attn .row { display:flex; justify-content:space-between; gap:8px; align-items:center; padding:8px 0; border-bottom:1px solid #E3E7EE; font-size:13px; } .attn .row:last-child { border-bottom:0; }
 </style>
 <style>
-textarea { background:#101216; border:1px solid var(--line); color:#fff; border-radius:10px; padding:10px 12px; font-size:14px; width:100%; font-family:inherit; }
+textarea { background:#FFFFFF; border:1px solid var(--line); color:#1F2937; border-radius:10px; padding:10px 12px; font-size:14px; width:100%; font-family:inherit; }
 .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin-bottom:10px; }
 .row2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-.item { display:grid; grid-template-columns:1fr 90px; gap:6px 8px; padding:8px 0; border-bottom:1px solid #1d2026; }
+.item { display:grid; grid-template-columns:1fr 90px; gap:6px 8px; padding:8px 0; border-bottom:1px solid #E3E7EE; }
 .item .nm { font-size:14px; }
 .item .note { grid-column:1 / -1; }
 .tchip { display:inline-flex; align-items:center; gap:4px; margin:2px 8px 2px 0; font-size:13px; white-space:nowrap; } .tchip input { width:auto; height:auto; }
-.prod { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid #1d2026; font-size:14px; } .prod input { width:20px; height:20px; flex:0 0 auto; } .prod .ds { color:var(--muted,#8b8f98); font-size:12px; margin-left:auto; text-align:right; }
-.pl { color:#7ee2a0; } .mi { color:#ff8b8b; }
+.prod { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid #E3E7EE; font-size:14px; } .prod input { width:20px; height:20px; flex:0 0 auto; } .prod .ds { color:var(--muted,#4B5563); font-size:12px; margin-left:auto; text-align:right; }
+.pl { color:#0E7A4D; } .mi { color:#B42318; }
 .item input { padding:8px 10px; }
 .st { display:inline-block; font-size:10px; font-weight:800; letter-spacing:.06em; padding:2px 8px; border-radius:999px; border:1px solid var(--line); color:var(--muted); }
-.st-won { color:#ffd479; border-color:#8a6d2f; } .st-scheduled { color:#8fb3ff; border-color:#33518f; } .st-submitted { color:#ff9f6b; border-color:#8a4b2f; } .st-closed { color:#7ee2a0; border-color:#2f7a4c; }
-.gold { background:var(--gold); color:#050505; border-color:var(--gold); }
+.st-won { color:#8A5A00; border-color:#E0B860; } .st-scheduled { color:#1F6FD1; border-color:#A9C6EE; } .st-submitted { color:#A1440B; border-color:#F3B98F; } .st-closed { color:#0E7A4D; border-color:#8FD3B0; }
+.gold { background:var(--gold); color:#FFFFFF; border-color:var(--gold); }
 .chk { display:flex; align-items:center; gap:6px; font-size:13px; }
 .chk input { width:auto; }
 .right { text-align:right; }
@@ -95,31 +95,31 @@ textarea { background:#101216; border:1px solid var(--line); color:#fff; border-
 input, select, textarea { font-size:16px; }
 .qbtn { min-height:36px; }
 .steps { display:flex; gap:4px; margin:0 0 10px; position:sticky; top:0; z-index:5; background:var(--bg); padding:6px 0; }
-.steps button { flex:1; min-width:0; height:44px; border-radius:10px; border:1px solid var(--line); background:#101216; color:var(--muted); font-size:11px; font-weight:700; line-height:1.15; padding:0 4px; }
+.steps button { flex:1; min-width:0; height:44px; border-radius:10px; border:1px solid var(--line); background:#FFFFFF; color:var(--muted); font-size:11px; font-weight:700; line-height:1.15; padding:0 4px; }
 .steps button b { display:block; font-size:13px; }
 .steps button.on { border-color:var(--gold); color:var(--gold); }
-.steps button.bad { color:#ff8b8b; border-color:#8a2f2f; }
+.steps button.bad { color:#B42318; border-color:#F1A9A0; }
 .step { display:none; } .step.on { display:block; }
-.actbar { position:sticky; bottom:0; z-index:6; display:flex; gap:8px; align-items:center; background:rgba(5,5,5,.96); border-top:1px solid var(--line); margin:12px -14px -60px; padding:10px 14px calc(10px + env(safe-area-inset-bottom)); }
+.actbar { position:sticky; bottom:0; z-index:6; display:flex; gap:8px; align-items:center; background:rgba(255,255,255,.97); border-top:1px solid var(--line); margin:12px -14px -60px; padding:10px 14px calc(10px + env(safe-area-inset-bottom)); }
 .actbar .qbtn { height:48px; min-height:48px; font-size:15px; border-radius:12px; flex:1; padding:0 10px; }
 .actbar .qbtn.slim { flex:0 0 auto; }
 #saveState { position:absolute; left:14px; top:-18px; font-size:11px; color:var(--muted); }
 .miss, .miss:focus { outline:2px solid #ff6b6b !important; outline-offset:2px; border-radius:10px; }
 .stp { display:flex; align-items:center; gap:4px; }
 .stp input { text-align:center; }
-.stp button { flex:0 0 40px; height:40px; border-radius:10px; border:1px solid var(--line); background:#1a1d23; color:#fff; font-size:20px; font-weight:700; padding:0; }
+.stp button { flex:0 0 40px; height:40px; border-radius:10px; border:1px solid var(--line); background:#FFFFFF; color:#1F2937; font-size:20px; font-weight:700; padding:0; }
 .sheetbg { position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:100; display:flex; align-items:flex-end; justify-content:center; }
-.sheet { background:#111318; border:1px solid var(--line); border-bottom:0; border-radius:18px 18px 0 0; width:100%; max-width:560px; max-height:85vh; overflow:auto; padding:16px 16px calc(16px + env(safe-area-inset-bottom)); animation:sheetup .18s ease-out; }
+.sheet { background:#FFFFFF; border:1px solid var(--line); border-bottom:0; border-radius:18px 18px 0 0; width:100%; max-width:560px; max-height:85vh; overflow:auto; padding:16px 16px calc(16px + env(safe-area-inset-bottom)); animation:sheetup .18s ease-out; }
 @keyframes sheetup { from { transform:translateY(40px); opacity:0; } to { transform:none; opacity:1; } }
 .sheet h3 { margin:0 0 4px; font-size:17px; }
 .sheet .grp { margin-top:12px; font-size:11px; text-transform:uppercase; letter-spacing:.08em; font-weight:700; }
-.sheet .it { display:flex; justify-content:space-between; align-items:center; gap:10px; width:100%; text-align:left; background:#1a1d23; border:1px solid var(--line); border-radius:12px; color:#fff; font-size:15px; padding:12px; margin-top:6px; min-height:48px; }
+.sheet .it { display:flex; justify-content:space-between; align-items:center; gap:10px; width:100%; text-align:left; background:#FFFFFF; border:1px solid var(--line); border-radius:12px; color:#1F2937; font-size:15px; padding:12px; margin-top:6px; min-height:48px; }
 .sheet .it span:last-child { color:var(--gold); font-size:13px; white-space:nowrap; }
 .sheet .acts { display:flex; gap:8px; margin-top:14px; } .sheet .acts .qbtn { flex:1; height:48px; font-size:15px; border-radius:12px; }
 .item { grid-template-columns:1fr 180px; }
 @media (max-width:640px) {
   #logT tr:first-child, #exT tr:first-child { display:none; }
-  #logT tr, #exT tr { display:grid; grid-template-columns:1fr 1fr; gap:6px; padding:8px 0; border-bottom:1px solid #1d2026; }
+  #logT tr, #exT tr { display:grid; grid-template-columns:1fr 1fr; gap:6px; padding:8px 0; border-bottom:1px solid #E3E7EE; }
   #logT td, #exT td { border:0; padding:0; }
   #logT td:nth-child(3), #exT td:first-child { grid-column:1 / -1; }
   .wrap { padding:10px 12px 60px; } header { flex-wrap:wrap; } header h1 { font-size:18px; }
@@ -135,12 +135,16 @@ input, select, textarea { font-size:16px; }
   .pos { color:#0a7a3a; } .neg { color:#b00020; } h1 span { color:#000; } .sect { color:#444; }
 }
 </style>
+<script>window.ASBC_TOOLS = true;</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./tools.css">
 </head>
 <body>
 <div class="wrap">
   <header>
     <h1>ASBC <span id="pageTitle">Jobs</span></h1>
-    <nav id="asbcNav" data-page="recaps" class="no-print"><button class="hnav" data-keep id="installBtn" style="display:none;border-color:#C7A66A;color:#C7A66A">Install app</button></nav>
+    <nav id="asbcNav" data-page="recaps" class="no-print"><button class="hnav" data-keep id="installBtn" style="display:none;border-color:#1F6FD1;color:#1F6FD1">Install app</button></nav>
   </header>
   <div id="app"><div class="empty">Loading…</div></div>
 </div>
@@ -157,7 +161,7 @@ async function save(ref, data) {
   if (!navigator.onLine) { flash('No signal: saved on this device. It will sync automatically when you are back online.'); p.catch(() => {}); return; }
   await p;
 }
-function flash(t) { let b = document.getElementById('flash'); if (!b) { b = document.createElement('div'); b.id = 'flash'; b.className = 'no-print'; b.style.cssText = 'position:fixed;left:12px;right:12px;bottom:12px;background:#1a1d23;border:1px solid #C7A66A;color:#fff;padding:10px 12px;border-radius:10px;font-size:13px;z-index:99'; document.body.appendChild(b); } b.textContent = t; b.style.display = ''; clearTimeout(b._t); b._t = setTimeout(() => b.style.display = 'none', 5000); }
+function flash(t) { let b = document.getElementById('flash'); if (!b) { b = document.createElement('div'); b.id = 'flash'; b.className = 'no-print'; b.style.cssText = 'position:fixed;left:12px;right:12px;bottom:12px;background:#FFFFFF;border:1px solid #1F6FD1;color:#1F2937;padding:10px 12px;border-radius:10px;font-size:13px;z-index:99'; document.body.appendChild(b); } b.textContent = t; b.style.display = ''; clearTimeout(b._t); b._t = setTimeout(() => b.style.display = 'none', 5000); }
 window.addEventListener('offline', () => flash('You are offline. Keep working; your entries will sync later.'));
 window.addEventListener('online', () => flash('Back online: syncing your saved entries.'));
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -175,7 +179,7 @@ const isSigned = q => !!(q && q.signoff && q.signoff.status === 'signed');
 function signoffBox(q) {
   const so = q && q.signoff, sk = ((q && q.job) || {}).signoffSkip || {}, signed = isSigned(q);
   return `<div id="soCard" class="no-print" style="border-top:1px solid var(--line);margin-top:12px;padding-top:10px"><div class="sect" style="margin-top:0">Customer sign-off ${signed ? '<span class="st st-closed">SIGNED</span>' : '<span style="text-transform:none;letter-spacing:0;font-weight:400">(required to mark Complete)</span>'}</div>
-    ${signed ? `<div class="qmeta">Signed by <b>${esc(so.name)}</b> · ${esc(new Date(so.signedAt).toLocaleString('en-US'))}${so.concerns ? ' · <span style="color:#ff8b8b">client noted concerns</span>' : ''}</div>` : '<div class="qmeta">Fill in the recap first, then tap below and hand the device to the client.</div>'}
+    ${signed ? `<div class="qmeta">Signed by <b>${esc(so.name)}</b> · ${esc(new Date(so.signedAt).toLocaleString('en-US'))}${so.concerns ? ' · <span style="color:#B42318">client noted concerns</span>' : ''}</div>` : '<div class="qmeta">Fill in the recap first, then tap below and hand the device to the client.</div>'}
     <div class="qactions"><button type="button" class="qbtn ${signed ? '' : 'gold'}" id="soOpen">${signed ? 'Redo customer sign-off' : 'Open customer sign-off'}</button></div>
     ${signed ? '' : `<div class="qmeta" style="margin-top:8px">Can't get a signature?</div><div class="row2"><select id="soSkip"><option value="">—</option>${Object.entries(SKIP).map(([k, v]) => `<option value="${k}" ${sk.status === k ? 'selected' : ''}>${v}</option>`).join('')}</select><input id="soReason" placeholder="Reason" value="${esc(sk.reason || '')}"></div>`}</div>`;
 }
@@ -190,14 +194,14 @@ function signoffReport(q) {
   if (isSigned(q)) {
     const a = so.answers || {}, good = (k, v) => k === 'issues' ? v === 'no' : v === 'yes';
     const sig = /^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(so.signature || '') ? `<img src="${so.signature}" alt="Client signature" style="display:block;max-width:320px;width:100%;background:#fff;border:1px solid #ccc;border-radius:8px;margin-top:8px">` : '';
-    return `<div class="card" style="${so.concerns ? 'border-color:#8a2f2f' : ''}"><div class="sect" style="margin-top:0">Customer sign-off ${so.concerns ? '<span class="st" style="color:#ff8b8b;border-color:#8a2f2f">CLIENT CONCERNS</span>' : '<span class="st st-closed">SIGNED</span>'}</div>
+    return `<div class="card" style="${so.concerns ? 'border-color:#F1A9A0' : ''}"><div class="sect" style="margin-top:0">Customer sign-off ${so.concerns ? '<span class="st" style="color:#B42318;border-color:#F1A9A0">CLIENT CONCERNS</span>' : '<span class="st st-closed">SIGNED</span>'}</div>
       <table>${SO_Q.map(([k, t]) => `<tr><td>${t}</td><td class="right ${a[k] ? (good(k, a[k]) ? 'pos' : 'neg') : ''}"><b>${a[k] === 'yes' ? 'Yes' : a[k] === 'no' ? 'No' : '—'}</b></td></tr>`).join('')}</table>
       ${so.issuesText ? `<div class="qmeta" style="margin-top:8px">Issue described by the client</div><div style="white-space:pre-wrap">${esc(so.issuesText)}</div>` : ''}
       ${so.comments ? `<div class="qmeta" style="margin-top:8px">Client comments</div><div style="white-space:pre-wrap">${esc(so.comments)}</div>` : ''}
       <div style="margin-top:10px">✓ The client acknowledged that the installation meets their expectations.</div>${sig}
       <div class="qmeta" style="margin-top:4px">Signed by <b>${esc(so.name)}</b> · ${esc(new Date(so.signedAt).toLocaleString('en-US'))} · collected by ${esc(nameOf(so.collectedBy))}</div></div>`;
   }
-  if (sk && sk.status) return `<div class="card"><div class="sect" style="margin-top:0">Customer sign-off</div><div style="color:#ff9f6b">${esc(SKIP[sk.status] || sk.status)}</div>${sk.reason ? `<div class="qmeta">${esc(sk.reason)}</div>` : ''}</div>`;
+  if (sk && sk.status) return `<div class="card"><div class="sect" style="margin-top:0">Customer sign-off</div><div style="color:#A1440B">${esc(SKIP[sk.status] || sk.status)}</div>${sk.reason ? `<div class="qmeta">${esc(sk.reason)}</div>` : ''}</div>`;
   if ((q.job || {}).jobStatus === 'Complete') return '<div class="card"><div class="sect" style="margin-top:0">Customer sign-off</div><div class="qmeta">Not collected.</div></div>';
   return '';
 }
@@ -317,10 +321,10 @@ async function jobPdf(btn) {
   if (btn) { btn.disabled = false; btn.textContent = was || 'Export PDF'; }
 }
 // v10.9.8 client phone from D-Tools (primary contact), tap to call
-const phoneLine = q => { const c = (q.project || {}).clientContact; return c && c.phone ? `<div class="qmeta" style="font-size:14px;margin-top:4px">📞 ${c.name ? esc(c.name) + ' · ' : ''}<a href="tel:${esc(String(c.phone).replace(/[^\d+]/g, ''))}" style="color:#8fb3ff">${esc(c.phone)}</a></div>` : ''; };
+const phoneLine = q => { const c = (q.project || {}).clientContact; return c && c.phone ? `<div class="qmeta" style="font-size:14px;margin-top:4px">📞 ${c.name ? esc(c.name) + ' · ' : ''}<a href="tel:${esc(String(c.phone).replace(/[^\d+]/g, ''))}" style="color:#1F6FD1">${esc(c.phone)}</a></div>` : ''; };
 // v10.9.6 where the quoted time comes from (replaces the old "Job report without a labor quote" line)
 const quoteLine = q => { const h = quotedHrs(q);
-  if (!h.est) return '<div class="qmeta" style="color:#ff9f6b">No labor quoted (no calculator quote or labor line on the D-Tools proposal)</div>';
+  if (!h.est) return '<div class="qmeta" style="color:#A1440B">No labor quoted (no calculator quote or labor line on the D-Tools proposal)</div>';
   return `<div class="qmeta">Quoted: <b>${hrs(h.est)} hrs</b>${h.prog ? ' (install ' + hrs(h.inst) + ' · programming ' + hrs(h.prog) + ')' : ''} from the ${esc(h.src)}</div>`; };
 // v8.21.0: who did each task (item lines and extra work)
 const jobTechs = () => { const ids = ((typeof Q !== 'undefined' && Q && Q.schedule) || {}).techs || []; const list = techs().filter(t => ids.includes(t.email)); return list.length ? list : techs(); };
@@ -416,7 +420,7 @@ async function showList() {
       <div class="qmeta">${esc((q.project || {}).dtoolsClientName || '')}${(q.project || {}).dtoolsOppNumber ? ' · #' + esc(q.project.dtoolsOppNumber) : ''} · Rep: ${esc((q.project || {}).salesManagerName || '—')}</div>${subLabel(q) ? `<div class="qmeta">${esc(subLabel(q))}</div>` : ''}</div>
       <div class="qnums"><div class="qnum-b" style="white-space:pre-line">${esc(dayWins(q.schedule || {}, '\n') || 'Not scheduled')}</div>
       <div class="qmeta">${esc(((q.schedule || {}).techs || []).map(nameOf).join(', '))}${teamCls(q) && teamCls(q) !== 'BOTH' ? ` <span class="tm ${teamCls(q)}">${teamCls(q)} Team</span>` : ''}</div>${ME.role === 'admin' ? `<button class="qbtn qbtn-del" style="margin-top:6px" onclick="event.preventDefault();event.stopPropagation();deleteJob('${esc(q._id)}')">Delete</button>` : ''}</div></div></div></a>`).join('') : '<div class="empty" style="padding:10px 0">None</div>')).join('')
-    + (!ARCH && archived.length ? `<p class="qmeta" style="margin-top:14px"><a href="./jobs.html?archive=1" style="color:#C7A66A">Archive: ${archived.length} report${archived.length === 1 ? '' : 's'} older than 30 days ›</a></p>` : '')
+    + (!ARCH && archived.length ? `<p class="qmeta" style="margin-top:14px"><a href="./jobs.html?archive=1" style="color:#1F6FD1">Archive: ${archived.length} report${archived.length === 1 ? '' : 's'} older than 30 days ›</a></p>` : '')
     + (ME.role === 'admin' && !ARCH ? '<p class="qmeta" style="margin-top:14px">To schedule any quote (even one not yet Won), open it from the Quote Log and tap Job.</p>' : '');
 }
 
@@ -448,7 +452,7 @@ function techList(jobs, archived) {
     ${late.length ? `<div class="tsec warn">Needs your report (${late.length})</div>${late.map(q => big(q, 'late')).join('')}` : ''}
     ${soon.length ? `<div class="tsec dim">Coming up</div>${soon.map(q => row(q, nextD(q))).join('')}` : ''}
     ${done.length ? `<details style="margin-top:16px"><summary>Submitted reports (${done.length})</summary>${done.map(q => row(q, ds(q).pop() || '')).join('')}</details>` : ''}
-    ${archived.length ? `<p class="qmeta" style="margin-top:10px"><a href="./jobs.html?archive=1" style="color:#C7A66A">Older reports (${archived.length}) ›</a></p>` : ''}
+    ${archived.length ? `<p class="qmeta" style="margin-top:10px"><a href="./jobs.html?archive=1" style="color:#1F6FD1">Older reports (${archived.length}) ›</a></p>` : ''}
     <div class="tsec dim" style="margin-top:26px">Not on the schedule?</div>
     <button class="tbtn ghost" onclick="showNew()">🚨 Unscheduled / emergency visit</button>
     <div class="qmeta" style="margin-top:6px">Only for visits that are not on the D-Tools calendar. Scheduled jobs appear here automatically.</div>`;
@@ -463,7 +467,7 @@ function attentionCard(jobs) {
     if ((q.unscheduled || q.counted === 'no-quote') && !sc.fromDtools && !q.unschedAck && ['submitted', 'closed', 'scheduled'].includes(q.status)) items.push(`<div class="row"><div><b>${nm}</b><div class="qmeta">Unscheduled visit by ${esc(nameOf((q.job || {}).submittedBy || (sc.techs || [])[0] || ''))}${ds.length ? ' on ' + esc(fmtDate(ds[0])) : ''}: add it to the D-Tools calendar so the records match.</div></div><div style="display:flex;gap:6px">${open(q)}<button class="qbtn" onclick="ackUnsched('${q._id}')">It’s on D-Tools</button></div></div>`);
     if (q.status === 'scheduled' && ds.length && ds[0] <= soon && !(q.quoteSuggest && q.quoteSuggest.id) && quotedHrs(q).est === 0 && !q.noLaborAck) items.push(`<div class="row"><div><b>${nm}</b><div class="qmeta">No labor quoted (no calculator quote, no INSTALL_SERVICE / SRV-PROG / flat-rate labor in D-Tools) · ${esc(fmtDate(ds.find(d => d >= t) || ds[ds.length - 1]))} · Rep: ${esc((q.project || {}).salesManagerName || '—')}</div></div><div style="display:flex;gap:6px">${open(q)}<button class="qbtn" onclick="ackNoLabor('${q._id}')">OK</button></div></div>`);
   });
-  return items.length ? `<div class="sect" style="color:#ffd479">Needs attention (${items.length})</div><div class="attn">${items.join('')}</div>` : '';
+  return items.length ? `<div class="sect" style="color:#8A5A00">Needs attention (${items.length})</div><div class="attn">${items.join('')}</div>` : '';
 }
 async function flagSet(id, data) { await save(db.collection('quotes').doc(id), data); showList(); }
 const noSuggest = id => db.collection('quotes').doc(id).get().then(s => flagSet(id, { quoteSuggest: null, quoteSuggestNo: ((s.data() || {}).quoteSuggest || {}).id || '' }));
@@ -555,8 +559,8 @@ function sheet({ title, sub, must = [], check = [], okLabel }) {
     const bg = document.createElement('div'); bg.className = 'sheetbg no-print';
     const row = ([t, sel]) => `<button type="button" class="it" data-sel="${esc(sel)}"><span>${esc(t)}</span><span>Fix ›</span></button>`;
     bg.innerHTML = `<div class="sheet" role="dialog" aria-modal="true"><h3>${esc(title)}</h3>${sub ? `<div class="qmeta" style="font-size:13px">${esc(sub)}</div>` : ''}
-      ${must.length ? `<div class="grp" style="color:#ff8b8b">Must fix before submitting</div>${must.map(row).join('')}` : ''}
-      ${check.length ? `<div class="grp" style="color:#ffd479">Please check</div>${check.map(row).join('')}` : ''}
+      ${must.length ? `<div class="grp" style="color:#B42318">Must fix before submitting</div>${must.map(row).join('')}` : ''}
+      ${check.length ? `<div class="grp" style="color:#8A5A00">Please check</div>${check.map(row).join('')}` : ''}
       <div class="acts">${must.length || !okLabel ? '<button type="button" class="qbtn gold" data-x="0">OK, fix it</button>' : `<button type="button" class="qbtn" data-x="0">Go back</button><button type="button" class="qbtn gold" data-x="1">${esc(okLabel)}</button>`}</div></div>`;
     const done = (v, sel) => { bg.remove(); res(v); if (sel) jumpTo(sel); };
     bg.addEventListener('click', e => {
@@ -608,7 +612,7 @@ function punchFrom(text) { return String(text || '').split(/\n|•|;/).map(x => 
 function punchCard(canTick) {
   const pl = Q.punch || []; if (!pl.length) return '';
   const open = pl.filter(x => !x.done).length;
-  return `<div class="card" style="border-color:${open ? '#8a6d2f' : 'var(--line)'}"><div class="sect" style="margin-top:0;color:${open ? '#ffd479' : 'inherit'}">Punch list (${open} open of ${pl.length})</div>
+  return `<div class="card" style="border-color:${open ? '#8a6d2f' : 'var(--line)'}"><div class="sect" style="margin-top:0;color:${open ? '#8A5A00' : 'inherit'}">Punch list (${open} open of ${pl.length})</div>
     ${pl.map((x, i) => `<label class="chk" style="display:flex;gap:8px;align-items:flex-start;padding:4px 0"><input type="checkbox" class="pk" data-i="${i}" ${x.done ? 'checked' : ''} ${canTick ? '' : 'disabled'}><span style="${x.done ? 'text-decoration:line-through;color:var(--muted)' : ''}">${esc(x.t)}${x.done && x.by ? ` <span class="qmeta">· ${esc(nameOf(x.by))} ${esc(new Date(x.at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }))}</span>` : ''}</span></label>`).join('')}</div>`;
 }
 function actualsFrom(j) {  // v10.0.0 whole-project hours: quoted catalog hours vs labor hours (hours on site × techs)
@@ -637,7 +641,7 @@ function revisionsCard() {
   const th = r => hrs((r.log || []).reduce((x, l) => x + (Number(l.hours) || 0), 0));
   return `<div class="card"><div class="sect" style="margin-top:0">Revisions</div>
     <div style="font-size:13px"><b>Rev ${j.revision || 1} (current)</b> · ${esc(nameOf(j.submittedBy))} · ${esc(j.submittedAt ? new Date(j.submittedAt).toLocaleString('en-US') : '')}${j.changeSummary ? `<div class="qmeta">Changed: ${esc(j.changeSummary)}</div>` : ''}</div>
-    ${revs.map(r => `<div style="font-size:13px;margin-top:8px;color:#c9ccd2">Rev ${r.revision || 1} · ${esc(nameOf(r.submittedBy))} · ${esc(r.submittedAt ? new Date(r.submittedAt).toLocaleString('en-US') : '')} · ${esc(r.jobStatus || '—')} · ${th(r)} hrs${r.changeSummary ? `<div class="qmeta">Changed: ${esc(r.changeSummary)}</div>` : ''}</div>`).join('')}</div>`;
+    ${revs.map(r => `<div style="font-size:13px;margin-top:8px;color:#374151">Rev ${r.revision || 1} · ${esc(nameOf(r.submittedBy))} · ${esc(r.submittedAt ? new Date(r.submittedAt).toLocaleString('en-US') : '')} · ${esc(r.jobStatus || '—')} · ${th(r)} hrs${r.changeSummary ? `<div class="qmeta">Changed: ${esc(r.changeSummary)}</div>` : ''}</div>`).join('')}</div>`;
 }
 // Other visits on the same D-Tools project (original install + return visits)
 async function projectVisits() {
@@ -671,11 +675,11 @@ async function showJob(id) {
   const st = Q.status || 'draft';
   let html = `<div class="card"><div class="qtop"><div><div class="qname">${esc(label(Q))} ${stBadge(st)} ${jsBadge((Q.job || {}).jobStatus)}</div>
     <div class="qmeta">${esc((Q.project || {}).dtoolsClientName || '')}${(Q.project || {}).dtoolsOppNumber ? ' · D-Tools #' + esc(Q.project.dtoolsOppNumber) : ''} · Rep: ${esc((Q.project || {}).salesManagerName || '—')}</div>
-    ${subLabel(Q) ? `<div class="qmeta">${esc(subLabel(Q))}</div>` : ''}${quoteLine(Q)}${phoneLine(Q)}<div class="qmeta">Dates: ${esc(dayWins(Q.schedule || {}) || '—')} · Techs: ${esc(((Q.schedule || {}).techs || []).map(nameOf).join(', ') || '—')}</div>${(Q.schedule || {}).address ? `<div class="qmeta">Address: <a href="https://maps.google.com/?q=${encodeURIComponent(Q.schedule.address)}" target="_blank" rel="noopener" style="color:#C7A66A">${esc(Q.schedule.address)}</a></div>` : ''}${((Q.schedule || {}).notes || []).length ? `<div class="qmeta" style="white-space:pre-wrap;color:#e9dcc0">D-Tools notes: ${esc(Q.schedule.notes.join('\n'))}</div>` : ''}${(Q.project || {}).proposalPdf ? `<div class="qmeta"><a href="${esc(Q.project.proposalPdf)}" target="_blank" rel="noopener" style="color:#C7A66A">Open proposal PDF</a></div>` : ''}${((Q.project || {}).files || []).filter(f => f.url !== (Q.project || {}).proposalPdf).map(f => `<div class="qmeta"><a href="${esc(f.url)}" target="_blank" rel="noopener" style="color:#C7A66A">${esc(f.name)}</a></div>`).join('')}${Q.parts && Q.parts.total ? `<div class="qmeta" style="color:${Q.parts.ready >= Q.parts.total ? '#7ee2a0' : '#ff8b8b'}">Parts: ${Q.parts.ready >= Q.parts.total ? 'all ' + Q.parts.total + ' staged' : (Q.parts.total - Q.parts.ready) + ' of ' + Q.parts.total + ' not staged' + ((Q.parts.notReady || []).length ? ' (' + esc(Q.parts.notReady.join(', ')) + ')' : '')}</div>` : ''}</div></div>
-    ${Q.job && Q.job.reviewNote && st === 'scheduled' ? `<div class="qmeta" style="color:#ff9f6b;margin-top:6px">Sent back by ${esc(nameOf(Q.job.reviewedBy))}: ${esc(Q.job.reviewNote)}</div>` : ''}</div>`;
+    ${subLabel(Q) ? `<div class="qmeta">${esc(subLabel(Q))}</div>` : ''}${quoteLine(Q)}${phoneLine(Q)}<div class="qmeta">Dates: ${esc(dayWins(Q.schedule || {}) || '—')} · Techs: ${esc(((Q.schedule || {}).techs || []).map(nameOf).join(', ') || '—')}</div>${(Q.schedule || {}).address ? `<div class="qmeta">Address: <a href="https://maps.google.com/?q=${encodeURIComponent(Q.schedule.address)}" target="_blank" rel="noopener" style="color:#1F6FD1">${esc(Q.schedule.address)}</a></div>` : ''}${((Q.schedule || {}).notes || []).length ? `<div class="qmeta" style="white-space:pre-wrap;color:#374151">D-Tools notes: ${esc(Q.schedule.notes.join('\n'))}</div>` : ''}${(Q.project || {}).proposalPdf ? `<div class="qmeta"><a href="${esc(Q.project.proposalPdf)}" target="_blank" rel="noopener" style="color:#1F6FD1">Open proposal PDF</a></div>` : ''}${((Q.project || {}).files || []).filter(f => f.url !== (Q.project || {}).proposalPdf).map(f => `<div class="qmeta"><a href="${esc(f.url)}" target="_blank" rel="noopener" style="color:#1F6FD1">${esc(f.name)}</a></div>`).join('')}${Q.parts && Q.parts.total ? `<div class="qmeta" style="color:${Q.parts.ready >= Q.parts.total ? '#0E7A4D' : '#B42318'}">Parts: ${Q.parts.ready >= Q.parts.total ? 'all ' + Q.parts.total + ' staged' : (Q.parts.total - Q.parts.ready) + ' of ' + Q.parts.total + ' not staged' + ((Q.parts.notReady || []).length ? ' (' + esc(Q.parts.notReady.join(', ')) + ')' : '')}</div>` : ''}</div></div>
+    ${Q.job && Q.job.reviewNote && st === 'scheduled' ? `<div class="qmeta" style="color:#A1440B;margin-top:6px">Sent back by ${esc(nameOf(Q.job.reviewedBy))}: ${esc(Q.job.reviewNote)}</div>` : ''}</div>`;
   if (ME.role === 'admin') html += scheduleCard(st);
   html += '<div id="visits"></div>';
-  if (EDIT) html += `<div class="card no-print" style="border-color:#8a6d2f"><div style="color:#ffd479;font-weight:700">Editing rev ${Q._live.revision || 1} of this report</div><div class="qmeta" style="font-size:12px">Changes save as you go but stay private until you tap Resubmit to PM.</div></div>` + logForm();
+  if (EDIT) html += `<div class="card no-print" style="border-color:#E0B860"><div style="color:#8A5A00;font-weight:700">Editing rev ${Q._live.revision || 1} of this report</div><div class="qmeta" style="font-size:12px">Changes save as you go but stay private until you tap Resubmit to PM.</div></div>` + logForm();
   else if (st === 'scheduled' && (assigned || ME.role === 'admin')) html += logForm();
   else if (st === 'submitted' || st === 'closed') html += report(ME.role === 'admin', canEdit);
   if (['scheduled', 'submitted', 'closed'].includes(st)) html += expensesCard(assigned || ME.role === 'admin');  // v9.6.0
@@ -690,8 +694,8 @@ function expensesCard(canAdd) {
   const tot = ex.reduce((a, e) => a + (Number(e.amount) || 0), 0);
   const usd = n => '$' + (Number(n) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   return `<div class="card"><div class="sect" style="margin-top:0">Expenses${ex.length ? ' · ' + usd(tot) : ''}</div>
-    ${ex.map(e => `<div class="qmeta" style="display:flex;justify-content:space-between;gap:8px"><span>${esc(e.date || '')} · ${esc(e.merchant || 'Receipt')}${e.who || e.by ? ' · ' + esc(e.who || nameOf(e.by)) : ''}${e.note ? `<br><span style="color:#ff9f6b">${esc(e.note)}</span>` : ''}</span>
-      <span style="white-space:nowrap">${usd(e.amount)} ${ME.role === 'admin' ? `<button class="qbtn no-print" data-rmx="${esc(e.id || e.pid || '')}" title="Not this job" style="padding:0 6px;min-height:0;height:22px">✕</button> ` : ''}${e.status === 'pending' ? '<span class="st" style="color:#ffd479">WAITING FOR CHARGE</span>' : `<span class="st st-closed">IN RAMP${e.receipt ? ' · RECEIPT' : ''}</span>`}</span></div>`).join('') || '<div class="qmeta">No expenses on this job yet.</div>'}
+    ${ex.map(e => `<div class="qmeta" style="display:flex;justify-content:space-between;gap:8px"><span>${esc(e.date || '')} · ${esc(e.merchant || 'Receipt')}${e.who || e.by ? ' · ' + esc(e.who || nameOf(e.by)) : ''}${e.note ? `<br><span style="color:#A1440B">${esc(e.note)}</span>` : ''}</span>
+      <span style="white-space:nowrap">${usd(e.amount)} ${ME.role === 'admin' ? `<button class="qbtn no-print" data-rmx="${esc(e.id || e.pid || '')}" title="Not this job" style="padding:0 6px;min-height:0;height:22px">✕</button> ` : ''}${e.status === 'pending' ? '<span class="st" style="color:#8A5A00">WAITING FOR CHARGE</span>' : `<span class="st st-closed">IN RAMP${e.receipt ? ' · RECEIPT' : ''}</span>`}</span></div>`).join('') || '<div class="qmeta">No expenses on this job yet.</div>'}
     ${canAdd ? `<div class="no-print" style="border-top:1px solid var(--line);margin-top:10px;padding-top:10px">
       <div class="qmeta">Add a receipt: it's attached to your Ramp charge with this project in the memo. If the charge hasn't posted yet, it's matched automatically when it does.</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;align-items:center"><input type="file" id="rcFile" accept="image/*,application/pdf" style="max-width:230px">
@@ -771,7 +775,7 @@ function moneyCard(j, show) {  // v10.2.0 time quoted vs time on site (no dollar
     <div><div class="qmeta">Actual labor (${hrs(site)} hrs on site × techs)</div><div style="font-size:22px;font-weight:800;color:var(--gold)">${hrs(lab)} hrs</div></div>
     <div><div class="qmeta">Days</div><div style="font-size:22px;font-weight:800">${days}</div></div></div>
     ${est ? `<div style="margin-top:10px;font-size:15px"><b class="${verdict[1]}">${verdict[0]}</b>: ${diff > 0 ? hrs(diff) + ' hrs over' : diff < 0 ? hrs(-diff) + ' hrs under' : 'right on'} (${d > 0 ? '+' : ''}${Math.round(d * 100)}%)${show ? ` · <span class="${pts >= 0 ? 'pl' : 'mi'}">${pts > 0 ? '+' : ''}${pts} pts</span> to ${esc((Q.project || {}).salesManagerName || 'the rep')}` : ''}</div>`
-      : `<div class="qmeta" style="margin-top:6px"><b style="color:#ff9f6b">No labor quoted</b>: no calculator labor quote and no INSTALL_SERVICE / SRV-PROG / flat-rate labor on the D-Tools proposal, so there is no quoted time to compare.</div>`}</div>`;
+      : `<div class="qmeta" style="margin-top:6px"><b style="color:#A1440B">No labor quoted</b>: no calculator labor quote and no INSTALL_SERVICE / SRV-PROG / flat-rate labor on the D-Tools proposal, so there is no quoted time to compare.</div>`}</div>`;
 }
 function logForm() {
   const j = Q.job || {}; const lines = j.lines || [];
@@ -791,7 +795,7 @@ function logForm() {
     ${clock ? `<div class="qmeta">Clocked in at <b>${esc(new Date(clock.start).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }))}</b> (${esc(new Date(clock.start).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }))}).</div>
       <div class="qactions"><button class="qbtn gold" id="clockOut">End day</button><button class="qbtn" id="clockCancel">Cancel timer</button></div>`
     : `<div class="qmeta">Tap Start when you arrive; tap End when you leave. Your hours are added to the time log below.</div><div class="qactions"><button class="qbtn gold" id="clockIn">Start day</button></div>`}</div>`;
-  const parent = Q.returnFor ? `<div class="card" style="border-color:#8a6d2f"><div class="sect" style="margin-top:0;color:#ffd479">Return visit</div><div class="qmeta">For: ${esc(Q.returnFor.label || '')}</div><div style="white-space:pre-wrap;margin-top:6px">${esc(Q.returnFor.openItems || '')}</div></div>` : '';
+  const parent = Q.returnFor ? `<div class="card" style="border-color:#E0B860"><div class="sect" style="margin-top:0;color:#8A5A00">Return visit</div><div class="qmeta">For: ${esc(Q.returnFor.label || '')}</div><div style="white-space:pre-wrap;margin-top:6px">${esc(Q.returnFor.openItems || '')}</div></div>` : '';
   const extrasCard = `<div class="card"><div class="sect" style="margin-top:0">Unplanned / extra work</div>
     <div class="qmeta">Anything done that was NOT on the quote (possible change order). Anthony and the sales rep are flagged.</div>
     <table id="exT"><tr><th>What was done</th><th style="width:80px">Hours</th><th style="width:130px">Who</th></tr>${extras.map(x => `<tr><td><input class="exd" value="${esc(x.desc || '')}" placeholder="e.g. Moved outlet behind TV"></td><td><input type="number" class="exh" min="0" step="0.25" value="${esc(x.hours ?? '')}"></td><td>${techPick('exw', '', x.by).replace('max-width:48%', 'max-width:100%;width:100%')}</td></tr>`).join('')}</table>
@@ -820,10 +824,10 @@ function report(admin, canEdit) {
   const recapCard = () => `    <div class="card"><div class="sect" style="margin-top:0">Recap ${jsBadge(j.jobStatus)}</div>${[['work', 'Work completed'], ['issues', 'Problems / what took longer'], ['followups', 'Open items / return visit'], ['client', 'Client feedback']].map(([k, t]) => `<div class="qmeta" style="margin-top:6px">${t}</div><div style="white-space:pre-wrap">${esc((j.recap || {})[k] || '—')}</div>`).join('')}
     <div class="qmeta" style="margin-top:10px">Submitted by ${esc(nameOf(j.submittedBy))}${j.submittedAt ? ' · ' + esc(new Date(j.submittedAt).toLocaleString('en-US')) : ''}${j.reviewedAt && (Q.status === 'closed') ? ' · Approved by ' + esc(nameOf(j.reviewedBy)) + ' ' + esc(new Date(j.reviewedAt).toLocaleDateString('en-US')) : ''}</div></div>`;
   const actions = revisionsCard() + `<div class="qactions no-print"><button class="qbtn" id="pdfJob">Export PDF</button>${canEdit ? '<button class="qbtn gold" id="addDayJob">+ Log another day</button><button class="qbtn" id="editJob">Edit &amp; resubmit</button>' : ''}${canEdit && (Q.project || {}).dtoolsOpportunityId ? `<a class="qbtn" style="display:inline-flex;align-items:center;text-decoration:none" href="?new=1&opp=${encodeURIComponent(Q.project.dtoolsOpportunityId)}&rep=${encodeURIComponent(Q.project.salesManagerName || '')}">+ Another report for this project</a>` : ''}<button class="qbtn" onclick="window.print()">Print / Save PDF</button>
-    ${admin && (j.recap || {}).followups && !j.returnVisitId ? '<button class="qbtn" id="makeReturn" style="border-color:#8a6d2f;color:#ffd479">Create return visit</button>' : ''}${admin && j.returnVisitId ? '<a class="qbtn" style="display:inline-flex;align-items:center;text-decoration:none" href="?quote=' + encodeURIComponent(j.returnVisitId) + '">Open return visit</a>' : ''}
+    ${admin && (j.recap || {}).followups && !j.returnVisitId ? '<button class="qbtn" id="makeReturn" style="border-color:#E0B860;color:#8A5A00">Create return visit</button>' : ''}${admin && j.returnVisitId ? '<a class="qbtn" style="display:inline-flex;align-items:center;text-decoration:none" href="?quote=' + encodeURIComponent(j.returnVisitId) + '">Open return visit</a>' : ''}
     ${admin && Q.status === 'submitted' ? '<button class="qbtn gold" id="approveJob">Approve &amp; close</button><button class="qbtn qbtn-del" id="sendBack">Send back</button>' : ''}</div><div id="revMsg" class="qmeta no-print"></div>`;
   const ex = (j.extras || []).filter(x => x.desc || x.hours);
-  const extrasCard = ex.length ? `<div class="card" style="border-color:#8a4b2f"><div class="sect" style="margin-top:0;color:#ff9f6b">Unplanned / extra work: possible change order (${hrs(ex.reduce((a, x) => a + (Number(x.hours) || 0), 0))} hrs)</div>
+  const extrasCard = ex.length ? `<div class="card" style="border-color:#F3B98F"><div class="sect" style="margin-top:0;color:#A1440B">Unplanned / extra work: possible change order (${hrs(ex.reduce((a, x) => a + (Number(x.hours) || 0), 0))} hrs)</div>
     <table><tr><th>What was done</th><th class="right">Hours</th><th>Who</th></tr>${ex.map(x => `<tr><td>${esc(x.desc)}</td><td class="right">${hrs(x.hours)}</td><td>${esc(techLabel(x.by))}</td></tr>`).join('')}</table></div>` : '';
   const parentCard = Q.returnFor ? `<div class="card"><div class="qmeta">Return visit for <b>${esc(Q.returnFor.label || '')}</b>. Open items were:</div><div style="white-space:pre-wrap">${esc(Q.returnFor.openItems || '')}</div></div>` : '';
   return parentCard + moneyCard(j, show) + productsReport(j) + extrasCard + daily() + recapCard() + punchCard(admin || canEdit) + photoReport(Q) + signoffReport(Q) + actions;
@@ -962,7 +966,7 @@ function showNew() {
     let ex = []; try { ex = (await db.collection('quotes').where('project.dtoolsOpportunityId', '==', e.target.value).get()).docs.map(d => ({ _id: d.id, ...d.data() })).filter(q => !q.isTemplate); } catch (err) { ex = []; }  // v8.29.0: installers only read their own jobs
     NEW.closed = ex.length && !ex.some(q => ['draft', 'won', 'scheduled', undefined].includes(q.status));
     NEW.open = ex.find(q => ['draft', 'won', 'scheduled', undefined].includes(q.status)) || null;
-    if (NEW.open) box.innerHTML = `<span style="color:#ffd479">This opportunity already has a labor quote (${esc(label(NEW.open))}).</span> <button class="qbtn gold" onclick="attachToQuote()">Log hours on that quote instead</button>`;
+    if (NEW.open) box.innerHTML = `<span style="color:#8A5A00">This opportunity already has a labor quote (${esc(label(NEW.open))}).</span> <button class="qbtn gold" onclick="attachToQuote()">Log hours on that quote instead</button>`;
     if (NEW.open) box.innerHTML += '<div class="qmeta" style="margin-top:4px">Or keep going to submit a separate report.</div>';
     else if (NEW.closed) box.innerHTML = '<span class="qmeta">This project already has a job report. You can submit another one (e.g. another day or visit).</span>';
   };
@@ -1077,5 +1081,7 @@ firebase.auth().onAuthStateChanged(async (u) => {
     catch (e) { app().innerHTML = '<div class="empty">Could not load: ' + esc(e.message) + '</div>'; window.ASBCDiag && ASBCDiag.fail('Could not load: ' + e.message); }  // v10.8.0 error log
 });
 </script>
+<script src="./alerts.js"></script>
+<script src="./sidebar.js" defer></script>
 </body>
 </html>

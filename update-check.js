@@ -4,7 +4,7 @@
 // If a newer version is live, a gold button appears at the top; tapping it saves any open recap and reloads.
 // ASBC_VERSION is kept in step by `python3 scripts/release.py bump X.Y.Z`.
 (function () {
-  const ASBC_VERSION = '10.9.9'; window.ASBC_VERSION = ASBC_VERSION;  // v10.8.0 read by diag.js
+  const ASBC_VERSION = '11.0.0'; window.ASBC_VERSION = ASBC_VERSION;  // v10.8.0 read by diag.js
   const newer = (a, b) => { const x = a.split('.').map(Number), y = b.split('.').map(Number); for (let i = 0; i < 3; i++) { if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); } return false; };
   let shown = false, last = 0;
   function show(v) {
@@ -12,7 +12,7 @@
     const b = document.createElement('button');
     b.id = 'asbcUpdateBtn'; b.type = 'button';
     b.textContent = 'Update available (v' + v + ') - tap to update';
-    b.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);top:calc(8px + env(safe-area-inset-top));z-index:9999;background:#C7A66A;color:#050505;border:0;border-radius:999px;padding:12px 18px;font:700 14px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.5);max-width:calc(100% - 24px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer';
+    b.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);top:calc(8px + env(safe-area-inset-top));z-index:9999;background:#1F6FD1;color:#FFFFFF;border:0;border-radius:999px;padding:12px 18px;font:700 14px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.5);max-width:calc(100% - 24px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer';
     b.onclick = async () => {
       b.textContent = 'Updating...'; b.disabled = true;
       try { if (typeof window.asbcBeforeUpdate === 'function') await window.asbcBeforeUpdate(); } catch (e) {}

@@ -43,7 +43,7 @@ def bump(v):
     s, n1 = re.subn(r"const APP_VERSION = '[\d.]+';", f"const APP_VERSION = '{v}';", s, 1)
     s, n2 = re.subn(r"const BUILD_DATE = '[\d-]+';", f"const BUILD_DATE = '{today}';", s, 1)
     w = rd("sw.js")
-    w, n3 = re.subn(r"asbc-calc-v[\d.]+", f"asbc-calc-v{v}", w, 1)
+    w, n3 = re.subn(r"asbc-(?:calc|tools)-v[\d.]+", f"asbc-tools-v{v}", w, 1)
     w = re.sub(r"service worker \(v[\d.]+\)", f"service worker (v{v})", w, 1)
     if (n1, n2, n3) != (1, 1, 1): sys.exit(f"bump failed: APP_VERSION={n1} BUILD_DATE={n2} CACHE_NAME={n3}")
     u = rd("update-check.js")
@@ -74,7 +74,7 @@ def verify(v, timeout=420):
             live = version(raw("index.html"))
             dep = [d for d in api("deployments?environment=github-pages&per_page=3") if d["sha"] == sha]
             state = api(f"deployments/{dep[0]['id']}/statuses?per_page=1")[0]["state"] if dep else "not started"
-            if live == v and state == "success" and f"asbc-calc-v{v}" in raw("sw.js"):
+            if live == v and state == "success" and f"asbc-tools-v{v}" in raw("sw.js"):
                 print(f"LIVE: v{v} deployed to GitHub Pages (commit {sha[:7]})"); return
             if state in ("failure", "error"): sys.exit(f"Pages deploy {state} for {sha[:7]}")
             print(f"waiting: main={live} pages={state}", flush=True)

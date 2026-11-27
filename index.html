@@ -1,17 +1,17 @@
 <!DOCTYPE html>
-<!-- ASBC Labor Calculator v8.9.15 | Firestore-primary catalog, offline-first boot, draft auto-save, admin tools | Build 2026-11-13 -->
+<!-- ASBC Tools v8.9.15 | Firestore-primary catalog, offline-first boot, draft auto-save, admin tools | Build 2026-11-13 -->
 <html lang="en">
 <head>
     <link rel="manifest" href="./manifest.json">
-    <link rel="icon" type="image/png" href="./icon-192.png">
-    <link rel="apple-touch-icon" href="./icon-192.png">
+    <link rel="icon" type="image/png" href="./tools-icon-192.png">
+    <link rel="apple-touch-icon" href="./tools-icon-192.png">
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="application-version" content="8.9.1">
     <meta name="build-date" content="2026-11-07">
-    <meta name="theme-color" content="#050505">
-    <title>Labor Calculator | ASBC</title>
+    <meta name="theme-color" content="#2F7FD1">
+    <title>Calculator | ASBC Tools</title>
 
     <link rel="stylesheet" href="./tailwind.css"><!-- v10.5.0 prebuilt Tailwind (was the cdn.tailwindcss.com runtime); rebuild: see CLAUDE.md -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
@@ -23,48 +23,48 @@
         button, input, select { touch-action: manipulation; }
 
         ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: #0A0A0A; }
-        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        ::-webkit-scrollbar-track { background: #F3F5F8; }
+        ::-webkit-scrollbar-thumb { background: #F1F4F8; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #D4AF37; }
 
         .category-active {
-            background: #C7A66A !important;
-            border-color: #C7A66A !important;
-            color: #0A0A0A !important;
+            background: #1F6FD1 !important;
+            border-color: #1F6FD1 !important;
+            color: #FFFFFF !important;
             font-weight: 600;
         }
         .cat-count { margin-left: 6px; font-size: 11px; opacity: .55; font-variant-numeric: tabular-nums; }
-        .cat-group-label { font-size: 9px; text-transform: uppercase; letter-spacing: .12em; color: #6B6B6B; padding-left: 8px; margin-left: 2px; border-left: 1px solid #2A2A2A; white-space: nowrap; }
+        .cat-group-label { font-size: 9px; text-transform: uppercase; letter-spacing: .12em; color: #6B6B6B; padding-left: 8px; margin-left: 2px; border-left: 1px solid #E3E7EE; white-space: nowrap; }
         #categoryWrap.fade-r #categoryButtons { -webkit-mask-image: linear-gradient(to right, #000 85%, transparent); mask-image: linear-gradient(to right, #000 85%, transparent); }
         #categoryWrap.fade-l #categoryButtons { -webkit-mask-image: linear-gradient(to left, #000 85%, transparent); mask-image: linear-gradient(to left, #000 85%, transparent); }
         #categoryWrap.fade-l.fade-r #categoryButtons { -webkit-mask-image: linear-gradient(to right, transparent, #000 10%, #000 88%, transparent); mask-image: linear-gradient(to right, transparent, #000 10%, #000 88%, transparent); }
-        .cat-arrow { position: absolute; top: 2px; z-index: 5; width: 30px; height: 34px; align-items: center; justify-content: center; border-radius: 9999px; background: #171717; border: 1px solid #2A2A2A; color: #C7A66A; font-size: 18px; opacity: 0; pointer-events: none; transition: opacity .15s; }
+        .cat-arrow { position: absolute; top: 2px; z-index: 5; width: 30px; height: 34px; align-items: center; justify-content: center; border-radius: 9999px; background: #FFFFFF; border: 1px solid #E3E7EE; color: #1F6FD1; font-size: 18px; opacity: 0; pointer-events: none; transition: opacity .15s; }
         .cat-arrow-l { left: -4px; } .cat-arrow-r { right: -4px; }
         #categoryWrap.fade-l .cat-arrow-l, #categoryWrap.fade-r .cat-arrow-r { opacity: 1; pointer-events: auto; }
 
         .favorites-active {
-            background: #111111 !important;
-            border-color: #C7A66A !important;
-            color: #C7A66A !important;
+            background: #FFFFFF !important;
+            border-color: #1F6FD1 !important;
+            color: #1F6FD1 !important;
         }
 
-        .bg-gray-900 { background-color: #101010 !important; }
-        .bg-gray-800 { background-color: #171717 !important; }
-        .border-gray-800 { border-color: #1A1A1A !important; }
-        .border-gray-700 { border-color: #242424 !important; }
-        .hover\:border-brandGold:hover { border-color: #C7A66A !important; }
+        .bg-gray-900 { background-color: #F1F4F8 !important; }
+        .bg-gray-800 { background-color: #FFFFFF !important; }
+        .border-gray-800 { border-color: #E3E7EE !important; }
+        .border-gray-700 { border-color: #E3E7EE !important; }
+        .hover\:border-brandGold:hover { border-color: #1F6FD1 !important; }
         #catalogPanel input, #catalogPanel select,
         #estimatePanel input, #estimatePanel select,
         #customItemModal input, #customItemModal select,
         #adminItemModal input, #adminItemModal select { color-scheme: dark; }
         select, input[list], datalist { color-scheme: dark; }
-        select option, select optgroup, datalist option { background-color: #141414 !important; color: #f5f5f5 !important; }
-        .suggestion-box { position: fixed; z-index: 200; background: #141414; border: 1px solid #4a4a4a; border-radius: 10px; box-shadow: 0 10px 28px rgba(0,0,0,.65); max-height: 240px; overflow-y: auto; color-scheme: dark; }
-        .suggestion-item { padding: 11px 13px; font-size: 14px; color: #f5f5f5; cursor: pointer; border-bottom: 1px solid #262626; -webkit-tap-highlight-color: transparent; }
+        select option, select optgroup, datalist option { background-color: #FFFFFF !important; color: #1F2937 !important; }
+        .suggestion-box { position: fixed; z-index: 200; background: #FFFFFF; border: 1px solid #4a4a4a; border-radius: 10px; box-shadow: 0 10px 28px rgba(0,0,0,.65); max-height: 240px; overflow-y: auto; color-scheme: dark; }
+        .suggestion-item { padding: 11px 13px; font-size: 14px; color: #1F2937; cursor: pointer; border-bottom: 1px solid #E3E7EE; -webkit-tap-highlight-color: transparent; }
         .suggestion-item:last-child { border-bottom: none; }
-        .suggestion-item:active { background: #C7A66A; color: #141414; }
+        .suggestion-item:active { background: #1F6FD1; color: #FFFFFF; }
         input:focus, select:focus {
-            border-color: #C7A66A !important;
+            border-color: #1F6FD1 !important;
             box-shadow: 0 0 0 1px rgba(199, 166, 106, 0.28);
             outline: none;
         }
@@ -73,10 +73,10 @@
             height: 26px;
             width: 100%;
             max-width: 100%;
-            background-color: #171717;
-            border: 1px solid #242424;
+            background-color: #FFFFFF;
+            border: 1px solid #E3E7EE;
             border-radius: 8px;
-            color: #C7A66A;
+            color: #1F6FD1;
             font-size: 10px;
             padding: 0 6px;
         }
@@ -99,7 +99,7 @@
         }
         @media (max-width: 639px) {
             #moreTools { display: none; }
-            #moreTools.open { display: flex; flex-direction: column; align-items: stretch; gap: 8px; position: fixed; top: 6rem; right: 8px; z-index: 60; background: #111318; border: 1px solid #26292f; border-radius: 12px; padding: 10px; box-shadow: 0 12px 30px rgba(0,0,0,.35); }
+            #moreTools.open { display: flex; flex-direction: column; align-items: stretch; gap: 8px; position: fixed; top: 6rem; right: 8px; z-index: 60; background: #FFFFFF; border: 1px solid #E3E7EE; border-radius: 12px; padding: 10px; box-shadow: 0 12px 30px rgba(0,0,0,.35); }
             #moreTools.open > * { justify-content: flex-start; }
         }
         @media print {
@@ -234,19 +234,23 @@
         }
     /* Typed quantity boxes (v8.1.0) */
     .qty-input { background: transparent; color: inherit; border: 0; outline: none; padding: 0; -moz-appearance: textfield; appearance: textfield; }
-    .qty-input:focus { background: rgba(255,255,255,0.08); box-shadow: inset 0 0 0 1px #C5A572; border-radius: 6px; }
+    .qty-input:focus { background: rgba(31,111,209,0.06); box-shadow: inset 0 0 0 1px #C5A572; border-radius: 6px; }
     .qty-input::-webkit-outer-spin-button, .qty-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
         @keyframes asbcTicker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
         .asbc-ticker-wrap { overflow: hidden; white-space: nowrap; max-width: 100%; }
         /* v8.30.0 header buttons, same look as the other pages */
-        #hdrNav .hnav { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px; border-radius: 9px; border: 1px solid #26292f; background: #1a1d23; color: #fff; font-size: 13px; font-weight: 600; text-decoration: none; white-space: nowrap; }
-        #hdrNav .hnav:hover { border-color: #C7A66A; }
-        #hdrNav .hnav.gold { background: #C7A66A; color: #050505; border-color: #C7A66A; }
+        #hdrNav .hnav { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px; border-radius: 9px; border: 1px solid #E3E7EE; background: #FFFFFF; color: #1F2937; font-size: 13px; font-weight: 600; text-decoration: none; white-space: nowrap; }
+        #hdrNav .hnav:hover { border-color: #1F6FD1; }
+        #hdrNav .hnav.gold { background: #1F6FD1; color: #FFFFFF; border-color: #1F6FD1; }
         #hdrNav .hnav.hidden { display: none !important; }
         @media (max-width: 639px) { #hdrNav .navx { display: none !important; } #hdrNav .hnav { height: 34px; padding: 0 10px; font-size: 12px; } }
         .asbc-ticker-inner { display: inline-block; white-space: nowrap; animation: asbcTicker 26s linear infinite; will-change: transform; }
         .asbc-ticker-wrap:hover .asbc-ticker-inner { animation-play-state: paused; }
     </style>
+<script>window.ASBC_TOOLS = true;</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./tools.css">
 </head>
 
 <body class="bg-bgDark text-white h-screen overflow-hidden font-sans">
@@ -255,7 +259,7 @@
         <!-- v8.30.0: same header style as Home, Calendar, Jobs, Pipeline and the other pages -->
         <div class="h-12 sm:h-16 px-3 sm:px-5 flex items-center justify-between gap-3">
             <div class="min-w-0 leading-tight">
-                <div class="text-lg sm:text-xl font-bold tracking-wide whitespace-nowrap"><span id="asbcLogo" class="cursor-pointer select-none">ASBC</span> <span class="text-[#C7A66A]">Labor Calculator</span></div>
+                <div class="text-lg sm:text-xl font-bold tracking-wide whitespace-nowrap"><span id="asbcLogo" class="cursor-pointer select-none">ASBC</span> <span class="text-[#C7A66A]">Calculator</span></div>
                 <div class="text-[10px] sm:text-[11px] text-[#8b8f98] whitespace-nowrap"><span data-rate-display>$200/hr</span> · <span id="versionNumber" class="cursor-pointer select-none"></span></div>
             </div>
             <div id="repTicker" onclick="location.href='./leaderboard.html'" class="flex-1 min-w-0 overflow-hidden px-3 hidden lg:block print-hide cursor-pointer" title="Open the leaderboard">
@@ -629,11 +633,11 @@
     <script src="./diag.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
     <style>
-        .admin-edit-btn { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; padding: 2px 10px; border: 1px solid #C7A66A; color: #C7A66A; border-radius: 9999px; background: transparent; cursor: pointer; font-weight: 600; }
-        .admin-edit-btn:hover { background: #C7A66A; color: #050505; }
-        .admin-edit-banner { position: sticky; top: 0; z-index: 50; background: #C7A66A; color: #050505; font-size: 11px; font-weight: 700; padding: 4px 12px; text-align: center; letter-spacing: 0.05em; }
+        .admin-edit-btn { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; padding: 2px 10px; border: 1px solid #1F6FD1; color: #1F6FD1; border-radius: 9999px; background: transparent; cursor: pointer; font-weight: 600; }
+        .admin-edit-btn:hover { background: #1F6FD1; color: #FFFFFF; }
+        .admin-edit-banner { position: sticky; top: 0; z-index: 50; background: #1F6FD1; color: #FFFFFF; font-size: 11px; font-weight: 700; padding: 4px 12px; text-align: center; letter-spacing: 0.05em; }
         .zone-rename-btn { font-size: 9px; padding: 1px 8px; border: 1px solid #4B5563; color: #9CA3AF; border-radius: 9999px; background: transparent; cursor: pointer; text-transform: uppercase; letter-spacing: 0.05em; }
-        .zone-rename-btn:hover { border-color: #C7A66A; color: #C7A66A; }
+        .zone-rename-btn:hover { border-color: #1F6FD1; color: #1F6FD1; }
         @media print { .admin-edit-btn, .admin-edit-banner, .zone-rename-btn, .print-hide { display: none !important; } }
     </style>
     <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
@@ -648,7 +652,7 @@
         <div id="authLoading" class="text-center"><div class="text-xl font-bold text-brandGold">ASBC</div><div class="text-sm text-textMuted mt-2">Loading…</div></div>
         <form id="authForm" class="bg-bgPanel border border-brandGold/40 p-6 rounded-2xl shadow-2xl w-full max-w-sm space-y-3" autocomplete="on">
             <div class="text-center">
-                <h2 class="text-xl font-bold text-brandGold">ASBC Labor Calculator</h2>
+                <h2 class="text-xl font-bold text-brandGold">ASBC Tools</h2>
                 <p id="authTitle" class="text-sm text-textMuted mt-1">Sign in</p>
             </div>
             <input id="authEmail" type="email" autocomplete="username" placeholder="Work email (you@asbc.us)" class="w-full h-12 bg-gray-900 border border-gray-700 rounded-lg px-3 text-white text-base">
@@ -704,7 +708,7 @@
               }
           });
 
-        const APP_VERSION = '10.9.9';
+        const APP_VERSION = '11.0.0';
         const BUILD_DATE = '2026-11-27';
         let HOURLY_RATE = 200;
 
@@ -1405,7 +1409,7 @@
         function learnedFor(item) { const st = ITEM_STATS[item.id]; if (!st || (st.n || 0) < 3 || !(st.qty > 0) || !(st.est > 0)) return null;
             const est = (Number(item.installHours) || 0) + (Number(item.programmingHours) || 0), act = st.act / st.qty; if (!(est > 0) || Math.abs(act - est) / est < 0.2) return null; return { est, act, n: st.n }; }
         function learnedHtml(item) { const l = learnedFor(item); if (!l) return '';
-            return `<div class="text-[11px] mt-1" style="color:${l.act > l.est ? '#ff9f6b' : '#7ee2a0'}">Real jobs: ${l.act.toFixed(2)} hrs/unit vs ${l.est.toFixed(2)} in the catalog (${l.n} jobs)${isAdminUser() ? ` <button type="button" data-learn="${item.id}" class="underline text-brandGold ml-1">Apply</button>` : ''}</div>`; }
+            return `<div class="text-[11px] mt-1" style="color:${l.act > l.est ? '#A1440B' : '#0E7A4D'}">Real jobs: ${l.act.toFixed(2)} hrs/unit vs ${l.est.toFixed(2)} in the catalog (${l.n} jobs)${isAdminUser() ? ` <button type="button" data-learn="${item.id}" class="underline text-brandGold ml-1">Apply</button>` : ''}</div>`; }
         document.addEventListener('click', async e => { const b = e.target.closest('[data-learn]'); if (!b || !isAdminUser()) return; e.preventDefault(); e.stopPropagation();
             const item = catalog.find(i => i.id === b.dataset.learn), l = item && learnedFor(item); if (!l) return;
             const f = l.act / l.est;
@@ -1839,7 +1843,7 @@
             el.textContent = h + ' hrs · ' + d;
         }
         // PDF file name = opportunity name (browsers use the page title as the default PDF name)
-        const _appTitle = () => `Labor Calculator | ASBC v${APP_VERSION}`;
+        const _appTitle = () => `Calculator | ASBC Tools v${APP_VERSION}`;
         function setPrintTitle() {
             const n = (customerName.value || '').trim().replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, ' ').slice(0, 120);
             if (n) document.title = n;
@@ -2197,7 +2201,7 @@
         function forceAppRefresh() {
             const banner = document.createElement('div');
             banner.textContent = 'Updating app...';
-            banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:300;background:#C7A66A;color:#141414;font:600 13px/1.4 sans-serif;text-align:center;padding:8px 12px;';
+            banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:300;background:#1F6FD1;color:#FFFFFF;font:600 13px/1.4 sans-serif;text-align:center;padding:8px 12px;';
             document.body.appendChild(banner);
             (async () => {
                 try {
@@ -2941,7 +2945,7 @@
         });
 
         document.getElementById('versionNumber').textContent = `v${APP_VERSION} (${BUILD_DATE})`;
-        document.title = `Labor Calculator | ASBC v${APP_VERSION}`;
+        document.title = `Calculator | ASBC Tools v${APP_VERSION}`;
 
         window.saveEstimate = saveEstimate;
         window.saveAndPrint = saveAndPrint;
@@ -2984,5 +2988,7 @@
             });
         }
     </script>
+<script src="./alerts.js"></script>
+<script src="./sidebar.js" defer></script>
 </body>
 </html>

@@ -37,10 +37,10 @@
   const can = (access, page) => !!(DEFS[access] && DEFS[access].pages.includes(page));
   function deny(page, el) {
     const box = el || document.body;
-    box.innerHTML = `<div style="max-width:520px;margin:60px auto;text-align:center;color:#c9ccd2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
-      <div style="font-size:18px;font-weight:700;color:#fff">${(PAGES[page] || {}).label || 'This page'} isn't part of your role</div>
+    box.innerHTML = `<div style="max-width:520px;margin:60px auto;text-align:center;color:#374151;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
+      <div style="font-size:18px;font-weight:700;color:#1F2937">${(PAGES[page] || {}).label || 'This page'} isn't part of your role</div>
       <div style="margin-top:8px;font-size:14px">Ask Anthony if you need access.</div>
-      <a href="./home.html" style="display:inline-block;margin-top:16px;padding:10px 16px;border-radius:10px;background:#C7A66A;color:#050505;font-weight:700;text-decoration:none">Back to Home</a></div>`;
+      <a href="./home.html" style="display:inline-block;margin-top:16px;padding:10px 16px;border-radius:10px;background:#1F6FD1;color:#FFFFFF;font-weight:700;text-decoration:none">Back to Home</a></div>`;
   }
   window.ASBCRoles = { DEFS, ORDER, PAGES, LEGACY, OWNER, accessOf, can, deny };
   // v8.33.0 install teams by the assigned techs' first names: SF Team = Joseph, Eugene (orange); LA Team = Ivan, Mina (blue)

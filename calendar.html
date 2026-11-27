@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#050505">
-<title>Calendar | ASBC Labor Calculator</title>
-<link rel="icon" href="./favicon.svg">
+<meta name="theme-color" content="#2F7FD1">
+<title>Calendar | ASBC Tools</title>
+<link rel="icon" href="./tools-favicon.svg">
 <link rel="manifest" href="./manifest.json">
-<link rel="apple-touch-icon" href="./icon-192.png">
+<link rel="apple-touch-icon" href="./tools-icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <script src="./diag.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
@@ -20,51 +20,51 @@
 <script src="./ramp.js"></script>
 <script src="./update-check.js" defer></script>
 <style>
-:root { --gold:#C7A66A; --bg:#050505; --card:#111318; --line:#26292f; --muted:#8b8f98; --sf:#f59e0b; --la:#3b82f6; --none:#6b7280; }
+:root { --gold:#1F6FD1; --bg:#F3F5F8; --card:#FFFFFF; --line:#E3E7EE; --muted:#4B5563; --sf:#f59e0b; --la:#3b82f6; --none:#6B7280; }
 * { box-sizing:border-box; }
-body { margin:0; background:var(--bg); color:#fff; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; }
+body { margin:0; background:var(--bg); color:#1F2937; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; }
 .wrap { max-width:1200px; margin:0 auto; padding:14px 14px 40px; }
 header { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px; flex-wrap:wrap; }
 h1 { font-size:20px; margin:0; } h1 span { color:var(--gold); }
-.btn { display:inline-flex; align-items:center; justify-content:center; height:38px; padding:0 12px; border-radius:9px; border:1px solid var(--line); color:#fff; text-decoration:none; font-size:13px; font-weight:600; background:#1a1d23; cursor:pointer; }
+.btn { display:inline-flex; align-items:center; justify-content:center; height:38px; padding:0 12px; border-radius:9px; border:1px solid var(--line); color:#1F2937; text-decoration:none; font-size:13px; font-weight:600; background:#FFFFFF; cursor:pointer; }
 .bar { display:flex; align-items:center; gap:8px; margin-bottom:10px; flex-wrap:wrap; }
 .bar .month { font-size:18px; font-weight:800; min-width:170px; text-align:center; }
 .legend { display:flex; gap:12px; flex-wrap:wrap; font-size:12px; color:var(--muted); margin-left:auto; }
 .legend i { display:inline-block; width:12px; height:12px; border-radius:3px; vertical-align:-2px; margin-right:5px; }
 .grid { display:grid; grid-template-columns:repeat(7, minmax(0, 1fr)); border:1px solid var(--line); border-radius:12px; overflow:hidden; }
-.dow { background:#0c0e12; color:var(--muted); font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; padding:6px; text-align:center; border-bottom:1px solid var(--line); }
-.day { min-height:118px; border-right:1px solid #1b1e24; border-bottom:1px solid #1b1e24; padding:4px; background:var(--card); cursor:pointer; overflow:hidden; }
+.dow { background:#F1F4F8; color:var(--muted); font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; padding:6px; text-align:center; border-bottom:1px solid var(--line); }
+.day { min-height:118px; border-right:1px solid #E3E7EE; border-bottom:1px solid #E3E7EE; padding:4px; background:var(--card); cursor:pointer; overflow:hidden; }
 .day:nth-child(7n) { border-right:0; }
-.day.out { background:#0b0d11; } .day.out .num { color:#454a53; }
-.day.today .num { background:var(--gold); color:#050505; }
+.day.out { background:#FFFFFF; } .day.out .num { color:#454a53; }
+.day.today .num { background:var(--gold); color:#FFFFFF; }
 .day.sel { outline:2px solid var(--gold); outline-offset:-2px; }
-.num { display:inline-block; font-size:12px; font-weight:700; min-width:22px; height:22px; line-height:22px; text-align:center; border-radius:11px; color:#c9ccd2; margin-bottom:2px; }
-.ev { display:block; text-decoration:none; color:#fff; border-radius:6px; padding:3px 5px; margin-top:3px; font-size:11px; line-height:1.25; border-left:4px solid var(--none); background:#1b1f27; overflow:hidden; }
+.num { display:inline-block; font-size:12px; font-weight:700; min-width:22px; height:22px; line-height:22px; text-align:center; border-radius:11px; color:#374151; margin-bottom:2px; }
+.ev { display:block; text-decoration:none; color:#1F2937; border-radius:6px; padding:3px 5px; margin-top:3px; font-size:11px; line-height:1.25; border-left:4px solid var(--none); background:#F1F4F8; overflow:hidden; }
 .ev b { display:block; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.ev .t { color:#c9ccd2; font-size:10px; white-space:nowrap; }
+.ev .t { color:#374151; font-size:10px; white-space:nowrap; }
 .ev.SF { border-left-color:var(--sf); background:rgba(245,158,11,.16); } .ev.LA { border-left-color:var(--la); background:rgba(59,130,246,.18); }
 .ev.BOTH { border-left-color:var(--sf); background:linear-gradient(90deg, rgba(245,158,11,.22), rgba(59,130,246,.22)); }
 .ev.done { opacity:.55; }
-.conf { background:#2a1414; border:1px solid #8a2f2f; color:#ffb4b4; border-radius:10px; padding:8px 12px; margin:0 0 10px; font-size:13px; } .conf b { color:#fff; }
-.warn { color:#ff8b8b; font-weight:800; margin-right:3px; }
-.crew { width:100%; border-collapse:collapse; font-size:12px; } .crew th, .crew td { border:1px solid #26292f; padding:6px; vertical-align:top; text-align:left; } .crew th { color:#8b8f98; font-size:11px; background:#0b0d11; } .crew td.c { background:#2a1414; } .crew .h { color:#C7A66A; font-weight:700; } .crew .j { display:block; margin-top:2px; } .crewwrap { overflow-x:auto; }
+.conf { background:#FDECEC; border:1px solid #F1A9A0; color:#B42318; border-radius:10px; padding:8px 12px; margin:0 0 10px; font-size:13px; } .conf b { color:#1F2937; }
+.warn { color:#B42318; font-weight:800; margin-right:3px; }
+.crew { width:100%; border-collapse:collapse; font-size:12px; } .crew th, .crew td { border:1px solid #E3E7EE; padding:6px; vertical-align:top; text-align:left; } .crew th { color:#4B5563; font-size:11px; background:#FFFFFF; } .crew td.c { background:#FDECEC; } .crew .h { color:#1F6FD1; font-weight:700; } .crew .j { display:block; margin-top:2px; } .crewwrap { overflow-x:auto; }
 .icbg { position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:80; display:flex; align-items:center; justify-content:center; padding:16px; }
-.ic { width:min(440px,100%); background:#111318; border:1px solid #26292f; border-radius:16px; padding:16px; box-shadow:0 16px 40px rgba(0,0,0,.6); }
+.ic { width:min(440px,100%); background:#FFFFFF; border:1px solid #E3E7EE; border-radius:16px; padding:16px; box-shadow:0 16px 40px rgba(0,0,0,.6); }
 .ich { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:8px; } .ict { font-size:17px; font-weight:800; margin-bottom:4px; }
-.icr { display:flex; gap:12px; padding:9px 0; border-top:1px solid #1d2027; font-size:14px; } .ick { flex:0 0 96px; color:#8b8f98; font-size:12px; text-transform:uppercase; letter-spacing:.05em; font-weight:700; padding-top:2px; } .icv { flex:1; min-width:0; line-height:1.4; } .icv a { color:#C7A66A; }
+.icr { display:flex; gap:12px; padding:9px 0; border-top:1px solid #E3E7EE; font-size:14px; } .ick { flex:0 0 96px; color:#4B5563; font-size:12px; text-transform:uppercase; letter-spacing:.05em; font-weight:700; padding-top:2px; } .icv { flex:1; min-width:0; line-height:1.4; } .icv a { color:#1F6FD1; }
 @media (max-width:700px) { .icbg { align-items:flex-end; padding:0; } .ic { border-radius:16px 16px 0 0; padding-bottom:calc(16px + env(safe-area-inset-bottom)); } }
-.hol { display:block; font-size:10px; font-weight:700; color:#2dd4bf; margin-top:3px; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; } .aev.holr { border-left-color:#2dd4bf; cursor:default; }
-.ev.dt { cursor:default; border-left-style:dashed; } .ev.dt.cev, .aev.dt.cev { border-left-color:#a78bfa !important; border-left-style:dotted; box-shadow:none; } /* v10.9.0 company events (no labor) */ .aev.dt { cursor:default; } .aev .desc { color:#e9dcc0; font-size:12px; margin-top:3px; white-space:pre-wrap; } .dtb { font-size:9px; font-weight:800; color:#C7A66A; letter-spacing:.05em; margin-right:4px; }
+.hol { display:block; font-size:10px; font-weight:700; color:#0F766E; margin-top:3px; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; } .aev.holr { border-left-color:#2dd4bf; cursor:default; }
+.ev.dt { cursor:default; border-left-style:dashed; } .ev.dt.cev, .aev.dt.cev { border-left-color:#a78bfa !important; border-left-style:dotted; box-shadow:none; } /* v10.9.0 company events (no labor) */ .aev.dt { cursor:default; } .aev .desc { color:#374151; font-size:12px; margin-top:3px; white-space:pre-wrap; } .dtb { font-size:9px; font-weight:800; color:#1F6FD1; letter-spacing:.05em; margin-right:4px; }
 .more { font-size:10px; color:var(--muted); margin-top:3px; }
 .agenda { margin-top:12px; }
 .agenda h3 { font-size:14px; margin:0 0 6px; color:var(--gold); }
-.aev { display:flex; gap:10px; align-items:center; text-decoration:none; color:#fff; background:var(--card); border:1px solid var(--line); border-left:6px solid var(--none); border-radius:10px; padding:10px 12px; margin-bottom:6px; }
+.aev { display:flex; gap:10px; align-items:center; text-decoration:none; color:#1F2937; background:var(--card); border:1px solid var(--line); border-left:6px solid var(--none); border-radius:10px; padding:10px 12px; margin-bottom:6px; }
 .aev.SF { border-left-color:var(--sf); } .aev.LA { border-left-color:var(--la); } .aev.BOTH { border-left-color:var(--sf); box-shadow:inset 6px 0 0 -3px var(--la); }
 .aev .nm { font-weight:700; font-size:15px; } .aev .meta { color:var(--muted); font-size:12px; margin-top:2px; }
 .tag { font-size:10px; font-weight:800; letter-spacing:.05em; padding:2px 7px; border-radius:999px; border:1px solid; white-space:nowrap; }
 .tag.SF { color:var(--sf); border-color:rgba(245,158,11,.5); } .tag.LA { color:var(--la); border-color:rgba(59,130,246,.5); } .tag.none { color:var(--muted); border-color:var(--line); }
 .empty { text-align:center; color:var(--muted); padding:30px 0; }
-select { background:#101216; border:1px solid var(--line); color:#fff; border-radius:9px; height:38px; padding:0 10px; font-size:14px; }
+select { background:#FFFFFF; border:1px solid var(--line); color:#1F2937; border-radius:9px; height:38px; padding:0 10px; font-size:14px; }
 @media (max-width:700px) {
   .wrap { padding:10px 8px 40px; } .bar .month { min-width:0; flex:1; font-size:16px; }
   .legend { margin-left:0; width:100%; }
@@ -74,6 +74,10 @@ select { background:#101216; border:1px solid var(--line); color:#fff; border-ra
   .ev b, .ev .t { display:none; } .hol { font-size:8px; margin-top:2px; } .more { font-size:9px; }
 }
 </style>
+<script>window.ASBC_TOOLS = true;</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./tools.css">
 </head>
 <body>
 <div class="wrap">
@@ -89,7 +93,7 @@ select { background:#101216; border:1px solid var(--line); color:#fff; border-ra
     <button class="btn" id="crewBtn" title="Who is booked or free each day">Crew / who's free</button>
     <button class="btn" id="syncBtn" style="display:none" title="Pull the D-Tools calendar into the app right now">Sync from D-Tools</button>
     <select id="teamF" aria-label="Filter by team"><option value="">All teams</option><option value="SF">SF Team</option><option value="LA">LA Team</option></select>
-    <div class="legend"><span><i style="background:var(--sf)"></i>SF Team (Joseph, Eugene)</span><span><i style="background:var(--la)"></i>LA Team (Ivan, Mina)</span><span><i style="background:var(--none)"></i>Other / not assigned</span><span><i style="background:#a78bfa"></i>Company event (no labor, calendar only)</span><span><b style="color:#2dd4bf;font-size:10px">Holiday</b></span><span><b style="color:#C7A66A;font-size:10px">EVT</b> D-Tools scheduled event (store work, pickups, holds)</span></div>
+    <div class="legend"><span><i style="background:var(--sf)"></i>SF Team (Joseph, Eugene)</span><span><i style="background:var(--la)"></i>LA Team (Ivan, Mina)</span><span><i style="background:var(--none)"></i>Other / not assigned</span><span><i style="background:#a78bfa"></i>Company event (no labor, calendar only)</span><span><b style="color:#0F766E;font-size:10px">Holiday</b></span><span><b style="color:#1F6FD1;font-size:10px">EVT</b> D-Tools scheduled event (store work, pickups, holds)</span></div>
   </div>
   <div id="conf"></div>
   <div id="cal"><div class="empty">Loading…</div></div>
@@ -167,7 +171,7 @@ function renderAgenda(byDay) {
   const title = SEL ? new Date(SEL + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) : 'This month';
   box.innerHTML = `<h3>${esc(title)}${SEL ? ' <button class="btn" style="height:28px;font-size:11px;margin-left:6px" onclick="SEL=null;render()">Show whole month</button>' : ''}</h3>` +
     (days.flatMap(k => (byDay[k] || []).map(q => ({ k, q }))).map(({ k, q }) => { const day = SEL ? '' : esc(new Date(k + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })) + ' · ';
-      if (q._hol) return `<div class="aev holr"><div style="flex:1;min-width:0"><div class="nm" style="color:#2dd4bf">${esc(q._hol)}</div><div class="meta">${day}Holiday</div></div></div>`;
+      if (q._hol) return `<div class="aev holr"><div style="flex:1;min-width:0"><div class="nm" style="color:#0F766E">${esc(q._hol)}</div><div class="meta">${day}Holiday</div></div></div>`;
       if (q._ev) { const e = q._ev; return `<div class="aev dt ${q._team} ${e.kind === 'event' ? 'cev' : ''}" data-ev="${esc(e.id)}" style="cursor:pointer"><div style="flex:1;min-width:0"><div class="nm"><span class="dtb">${e.kind === 'event' ? 'COMPANY EVENT · NO LABOR' : 'D-TOOLS'}</span>${esc(e.name)}</div>
         <div class="meta">${day}${esc(q._win)} · ${esc(e.people.join(', ') || 'Nobody assigned')}${e.client ? ' · ' + esc(e.client) : ''}${e.address ? ' · ' + esc(e.address) : ''}</div>${e.desc ? `<div class="desc">${esc(e.desc)}</div>` : ''}</div>${teamTag(q._team)}</div>`; }
       const sc = q.schedule || {};
@@ -204,8 +208,8 @@ function infoJob(id) {
     pdf: p.proposalPdf, files: p.files || [], parts: partsTxt(q.parts), dt: PURL[pfold(p.dtoolsProjectName)] || PURL[pfold(label(q))] || dtLink(p.dtoolsNum) });
 }
 // v9.3.0 parts readiness from D-Tools item statuses
-function partsTxt(pt) { if (!pt || !pt.total) return ''; if (pt.ready >= pt.total) return `<span style="color:#7ee2a0">All ${pt.total} items staged</span>`;
-  return `<span style="color:#ff8b8b">${pt.total - pt.ready} of ${pt.total} not staged</span>${(pt.notReady || []).length ? '<br><span style="color:#8b8f98;font-size:12px">' + esc(pt.notReady.join(', ')) + '</span>' : ''}`;
+function partsTxt(pt) { if (!pt || !pt.total) return ''; if (pt.ready >= pt.total) return `<span style="color:#0E7A4D">All ${pt.total} items staged</span>`;
+  return `<span style="color:#B42318">${pt.total - pt.ready} of ${pt.total} not staged</span>${(pt.notReady || []).length ? '<br><span style="color:#4B5563;font-size:12px">' + esc(pt.notReady.join(', ')) + '</span>' : ''}`;
 }
 function infoEv(id) {
   const e = EVENTS.find(x => x.id === id); if (!e) return;
@@ -225,19 +229,19 @@ function renderCrew() {
   const cell = (t, d) => { const l = ALLEV.filter(x => x.date === d && (x.techs || []).includes(t.e)); const uniq = []; l.forEach(x => { if (!uniq.some(u => u.name === x.name)) uniq.push(x); });
     const h = uniq.reduce((a, x) => a + hrsOf(x), 0), c = CONF.some(x => x.tech === t.e && x.date === d);
     const wk = !workday(d);
-    return `<td class="${c ? 'c' : ''}">${uniq.length ? `<span class="h">${Math.round(h * 10) / 10} h</span>` + uniq.map(x => `<span class="j">${esc(x.name)}${x.start ? ' · ' + esc(t12(x.start)) : ''}</span>`).join('') : wk ? '<span style="color:#555">—</span>' : '<span style="color:#7ee2a0;font-weight:700">Free</span>'}</td>`; };
+    return `<td class="${c ? 'c' : ''}">${uniq.length ? `<span class="h">${Math.round(h * 10) / 10} h</span>` + uniq.map(x => `<span class="j">${esc(x.name)}${x.start ? ' · ' + esc(t12(x.start)) : ''}</span>`).join('') : wk ? '<span style="color:#6B7280">—</span>' : '<span style="color:#0E7A4D;font-weight:700">Free</span>'}</td>`; };
   // v10.3.0 who's free: a tech is free on a weekday with no booking; a team is free when both of its techs are
   const busy = (e, d) => ALLEV.some(x => x.date === d && (x.techs || []).includes(e)) || JOBS.some(q => ((q.schedule || {}).dates || []).includes(d) && ((q.schedule || {}).techs || []).includes(e));
   const HOLS = Object.assign({}, ...[-1, 0, 1].map(k => Object.fromEntries(usHolidays(new Date().getFullYear() + k))), HOLIDAYS);  // v10.3.1 US + D-Tools holidays
   const workday = d => ![0, 6].includes(new Date(d + 'T12:00:00').getDay()) && !HOLS[d];
   const teamFree = (k, d) => { const m = techs.filter(t => ASBCTeams.ofNames([t.n]) === k); return m.length && m.every(t => !busy(t.e, d)); };
   const nextFree = k => { const d = new Date(); for (let i = 1; i <= 90; i++) { d.setDate(d.getDate() + 1); const s = ymd(d); if (workday(s) && teamFree(k, s)) return s; } return ''; };
-  const nf = ['SF', 'LA'].map(k => { const s = nextFree(k); return `<span style="margin-right:14px">${teamTag(k)} next fully free day: <b>${s ? esc(new Date(s + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })) : 'none in 90 days'}</b>${s ? ` <a href="#" data-wk="${s}" style="color:#C7A66A">show</a>` : ''}</span>`; }).join('');
+  const nf = ['SF', 'LA'].map(k => { const s = nextFree(k); return `<span style="margin-right:14px">${teamTag(k)} next fully free day: <b>${s ? esc(new Date(s + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })) : 'none in 90 days'}</b>${s ? ` <a href="#" data-wk="${s}" style="color:#1F6FD1">show</a>` : ''}</span>`; }).join('');
   const tot = t => days.reduce((a, d) => { const l = ALLEV.filter(x => x.date === d && (x.techs || []).includes(t.e)); const u = []; l.forEach(x => { if (!u.some(y => y.name === x.name)) u.push(x); }); return a + u.reduce((s, x) => s + hrsOf(x), 0); }, 0);
-  box.innerHTML = `<div style="display:flex;gap:6px;align-items:center;margin-bottom:8px"><button class="btn" id="wkPrev">‹</button><b>Week of ${esc(new Date(WEEK + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }))}</b><button class="btn" id="wkNext">›</button><span style="color:#8b8f98;font-size:12px">Hours = D-Tools time window (all-day = 8 h). Red = double-booked.</span></div>
+  box.innerHTML = `<div style="display:flex;gap:6px;align-items:center;margin-bottom:8px"><button class="btn" id="wkPrev">‹</button><b>Week of ${esc(new Date(WEEK + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }))}</b><button class="btn" id="wkNext">›</button><span style="color:#4B5563;font-size:12px">Hours = D-Tools time window (all-day = 8 h). Red = double-booked.</span></div>
     <div class="crewwrap"><table class="crew"><tr><th>Tech</th>${days.map(d => `<th>${esc(new Date(d + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'numeric', day: 'numeric' }))}</th>`).join('')}<th>Week</th></tr>
     ${techs.map(t => `<tr><td><b>${esc(t.n)}</b> ${teamTag(ASBCTeams.ofNames([t.n]))}</td>${days.map(d => cell(t, d)).join('')}<td class="h">${Math.round(tot(t) * 10) / 10} h</td></tr>`).join('')}
-    <tr><td><b>Free crews</b></td>${days.map(d => `<td>${workday(d) ? (['SF', 'LA'].filter(k => teamFree(k, d)).map(k => teamTag(k)).join(' ') || '<span style="color:#555">none</span>') : '<span style="color:#555">—</span>'}</td>`).join('')}<td></td></tr></table></div>
+    <tr><td><b>Free crews</b></td>${days.map(d => `<td>${workday(d) ? (['SF', 'LA'].filter(k => teamFree(k, d)).map(k => teamTag(k)).join(' ') || '<span style="color:#6B7280">none</span>') : '<span style="color:#6B7280">—</span>'}</td>`).join('')}<td></td></tr></table></div>
     <div style="margin-top:10px;font-size:13px">${nf}</div>`;
   box.querySelector('.crewwrap').insertAdjacentHTML('beforebegin', `<div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;font-size:13px">Who's free on <input type="date" id="freeDate" value="${WEEK}" style="height:32px"></div>`);
   document.getElementById('freeDate').onchange = e => { if (!e.target.value) return; const d = new Date(e.target.value + 'T12:00:00'); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); WEEK = ymd(d); renderCrew(); };
@@ -252,9 +256,9 @@ document.getElementById('syncBtn').onclick = () => {
   document.querySelectorAll('.icbg').forEach(x => x.remove());
   const bg = document.createElement('div'); bg.className = 'icbg';
   bg.innerHTML = `<div class="ic" role="dialog" aria-label="Sync from D-Tools"><div class="ich"><div class="ict">Sync from D-Tools now</div><button class="btn" data-x aria-label="Close">✕</button></div>
-    <div style="font-size:14px;line-height:1.5"><b>One time:</b> drag this button to your bookmarks bar:<div style="margin:10px 0"><a class="btn" id="bmLink" style="border-color:#C7A66A;color:#C7A66A">ASBC sync</a></div>
+    <div style="font-size:14px;line-height:1.5"><b>One time:</b> drag this button to your bookmarks bar:<div style="margin:10px 0"><a class="btn" id="bmLink" style="border-color:#1F6FD1;color:#1F6FD1">ASBC sync</a></div>
     <b>Any time after:</b><ol style="margin:6px 0 0 18px;padding:0"><li>Open D-Tools (signed in).</li><li>Click <b>ASBC sync</b> on your bookmarks bar.</li><li>You're brought back here; confirm the import.</li></ol>
-    <div style="color:#8b8f98;font-size:12px;margin-top:8px">Reads the same calendar as the scheduled pull (last 7 days + next 60), updates installs and events, and messages techs only about real changes. Nothing is changed in D-Tools.</div>
+    <div style="color:#4B5563;font-size:12px;margin-top:8px">Reads the same calendar as the scheduled pull (last 7 days + next 60), updates installs and events, and messages techs only about real changes. Nothing is changed in D-Tools.</div>
     <div style="margin-top:12px;text-align:right"><a class="btn" href="https://d-tools.cloud/" target="_blank" rel="noopener">Open D-Tools</a></div></div></div>`;
   bg.querySelector('#bmLink').setAttribute('href', 'javascript:' + encodeURIComponent(DT_BOOKMARK));
   bg.querySelector('#bmLink').onclick = e => { e.preventDefault(); alert('Drag this button onto your bookmarks bar, then click it while you are on D-Tools.'); };
@@ -279,7 +283,7 @@ document.getElementById('today').onclick = () => { VIEW = new Date(); VIEW.setDa
 document.getElementById('teamF').onchange = render;
 document.getElementById('cal').addEventListener('click', e => { if (e.target.closest('.ev') && window.innerWidth > 700) { const c = e.target.closest('[data-q],[data-ev]'); if (c) { e.preventDefault(); c.dataset.q ? infoJob(c.dataset.q) : infoEv(c.dataset.ev); } return; } const d = e.target.closest('.day'); if (!d) return; e.preventDefault(); SEL = d.dataset.day === SEL ? null : d.dataset.day; render(); if (SEL) document.getElementById('agenda').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
 firebase.auth().onAuthStateChanged(async u => {
-  if (!u || !u.emailVerified) { document.getElementById('cal').innerHTML = '<div class="empty">Sign in (and confirm your email) on the <a href="./" style="color:#C7A66A">calculator</a> first, then reopen the Calendar.</div>'; return; }
+  if (!u || !u.emailVerified) { document.getElementById('cal').innerHTML = '<div class="empty">Sign in (and confirm your email) on the <a href="./" style="color:#1F6FD1">calculator</a> first, then reopen the Calendar.</div>'; return; }
  try { if (!(await u.getIdTokenResult()).claims.email_verified) { await u.reload(); await u.getIdToken(true); } } catch (e) {}  // v8.28.1: refresh a sign-in token issued before the email was confirmed
   const us = await db.collection('config').doc('users').get().catch(() => null);
   USERS = (us && us.exists && us.data().users) || {};
@@ -306,5 +310,6 @@ firebase.auth().onAuthStateChanged(async u => {
 });
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
 </script>
+<script src="./sidebar.js" defer></script>
 </body>
 </html>

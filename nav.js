@@ -7,10 +7,10 @@
     ['quotes', 'Quotes', './log.html'], ['users', 'Users', './users.html']];
   const EXTRA = ['expenses', 'leaderboard', 'quotes', 'users'];  // folded into "More" on phones
   const css = `#asbcNav{display:flex;gap:6px;flex-wrap:wrap;align-items:center;justify-content:flex-end}
-#asbcNav .hnav{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 12px;border-radius:9px;border:1px solid #26292f;background:#1a1d23;color:#fff;font-size:13px;font-weight:600;text-decoration:none;white-space:nowrap;cursor:pointer;font-family:inherit}
-#asbcNav .hnav:hover{border-color:#C7A66A}#asbcNav .hnav.on{border-color:#C7A66A;color:#C7A66A}
-#asbcNav .more{display:none;position:relative}#asbcNav .menu{display:none;position:absolute;right:0;top:40px;z-index:50;background:#111318;border:1px solid #26292f;border-radius:10px;padding:6px;min-width:150px;box-shadow:0 8px 24px rgba(0,0,0,.5)}
-#asbcNav .menu a{display:block;padding:9px 10px;border-radius:7px;color:#fff;text-decoration:none;font-size:14px}#asbcNav .menu a:hover{background:#1a1d23}#asbcNav .more.open .menu{display:block}
+#asbcNav .hnav{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 12px;border-radius:9px;border:1px solid #E3E7EE;background:#FFFFFF;color:#1F2937;font-size:13px;font-weight:600;text-decoration:none;white-space:nowrap;cursor:pointer;font-family:inherit}
+#asbcNav .hnav:hover{border-color:#1F6FD1}#asbcNav .hnav.on{border-color:#1F6FD1;color:#1F6FD1}
+#asbcNav .more{display:none;position:relative}#asbcNav .menu{display:none;position:absolute;right:0;top:40px;z-index:50;background:#FFFFFF;border:1px solid #E3E7EE;border-radius:10px;padding:6px;min-width:150px;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+#asbcNav .menu a{display:block;padding:9px 10px;border-radius:7px;color:#1F2937;text-decoration:none;font-size:14px}#asbcNav .menu a:hover{background:#FFFFFF}#asbcNav .more.open .menu{display:block}
 @media(max-width:639px){#asbcNav .hnav{height:34px;padding:0 10px;font-size:12px}#asbcNav .navx{display:none}#asbcNav .more{display:inline-block}}
 @media print{#asbcNav{display:none}}`;
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

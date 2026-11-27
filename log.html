@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#050505">
-<title>Saved Quotes | ASBC Labor Calculator</title>
-<link rel="icon" href="./favicon.svg">
+<meta name="theme-color" content="#2F7FD1">
+<title>Saved Quotes | ASBC Tools</title>
+<link rel="icon" href="./tools-favicon.svg">
 <script src="./diag.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
@@ -15,20 +15,20 @@
 <script src="./update-check.js" defer></script>
 <script src="./pricing.js"></script>
 <style>
-:root { --gold:#C7A66A; --bg:#050505; --card:#111318; --line:#26292f; --muted:#8b8f98; }
+:root { --gold:#1F6FD1; --bg:#F3F5F8; --card:#FFFFFF; --line:#E3E7EE; --muted:#4B5563; }
 * { box-sizing:border-box; }
-body { margin:0; background:var(--bg); color:#fff; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; }
+body { margin:0; background:var(--bg); color:#1F2937; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; }
 .wrap { max-width:860px; margin:0 auto; padding:16px 14px 60px; }
 header { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px; }
 h1 { font-size:20px; margin:0; letter-spacing:.02em; }
 h1 span { color:var(--gold); }
-.btn { display:inline-flex; align-items:center; height:34px; padding:0 12px; border-radius:8px; border:1px solid var(--line); color:#fff; text-decoration:none; font-size:12px; font-weight:600; background:#1a1d23; }
-input, select { background:#101216; border:1px solid var(--line); color:#fff; border-radius:10px; padding:10px 12px; font-size:14px; width:100%; }
+.btn { display:inline-flex; align-items:center; height:34px; padding:0 12px; border-radius:8px; border:1px solid var(--line); color:#1F2937; text-decoration:none; font-size:12px; font-weight:600; background:#FFFFFF; }
+input, select { background:#FFFFFF; border:1px solid var(--line); color:#1F2937; border-radius:10px; padding:10px 12px; font-size:14px; width:100%; }
 .controls { display:flex; gap:8px; margin-bottom:12px; }
 .badge { display:inline-block; font-size:9px; font-weight:700; letter-spacing:.06em; padding:2px 7px; border-radius:999px; border:1px solid; vertical-align:middle; }
-.b-t { color:#8fb3ff; border-color:#33518f; }
-.b-l { color:#ffd479; border-color:#8a6d2f; }
-.b-a { color:#7ee2a0; border-color:#2f7a4c; }
+.b-t { color:#1F6FD1; border-color:#A9C6EE; }
+.b-l { color:#8A5A00; border-color:#E0B860; }
+.b-a { color:#0E7A4D; border-color:#8FD3B0; }
 .qrow { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin-bottom:8px; cursor:pointer; }
 .qrow:hover { border-color:var(--gold); }
 .qtop { display:flex; justify-content:space-between; gap:10px; align-items:baseline; }
@@ -36,22 +36,26 @@ input, select { background:#101216; border:1px solid var(--line); color:#fff; bo
 .qmeta { color:var(--muted); font-size:11px; margin-top:2px; }
 .qnums { text-align:right; font-variant-numeric:tabular-nums; font-size:13px; white-space:nowrap; }
 .qnum-b { color:var(--gold); font-weight:700; }
-.qdetail { display:none; border-top:1px solid var(--line); margin-top:10px; padding-top:10px; font-size:12px; color:#d7d9de; overflow-x:auto; }
+.qdetail { display:none; border-top:1px solid var(--line); margin-top:10px; padding-top:10px; font-size:12px; color:#374151; overflow-x:auto; }
 .qrow.open .qdetail { display:block; }
 table { width:100%; border-collapse:collapse; }
-th, td { text-align:left; padding:4px 6px; border-bottom:1px solid #1d2026; font-variant-numeric:tabular-nums; }
+th, td { text-align:left; padding:4px 6px; border-bottom:1px solid #E3E7EE; font-variant-numeric:tabular-nums; }
 th { color:var(--muted); font-size:10px; text-transform:uppercase; letter-spacing:.05em; }
-.pos { color:#7ee2a0; } .neg { color:#ff8b8b; }
+.pos { color:#0E7A4D; } .neg { color:#B42318; }
 .sect { margin:18px 0 8px; font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); font-weight:700; }
 .empty { text-align:center; color:var(--muted); padding:30px 0; }
 details summary { cursor:pointer; color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.08em; font-weight:700; }
 details[open] summary { margin-bottom:8px; }
 .qactions { display:flex; gap:6px; margin-top:8px; }
-.qbtn { height:28px; padding:0 12px; border-radius:7px; border:1px solid var(--line); background:#1a1d23; color:#fff; font-size:11px; font-weight:600; cursor:pointer; }
-.qbtn-load { border-color:#8a6d2f; color:#ffd479; }
-.qbtn-del { border-color:#5a2b2b; color:#ff8b8b; }
+.qbtn { height:28px; padding:0 12px; border-radius:7px; border:1px solid var(--line); background:#FFFFFF; color:#1F2937; font-size:11px; font-weight:600; cursor:pointer; }
+.qbtn-load { border-color:#E0B860; color:#8A5A00; }
+.qbtn-del { border-color:#F1A9A0; color:#B42318; }
 .qbtn:hover { border-color:var(--gold); }
 </style>
+<script>window.ASBC_TOOLS = true;</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./tools.css">
 </head>
 <body>
 <div class="wrap">
@@ -213,17 +217,17 @@ function renderList() {
       (r.isLocked ? '<span class="badge b-l">LOCKED</span> ' : '') +
       (r.actuals ? '<span class="badge b-a">ACTUALS</span> ' : '') +
       (r.status && r.status !== 'draft' ? '<span class="badge b-l">' + esc(String(r.status).toUpperCase()) + '</span> ' : '') +
-      (r.job && r.job.jobStatus ? '<span class="badge" style="color:#8fb3ff;border-color:#33518f">' + esc(String(r.job.jobStatus).toUpperCase()) + '</span> ' : '') +
-      (r.job && r.job.extrasHours > 0 ? '<span class="badge" style="color:#ff9f6b;border-color:#8a4b2f">EXTRA WORK ' + Number(r.job.extrasHours).toFixed(2) + ' HRS: POSSIBLE CO</span>' : '') +
-      (r.signoff && r.signoff.status === 'signed' ? ' <span class="badge" style="color:' + (r.signoff.concerns ? '#ff8b8b;border-color:#8a2f2f">CLIENT SIGNED · CONCERNS' : '#7ee2a0;border-color:#2f7a4c">CLIENT SIGNED') + '</span>' : '');
+      (r.job && r.job.jobStatus ? '<span class="badge" style="color:#1F6FD1;border-color:#A9C6EE">' + esc(String(r.job.jobStatus).toUpperCase()) + '</span> ' : '') +
+      (r.job && r.job.extrasHours > 0 ? '<span class="badge" style="color:#A1440B;border-color:#F3B98F">EXTRA WORK ' + Number(r.job.extrasHours).toFixed(2) + ' HRS: POSSIBLE CO</span>' : '') +
+      (r.signoff && r.signoff.status === 'signed' ? ' <span class="badge" style="color:' + (r.signoff.concerns ? '#B42318;border-color:#F1A9A0">CLIENT SIGNED · CONCERNS' : '#0E7A4D;border-color:#8FD3B0">CLIENT SIGNED') + '</span>' : '');
     const a = r.actuals;
     const detail = `
       <div class="qdetail">
         <table><tr><th>Item</th><th>Space</th><th>Qty</th><th>Labor hrs</th><th>Prog hrs</th></tr>
-        ${info.lines.map(l => `<tr><td>${esc(l.name)}${l.addon ? ` <span style="color:#C7A66A">+ ${esc(l.addon)}</span>` : ''}${l.missing ? ' <span class="neg">(no longer in catalog)</span>' : ''}</td><td>${esc(l.zone)}</td><td>${l.qty}</td><td>${(l.inst * (Number(l.qty) || 0)).toFixed(2)}</td><td>${(l.prog * (Number(l.qty) || 0)).toFixed(2)}</td></tr>`).join('')}
+        ${info.lines.map(l => `<tr><td>${esc(l.name)}${l.addon ? ` <span style="color:#1F6FD1">+ ${esc(l.addon)}</span>` : ''}${l.missing ? ' <span class="neg">(no longer in catalog)</span>' : ''}</td><td>${esc(l.zone)}</td><td>${l.qty}</td><td>${(l.inst * (Number(l.qty) || 0)).toFixed(2)}</td><td>${(l.prog * (Number(l.qty) || 0)).toFixed(2)}</td></tr>`).join('')}
         <tr><td colspan="3"><b>Total</b></td><td><b>${info.install.toFixed(2)}</b></td><td><b>${info.prog.toFixed(2)}</b></td></tr>
         </table>
-        <div style="margin-top:8px;color:#8b8f98">Labor ${fmt(p.labor)} &middot; Materials ${fmt(p.materials)} (${Number((r.options || {}).markup) || 0}%)${p.trip ? ' &middot; Trip ' + fmt(p.trip) : ''} &middot; Recycling ${fmt(p.recycling)} &middot; Crew ${Number((r.options || {}).crewSize) || 1}</div>
+        <div style="margin-top:8px;color:#4B5563">Labor ${fmt(p.labor)} &middot; Materials ${fmt(p.materials)} (${Number((r.options || {}).markup) || 0}%)${p.trip ? ' &middot; Trip ' + fmt(p.trip) : ''} &middot; Recycling ${fmt(p.recycling)} &middot; Crew ${Number((r.options || {}).crewSize) || 1}</div>
         <div style="margin-top:4px"><b>Total: ${fmt(p.total)}</b></div>
         ${a ? `<div style="margin-top:8px"><span class="badge b-a">ACTUALS</span> est ${Number(a.totalEstHours).toFixed(2)} hrs vs actual ${Number(a.totalActualHours).toFixed(2)} hrs${a.notes ? ` &middot; notes: ${esc(a.notes)}` : ''}</div>` : ''}
       </div>`;
@@ -236,7 +240,7 @@ function renderList() {
         <button class="qbtn qbtn-load" data-act="load" data-id="${r._id}">Load</button>
         ${ME.role === 'admin' || ((r.project || {}).salesManagerName === ME.name) ? `<button class="qbtn qbtn-save" data-act="save" data-id="${r._id}">Save</button>
         <button class="qbtn qbtn-del" data-act="delete" data-id="${r._id}">Delete</button>` : ''}
-        ${ME && ME.role === 'admin' && !r.isTemplate ? `<a class="qbtn" style="display:inline-flex;align-items:center;text-decoration:none" href="./jobs.html?quote=${encodeURIComponent(r._id)}">Job</a>` : (r.job && r.job.submittedAt && ['submitted', 'closed'].includes(r.status) ? `<a class="qbtn" style="display:inline-flex;align-items:center;text-decoration:none;border-color:#2f7a4c;color:#7ee2a0" href="./jobs.html?quote=${encodeURIComponent(r._id)}">Job report</a>` : '')}
+        ${ME && ME.role === 'admin' && !r.isTemplate ? `<a class="qbtn" style="display:inline-flex;align-items:center;text-decoration:none" href="./jobs.html?quote=${encodeURIComponent(r._id)}">Job</a>` : (r.job && r.job.submittedAt && ['submitted', 'closed'].includes(r.status) ? `<a class="qbtn" style="display:inline-flex;align-items:center;text-decoration:none;border-color:#8FD3B0;color:#0E7A4D" href="./jobs.html?quote=${encodeURIComponent(r._id)}">Job report</a>` : '')}
       </div>
       ${detail}
     </div>`;
@@ -301,5 +305,6 @@ document.getElementById('list').addEventListener('click', async (e) => {
 
 // boot() runs after sign-in (onAuthStateChanged above)
 </script>
+<script src="./sidebar.js" defer></script>
 </body>
 </html>

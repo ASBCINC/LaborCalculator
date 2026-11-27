@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#050505">
+<meta name="theme-color" content="#2F7FD1">
 <meta name="robots" content="noindex">
-<title>User Roles | ASBC</title>
-<link rel="icon" href="./favicon.svg">
+<title>User Roles | ASBC Tools</title>
+<link rel="icon" href="./tools-favicon.svg">
 <link rel="manifest" href="./manifest.json">
 <script src="./diag.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
@@ -16,27 +16,31 @@
 <script src="./nav.js" defer></script>
 <script src="./update-check.js" defer></script>
 <style>
-:root { --gold:#C7A66A; --bg:#050505; --card:#111318; --line:#26292f; --muted:#8b8f98; }
+:root { --gold:#1F6FD1; --bg:#F3F5F8; --card:#FFFFFF; --line:#E3E7EE; --muted:#4B5563; }
 * { box-sizing:border-box; }
-body { margin:0; background:var(--bg); color:#fff; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; }
+body { margin:0; background:var(--bg); color:#1F2937; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; }
 .wrap { max-width:1000px; margin:0 auto; padding:14px 14px 60px; }
 header { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px; flex-wrap:wrap; }
 h1 { font-size:20px; margin:0; } h1 span { color:var(--gold); }
-.btn { display:inline-flex; align-items:center; justify-content:center; height:38px; padding:0 12px; border-radius:9px; border:1px solid var(--line); color:#fff; text-decoration:none; font-size:13px; font-weight:600; background:#1a1d23; cursor:pointer; }
-.gold { background:var(--gold); color:#050505; border-color:var(--gold); }
+.btn { display:inline-flex; align-items:center; justify-content:center; height:38px; padding:0 12px; border-radius:9px; border:1px solid var(--line); color:#1F2937; text-decoration:none; font-size:13px; font-weight:600; background:#FFFFFF; cursor:pointer; }
+.gold { background:var(--gold); color:#FFFFFF; border-color:var(--gold); }
 .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin-bottom:12px; }
 .sect { font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); font-weight:700; margin:0 0 8px; }
-input, select { background:#101216; border:1px solid var(--line); color:#fff; border-radius:9px; height:38px; padding:0 10px; font-size:16px; width:100%; }
-table { width:100%; border-collapse:collapse; } th, td { text-align:left; padding:6px 5px; border-bottom:1px solid #1d2026; vertical-align:middle; font-size:13px; }
+input, select { background:#FFFFFF; border:1px solid var(--line); color:#1F2937; border-radius:9px; height:38px; padding:0 10px; font-size:16px; width:100%; }
+table { width:100%; border-collapse:collapse; } th, td { text-align:left; padding:6px 5px; border-bottom:1px solid #E3E7EE; vertical-align:middle; font-size:13px; }
 th { color:var(--muted); font-size:10px; text-transform:uppercase; letter-spacing:.05em; }
 .matrix td, .matrix th { text-align:center; } .matrix td:first-child, .matrix th:first-child { text-align:left; }
-.y { color:#7ee2a0; font-weight:800; } .n { color:#454a53; }
+.y { color:#0E7A4D; font-weight:800; } .n { color:#454a53; }
 .muted { color:var(--muted); font-size:12px; }
-.del { background:none; border:1px solid #5a2b2b; color:#ff8b8b; border-radius:8px; height:34px; padding:0 10px; cursor:pointer; }
-.chg td { background:rgba(199,166,106,.08); }
-#bar { position:sticky; bottom:0; background:rgba(5,5,5,.96); border-top:1px solid var(--line); padding:10px 0 calc(10px + env(safe-area-inset-bottom)); display:flex; gap:8px; align-items:center; margin-top:12px; }
-@media (max-width:720px) { .ulist thead { display:none; } .ulist tr { display:grid; grid-template-columns:1fr 1fr; gap:6px; padding:10px 0; border-bottom:1px solid #1d2026; } .ulist td { border:0; padding:0; } .ulist td.full { grid-column:1 / -1; } }
+.del { background:none; border:1px solid #F1A9A0; color:#B42318; border-radius:8px; height:34px; padding:0 10px; cursor:pointer; }
+.chg td { background:rgba(31,111,209,.06); }
+#bar { position:sticky; bottom:0; background:rgba(255,255,255,.97); border-top:1px solid var(--line); padding:10px 0 calc(10px + env(safe-area-inset-bottom)); display:flex; gap:8px; align-items:center; margin-top:12px; }
+@media (max-width:720px) { .ulist thead { display:none; } .ulist tr { display:grid; grid-template-columns:1fr 1fr; gap:6px; padding:10px 0; border-bottom:1px solid #E3E7EE; } .ulist td { border:0; padding:0; } .ulist td.full { grid-column:1 / -1; } }
 </style>
+<script>window.ASBC_TOOLS = true;</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./tools.css">
 </head>
 <body>
 <div class="wrap">
@@ -146,5 +150,6 @@ firebase.auth().onAuthStateChanged(async u => {
   load().catch(e => document.getElementById('app').innerHTML = '<div class="muted">Could not load: ' + esc(e.message) + '</div>');
 });
 </script>
+<script src="./sidebar.js" defer></script>
 </body>
 </html>
