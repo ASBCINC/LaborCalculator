@@ -318,3 +318,7 @@ D-Tools handoff panel (paste-ready labor block); Quote Log search wording.
 - Data: config/knowledgeCenter {items:[{id, cat, sub, product, title, url, kind, src}], seedV}; admins add/edit/remove on the page.
 - Seed (SEED_V=1): 50 entries for the 45 B&O PDFs pulled from BeoWise (bogob2b.custhelp.com) into Anthony's OneDrive › Documents › B&O Install Manuals/{Speakers,Sound systems,TVs,Accessories}; urls are SharePoint webUrls, so readers need access to that folder.
 - BeoWise rate-limits (HTTP 429) fast crawls; ~1.6 s between requests worked.
+
+## v11.5.1 — Knowledge Center: vendor manuals (2026-11-27)
+- knowledge.html SEED_V=2 adds 90 links to public manufacturer docs: UniFi (gateway, APs, Protect, Access), Ruckus, Access Networks, WattBox, Kaleidescape, Lutron (RadioRA 3, Pico, Sivoia QS, Triathlon, Palladiom, drapery), Origin Acoustics. Seeds carry v; only versions newer than the stored seedV are added, so admin removals stick.
+- Vendor links point at the manufacturer's own pages/PDFs (always current); UniFi uses techspecs.ui.com pages (Installation Guide tab).
