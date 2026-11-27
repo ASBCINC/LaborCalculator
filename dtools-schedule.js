@@ -297,7 +297,7 @@
   }
   async function stagesDone(results) {
     const db = firebase.firestore();
-    for (const r of results || []) { const ref = db.collection('quotes').doc(r.quote), t = (((await ref.get()).data() || {}).dtoolsStage || {}).tries || 0;
+    for (const r of (results || []).filter(r => r && r.quote)) { const ref = db.collection('quotes').doc(r.quote), t = (((await ref.get()).data() || {}).dtoolsStage || {}).tries || 0;
       await ref.set({ dtoolsStage: r.ok ? { done: true, result: r.from + ' → ' + r.want, appliedAt: new Date().toISOString() } : { done: t + 1 >= 3, tries: t + 1, result: 'failed: ' + (r.err || '') } }, { merge: true }); }
     return (results || []).map(r => r.name + ': ' + (r.ok ? r.from + ' → ' + r.want : 'FAILED ' + r.err));
   }

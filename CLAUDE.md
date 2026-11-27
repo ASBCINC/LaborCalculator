@@ -369,3 +369,11 @@ D-Tools handoff panel (paste-ready labor block); Quote Log search wording.
   (must be @asbc-calculator.iam.gserviceaccount.com). New relay kind 'admin' {title, text, url, button}.
 - Claude "ASBC D-Tools pull (v2)" now runs once, weekdays 5:37 PM PT: connector pull, calendar import (backup to the bookmark),
   dashboard tasks/messages, Monday data check, Friday D-Tools update list. Old steps 7f/7g/8/10 retired.
+- Nov 27: Anthony removed the Installed stage in D-Tools; projects only move to Delayed, In Progress or Completed (job-report rule).
+  The Claude pull's old 6a/6b (Installed / 30-day Completed) are retired; nothing changes stages automatically except the bookmark's
+  confirmed job-report changes.
+- Phone/tablet (Chrome): Sync dialog has "Copy bookmark code" + steps (bookmark any page, edit URL; run by typing "ASBC sync" in the
+  address bar on D-Tools). Phones block the bookmark's pop-up, so it falls back to same-tab import; waiting stage changes are then
+  pushed from Sync dialog → "Push stage changes (n)": confirm, the app opens D-Tools (window.open keeps window.opener), Anthony runs
+  the bookmark there, it says {t:'asbc-hello'} to the opener, gets {t:'asbc-ready', P} and replies {t:'asbc-stages-done', R}.
+  Tested with Playwright (pop-up blocked path + push from the app).
