@@ -322,3 +322,8 @@ D-Tools handoff panel (paste-ready labor block); Quote Log search wording.
 ## v11.5.1 — Knowledge Center: vendor manuals (2026-11-27)
 - knowledge.html SEED_V=2 adds 90 links to public manufacturer docs: UniFi (gateway, APs, Protect, Access), Ruckus, Access Networks, WattBox, Kaleidescape, Lutron (RadioRA 3, Pico, Sivoia QS, Triathlon, Palladiom, drapery), Origin Acoustics. Seeds carry v; only versions newer than the stored seedV are added, so admin removals stick.
 - Vendor links point at the manufacturer's own pages/PDFs (always current); UniFi uses techspecs.ui.com pages (Installation Guide tab).
+
+## v11.5.2 — Knowledge Center: more brands + ASBC Standards (2026-11-27)
+- New top branch "ASBC Standards" (first in CATS): B&O Installation Standards SOP, install team policy, project lifecycle SOP + summary, D-Tools sales pipeline training, scope of work template, service authorization form, AV content server guidelines, van stock list (all OneDrive webUrls; readers need sharing).
+- SEED_V=3 adds 72: Control4, Josh.ai, Basalte, Lutron HomeWorks, Sonos, MantelMount/SANUS, Samsung Frame, Screen Innovations/Stewart, AVPro Edge/Binary/madVR, Middle Atlantic, Leviton SMC, Cat6/T568B refs, links to ASBC tools (./tool-*.html).
+- Items show "from <src>"; some are distributor/retailer-hosted copies (Basalte, Sonos, Middle Atlantic) and say so. okUrl accepts ./page links; ./ links open in the same tab.
